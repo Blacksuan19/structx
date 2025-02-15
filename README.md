@@ -5,7 +5,7 @@ using Large Language Models (LLMs). It dynamically generates type-safe data
 models and provides consistent, structured extraction with support for complex
 nested data structures.
 
-[![view - Documentation](https://img.shields.io/badge/PyPi-0.1.1-blue?style=for-the-badge)](https://pypi.org/project/structx "view package on PyPi")
+[![view - Documentation](https://img.shields.io/badge/PyPi-0.1.2-blue?style=for-the-badge)](https://pypi.org/project/structx "view package on PyPi")
 &nbsp;&nbsp;&nbsp;
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with github actions")
 
