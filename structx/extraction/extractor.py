@@ -20,11 +20,7 @@ from structx.core.models import (
 )
 from structx.extraction.generator import ModelGenerator
 from structx.utils.file_reader import FileReader
-from structx.utils.helpers import (
-    flatten_extracted_data,
-    handle_errors,
-    log_model_schema,
-)
+from structx.utils.helpers import flatten_extracted_data, handle_errors
 from structx.utils.prompts import *  # noqa: F401 sue me
 
 
@@ -78,9 +74,9 @@ class Extractor:
         Perform completion with the given model and prompt
 
         Args:
-            model: Model name or ID
-            prompt: Prompt text
-            **kwargs: Additional keyword arguments for completion
+            messages: List of messages for the completion
+            response_model: Pydantic model for response
+            config: Configuration for the completion
         """
         return self.client.chat.completions.create(
             model=self.model_name,
@@ -138,8 +134,6 @@ class Extractor:
         self, sample_text: str, refined_query: QueryRefinement, guide: ExtractionGuide
     ) -> ExtractionRequest:
         """Generate schema with enforced structure"""
-
-        # Generate schema with structural requirements
 
         return self._perform_llm_completion(
             messages=[
@@ -214,12 +208,8 @@ class Extractor:
         )
 
         # Validate result
-        try:
-            validated = [extraction_model.model_validate(item) for item in result]
-            return validated
-        except Exception as ve:
-            logger.error(f"Validation error: {str(ve)}")
-            raise
+        validated = [extraction_model.model_validate(item) for item in result]
+        return validated
 
     @handle_errors(
         error_message="Failed to initialize extraction", error_type=ExtractionError
@@ -249,7 +239,7 @@ class Extractor:
         )
         ExtractionModel = ModelGenerator.from_extraction_request(schema_request)
         logger.info("Generated Model Schema:")
-        logger.info(ExtractionModel.schema_json(indent=2))
+        logger.info(ExtractionModel.model_json_schema(indent=2))
 
         return query_analysis, refined_query, guide, ExtractionModel
 
@@ -289,7 +279,6 @@ class Extractor:
         ):
             with semaphore:
                 try:
-                    # Extract data
                     items = self._extract_with_model(
                         text=row_text,
                         extraction_model=extraction_model,
@@ -530,7 +519,7 @@ class Extractor:
         ExtractionModel = ModelGenerator.from_extraction_request(schema_request)
 
         # Return schema
-        return ExtractionModel.schema_json(indent=2)
+        return ExtractionModel.model_schema_json(indent=2)
 
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract_batch(
