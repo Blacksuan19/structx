@@ -278,7 +278,7 @@ class Extractor:
         failed_rows: List[Dict],
         return_df: bool,
         expand_nested: bool,
-    ) -> Callable:
+    ):
         """Create a worker function for threaded extraction"""
 
         def extract_worker(
