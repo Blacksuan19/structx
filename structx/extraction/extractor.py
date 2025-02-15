@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import threading
 from datetime import datetime
@@ -284,7 +285,7 @@ class Extractor:
         )
         ExtractionModel = ModelGenerator.from_extraction_request(schema_request)
         logger.info("Generated Model Schema:")
-        logger.info(ExtractionModel.model_json_schema(indent=2))
+        logger.info(json.dumps(ExtractionModel.model_json_schema(), indent=2))
 
         return query_analysis, refined_query, guide, ExtractionModel
 
@@ -564,7 +565,7 @@ class Extractor:
         ExtractionModel = ModelGenerator.from_extraction_request(schema_request)
 
         # Return schema
-        return ExtractionModel.model_schema_json(indent=2)
+        return json.dumps(ExtractionModel.model_json_schema(), indent=2)
 
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract_batch(
