@@ -21,6 +21,7 @@ nested data structures.
 - 🏗️ Type-safe data models using Pydantic
 - 🎮 Easy-to-use interface
 - 🔌 Support for multiple LLM providers through litellm
+- 🔄 Automatic retry mechanism with exponential backoff
 
 ## Installation
 
@@ -43,6 +44,9 @@ data = [
 extractor = Extractor.from_litellm(
     model="gpt-4o-mini",  # or any other model supported by litellm
     api_key="your-api-key",
+    max_retries=3,     # Maximum number of retry attempts
+    min_wait=1,        # Minimum seconds to wait between retries
+    max_wait=10        # Maximum seconds to wait between retries
     ...  # other parameters to litellm
 )
 
@@ -193,6 +197,52 @@ schema = extractor.get_schema(
 print(schema)
 ```
 
+### Retry Configuration
+
+structx includes an automatic retry mechanism with exponential backoff for
+handling transient failures during extraction. You can configure retry behavior
+when initializing the Extractor:
+
+```python
+# Default retry settings
+extractor = Extractor.from_litellm(
+    model="gpt-4",
+    api_key="your-api-key"
+)
+
+# Custom retry settings
+extractor = Extractor.from_litellm(
+    model="gpt-4",
+    api_key="your-api-key",
+    max_retries=5,      # More retry attempts
+    min_wait=2,         # Wait at least 2 seconds
+    max_wait=30         # Maximum 30 seconds wait
+)
+
+# Disable retries
+extractor = Extractor.from_litellm(
+    model="gpt-4",
+    api_key="your-api-key",
+    max_retries=0       # Disables retry mechanism
+)
+```
+
+The retry mechanism uses exponential backoff, meaning the wait time between
+retries increases exponentially (but is capped at `max_wait`):
+
+- First retry: `min_wait` seconds
+- Second retry: `min_wait * 2` seconds
+- Third retry: `min_wait * 4` seconds
+- And so on, up to `max_wait`
+
+#### Retry Parameters
+
+| Parameter   | Type | Default | Description                             |
+| ----------- | ---- | ------- | --------------------------------------- |
+| max_retries | int  | 3       | Maximum number of retry attempts        |
+| min_wait    | int  | 1       | Minimum seconds to wait between retries |
+| max_wait    | int  | 10      | Maximum seconds to wait between retries |
+
 ## Requirements
 
 - Python 3.8+
@@ -203,6 +253,7 @@ print(schema)
 - omegaconf
 - PyYAML
 - tqdm
+- tenacity (for retry mechanism)
 
 ## Development
 
