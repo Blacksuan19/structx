@@ -56,9 +56,9 @@ class Extractor:
         config: Optional[Union[Dict, str, Path, ExtractionConfig]] = None,
         max_threads: int = 10,
         batch_size: int = 100,
-        max_retries: int = 3,  # Add retry configuration
-        min_wait: int = 1,  # Minimum seconds to wait between retries
-        max_wait: int = 10,  # Maximum seconds to wait between retries
+        max_retries: int = 3,
+        min_wait: int = 1,
+        max_wait: int = 10,
     ):
         """Initialize extractor"""
         self.client = client
@@ -88,15 +88,8 @@ class Extractor:
         messages: List[Dict[str, str]],
         response_model: Type[BaseModel],
         config: DictStrAny,
-    ) -> Dict:
-        """
-        Perform completion with the given model and prompt
-
-        Args:
-            messages: List of messages for the completion
-            response_model: Pydantic model for response
-            config: Configuration for the completion
-        """
+    ) -> BaseModel:
+        """Perform completion with the given model and prompt"""
         return self.client.chat.completions.create(
             model=self.model_name,
             response_model=response_model,
@@ -106,13 +99,7 @@ class Extractor:
 
     @handle_errors(error_message="Query analysis failed", error_type=ExtractionError)
     def _analyze_query(self, query: str, available_columns: List[str]) -> QueryAnalysis:
-        """
-        Analyze query to determine target column and extraction purpose
-
-        Args:
-            query: Natural language query
-            available_columns: List of available column names
-        """
+        """Analyze query to determine target column and extraction purpose"""
         return self._perform_llm_completion(
             messages=[
                 {"role": "system", "content": query_analysis_system_prompt},
@@ -129,12 +116,7 @@ class Extractor:
 
     @handle_errors(error_message="Query refinement failed", error_type=ExtractionError)
     def _refine_query(self, query: str) -> QueryRefinement:
-        """
-        Refine and expand query with structural requirements
-
-        Args:
-            query: Original query to refine
-        """
+        """Refine and expand query with structural requirements"""
 
         return self._perform_llm_completion(
             messages=[
@@ -212,7 +194,7 @@ class Extractor:
         extraction_model: Type[BaseModel],
         refined_query: QueryRefinement,
         guide: ExtractionGuide,
-    ) -> List[BaseModel]:
+    ) -> Iterable[BaseModel]:
         """Extract data with enforced structure with retries"""
         # Apply retry decorator dynamically
         retry_decorator = self.create_retry_decorator()
@@ -225,7 +207,7 @@ class Extractor:
         extraction_model: Type[BaseModel],
         refined_query: QueryRefinement,
         guide: ExtractionGuide,
-    ) -> BaseModel:
+    ) -> Iterable[BaseModel]:
         """
         Extract structured data from text using a Pydantic model
 
@@ -298,7 +280,7 @@ class Extractor:
         failed_rows = []
 
         # Initialize extraction columns
-        for field_name in extraction_model.__fields__:
+        for field_name in extraction_model.model_fields:
             result_df[field_name] = None
         result_df["extraction_status"] = None
 
@@ -480,7 +462,7 @@ class Extractor:
         return_df: bool = False,
         expand_nested: bool = False,
         file_kwargs: Optional[Dict] = None,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ):
         """
         Extract structured data from file or DataFrame
 
@@ -493,7 +475,7 @@ class Extractor:
 
         Returns:
             Tuple containing:
-                - DataFrame with extracted data
+                - List of extracted data (if return_df=False) or DataFrame with extracted data (if return_df=True)
                 - DataFrame with failed extractions
         """
         # Handle input data
@@ -622,6 +604,9 @@ class Extractor:
             config: Extraction configuration
             max_threads: Maximum number of concurrent threads
             batch_size: Size of processing batches
+            max_retries: Maximum number of retries for extraction
+            min_wait: Minimum seconds to wait between retries
+            max_wait: Maximum seconds to wait between retries
             **litellm_kwargs: Additional kwargs for litellm (e.g., api_base, organization)
         """
         import instructor
