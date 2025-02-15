@@ -510,6 +510,8 @@ class Extractor:
         self,
         data: Union[str, Path, pd.DataFrame],
         query: str,
+        return_df: bool = False,
+        expand_nested: bool = False,
         file_kwargs: Optional[Dict] = None,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -518,6 +520,8 @@ class Extractor:
         Args:
             data: Path to input file or pandas DataFrame
             query: Natural language query describing what to extract
+            return_df: Whether to return the extracted DataFrame or a list of dictionaries (default: False)
+            expand_nested: Whether to expand nested structures in the result (default: False, only for `return_df=True`)
             file_kwargs: Optional kwargs for file reading (used only if data is a path)
 
         Returns:
@@ -534,7 +538,9 @@ class Extractor:
                 df = await asyncio.to_thread(FileReader.read_file, data, **file_kwargs)
 
             # Process data in thread pool
-            return await asyncio.to_thread(self._process_data, df, query)
+            return await asyncio.to_thread(
+                self._process_data, df, query, return_df, expand_nested
+            )
 
         except Exception as e:
             raise ExtractionError(f"Async extraction failed: {str(e)}")
