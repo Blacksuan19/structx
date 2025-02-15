@@ -12,7 +12,7 @@ from structx.core.models import (
 )
 from structx.extraction.extractor import Extractor
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __all__ = [
     "Extractor",
     "ExtractionConfig",
