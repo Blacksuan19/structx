@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 TYPE_ALIASES = {
     "string": "str",
     "integer": "int",
+    "numeric": "float",
     "number": "float",
     "boolean": "bool",
     "array": "List",
