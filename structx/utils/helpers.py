@@ -23,7 +23,7 @@ def handle_errors(
         log_result: Whether to log function result
     """
 
-    def decorator(func: Callable):
+    def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             try:
