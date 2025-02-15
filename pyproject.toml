@@ -32,6 +32,7 @@ dependencies = [
     "loguru",
     "omegaconf",
     "litellm",
+    "tenacity",
 ]
 
 [project.optional-dependencies]

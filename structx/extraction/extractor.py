@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +9,14 @@ import pandas as pd
 from instructor import Instructor
 from loguru import logger
 from pydantic import BaseModel
+from tenacity import (
+    after_log,
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 from tqdm import tqdm
 
 from structx.core.config import DictStrAny, ExtractionConfig
@@ -34,6 +43,9 @@ class Extractor:
         config (Optional[Union[Dict, str, Path, ExtractionConfig]]): Configuration for extraction steps
         max_threads (int): Maximum number of concurrent threads
         batch_size (int): Size of batches for processing
+        max_retries (int): Maximum number of retries for extraction
+        min_wait (int): Minimum seconds to wait between retries
+        max_wait (int): Maximum seconds to wait between retries
     """
 
     def __init__(
@@ -43,12 +55,18 @@ class Extractor:
         config: Optional[Union[Dict, str, Path, ExtractionConfig]] = None,
         max_threads: int = 10,
         batch_size: int = 100,
+        max_retries: int = 3,  # Add retry configuration
+        min_wait: int = 1,  # Minimum seconds to wait between retries
+        max_wait: int = 10,  # Maximum seconds to wait between retries
     ):
         """Initialize extractor"""
         self.client = client
         self.model_name = model_name
         self.max_threads = max_threads
         self.batch_size = batch_size
+        self.max_retries = max_retries
+        self.min_wait = min_wait
+        self.max_wait = max_wait
 
         if not config:
             self.config = ExtractionConfig()
@@ -172,8 +190,35 @@ class Extractor:
             config=self.config.refinement,
         )
 
-    @handle_errors(error_message="Data extraction failed", error_type=ExtractionError)
+    def create_retry_decorator(self):
+        """Create retry decorator with instance parameters"""
+        return retry(
+            stop=stop_after_attempt(self.max_retries),
+            wait=wait_exponential(
+                multiplier=self.min_wait, min=self.min_wait, max=self.max_wait
+            ),
+            retry=retry_if_exception_type(ExtractionError),
+            before_sleep=before_sleep_log(logger, logging.DEBUG),
+            after=after_log(logger, logging.DEBUG),
+        )
+
+    @handle_errors(
+        "Data extraction failed after all retries", error_type=ExtractionError
+    )
     def _extract_with_model(
+        self,
+        text: str,
+        extraction_model: Type[BaseModel],
+        refined_query: QueryRefinement,
+        guide: ExtractionGuide,
+    ) -> List[BaseModel]:
+        """Extract data with enforced structure with retries"""
+        # Apply retry decorator dynamically
+        retry_decorator = self.create_retry_decorator()
+        extract_with_retry = retry_decorator(self._extract_without_retry)
+        return extract_with_retry(text, extraction_model, refined_query, guide)
+
+    def _extract_without_retry(
         self,
         text: str,
         extraction_model: Type[BaseModel],
