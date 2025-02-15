@@ -602,6 +602,9 @@ class Extractor:
         config: Optional[Union[Dict, str]] = None,
         max_threads: int = 10,
         batch_size: int = 100,
+        max_retries: int = 3,
+        min_wait: int = 1,
+        max_wait: int = 10,
         **litellm_kwargs: Any,
     ) -> "Extractor":
         """
@@ -636,4 +639,7 @@ class Extractor:
             config=config,
             max_threads=max_threads,
             batch_size=batch_size,
+            max_retries=max_retries,
+            min_wait=min_wait,
+            max_wait=max_wait,
         )
