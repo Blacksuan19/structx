@@ -28,60 +28,55 @@ extractor = Extractor.from_litellm(
 # Example 1: Extract incident timing
 print("\nExample 1: Extracting incident timing")
 print("-" * 50)
+q1 = "extract the main incident date and time, and any additional timestamps with their significance"
 
-results1, failed1 = extractor.extract(
-    df,
-    "extract the main incident date and time, and any additional timestamps with their significance",
-)
 
+results1, failed1 = extractor.extract(df, q1)
 
 print("\nResults:")
+print(q1)
 print(json.dumps([item.model_dump() for item in results1], indent=2, default=str))
 
 
 # Example 2: Extract technical details
 print("\nExample 2: Extracting technical details")
 print("-" * 50)
-
-results2, failed2 = extractor.extract(
-    df,
-    """
+q2 = """
     extract incident information including:
     - system component affected
     - issue type
     - severity
     - resolution steps
-    """,
-)
+    """
+
+
+results2, failed2 = extractor.extract(df, q2)
 
 print("\nResults:")
+print(q2)
 print(json.dumps([item.model_dump() for item in results2], indent=2, default=str))
 
 # Example 3: Complex nested extraction
 print("\nExample 3: Complex nested extraction")
 print("-" * 50)
-
-results3, failed3 = extractor.extract(
-    df,
-    """
+q3 = """
     extract structured information where:
     - each incident has a system component and timestamp
     - actions have timing and outcome
     - metrics include before and after values if available
-    """,
-)
+    """
+results3, failed3 = extractor.extract(df, q3)
 
 print("\nResults:")
+print(q3)
 print(json.dumps([item.model_dump() for item in results3], indent=2, default=str))
 
 # Example 4: Preview schema
 print("\nExample 4: Preview generated schema")
 print("-" * 50)
-
-schema = extractor.get_schema(
-    query="extract system component, issue details, and resolution steps",
-    sample_text=df["Description"].iloc[0],
-)
+q4 = "extract system component, issue details, and resolution steps"
+schema = extractor.get_schema(query=q4, sample_text=df["Description"].iloc[0])
 
 print("\nGenerated Schema:")
-print(json.dumps(schema, indent=2, default=str))
+print(q4)
+print(schema)

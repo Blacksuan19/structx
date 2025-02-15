@@ -1,0 +1,576 @@
+
+Example 1: Extracting incident timing
+--------------------------------------------------
+
+Results:
+extract the main incident date and time, and any additional timestamps with their significance
+[
+  {
+    "main_incident_datetime": "2024-01-15 00:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-01-15 14:30:00",
+        "significance": "Alert triggered due to high CPU usage."
+      },
+      {
+        "timestamp": "2024-01-16 08:00:00",
+        "significance": "Patch applied to resolve memory leak."
+      },
+      {
+        "timestamp": "2024-01-16 09:15:00",
+        "significance": "Resolution confirmed after patch application."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-05 00:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-05 09:00:00",
+        "significance": "Cache invalidation errors occurred."
+      },
+      {
+        "timestamp": "2024-02-05 14:00:00",
+        "significance": "Slow query responses were reported."
+      },
+      {
+        "timestamp": "2024-02-05 09:30:00",
+        "significance": "Cache system was restarted."
+      },
+      {
+        "timestamp": "2024-02-05 15:00:00",
+        "significance": "Query optimization was implemented."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-01-20 03:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-01-20 04:30:00",
+        "significance": "Emergency cleanup performed due to insufficient storage space."
+      },
+      {
+        "timestamp": "2024-01-20 05:45:00",
+        "significance": "Backup reattempted successfully after cleanup."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-01 10:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-01 10:15:00",
+        "significance": "Initial diagnosis identified router misconfiguration."
+      },
+      {
+        "timestamp": "2024-02-01 10:30:00",
+        "significance": "Applied fix for the router misconfiguration."
+      },
+      {
+        "timestamp": "2024-02-01 10:45:00",
+        "significance": "Confirmed full restoration of network connectivity."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-10 09:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-10 09:15:00",
+        "significance": "Detected unexpected API behavior through monitoring."
+      },
+      {
+        "timestamp": "2024-02-10 09:20:00",
+        "significance": "Immediate rollback initiated."
+      },
+      {
+        "timestamp": "2024-02-10 11:00:00",
+        "significance": "Root cause analysis completed."
+      }
+    ]
+  }
+]
+
+Example 2: Extracting technical details
+--------------------------------------------------
+
+Results:
+
+    extract incident information including:
+    - system component affected
+    - issue type
+    - severity
+    - resolution steps
+    
+[
+  {
+    "system_component_affected": "Database",
+    "issue_type": "Backup Failure",
+    "severity": "Critical",
+    "resolution_steps": [
+      {
+        "step": "Emergency cleanup performed to free up storage space."
+      },
+      {
+        "step": "Backup reattempted successfully after cleanup."
+      },
+      {
+        "step": "Added monitoring alert for storage capacity."
+      }
+    ]
+  },
+  {
+    "system_component_affected": "3 application servers",
+    "issue_type": "Network connectivity drops",
+    "severity": "High",
+    "resolution_steps": [
+      {
+        "step": "Initial diagnosis identified router misconfiguration."
+      },
+      {
+        "step": "Applied fix."
+      },
+      {
+        "step": "Confirmed full restoration."
+      }
+    ]
+  },
+  {
+    "system_component_affected": "Cache System",
+    "issue_type": "Cache Invalidation Error",
+    "severity": "High",
+    "resolution_steps": [
+      {
+        "step": "Cache system restarted at 09:30"
+      },
+      {
+        "step": "Both issues resolved by EOD"
+      }
+    ]
+  },
+  {
+    "system_component_affected": "Database",
+    "issue_type": "Slow Query Response",
+    "severity": "Medium",
+    "resolution_steps": [
+      {
+        "step": "Query optimization implemented at 15:00"
+      },
+      {
+        "step": "Both issues resolved by EOD"
+      }
+    ]
+  },
+  {
+    "system_component_affected": "server-01",
+    "issue_type": "high CPU usage",
+    "severity": "high",
+    "resolution_steps": [
+      {
+        "step": "Investigated the high CPU usage."
+      },
+      {
+        "step": "Identified memory leak in application A."
+      },
+      {
+        "step": "Applied patch to resolve memory leak."
+      },
+      {
+        "step": "Confirmed resolution of the issue."
+      }
+    ]
+  },
+  {
+    "system_component_affected": "API",
+    "issue_type": "Unexpected Behavior",
+    "severity": "High",
+    "resolution_steps": [
+      {
+        "step": "Rollback initiated"
+      },
+      {
+        "step": "Root cause analysis completed"
+      },
+      {
+        "step": "New update scheduled with additional testing"
+      }
+    ]
+  }
+]
+
+Example 3: Complex nested extraction
+--------------------------------------------------
+
+Results:
+
+    extract structured information where:
+    - each incident has a system component and timestamp
+    - actions have timing and outcome
+    - metrics include before and after values if available
+    
+[
+  {
+    "incident": {
+      "system_component": "3 application servers",
+      "timestamp": "2024-02-01T10:00:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-02-01T10:30:00",
+      "outcome": "Full restoration confirmed at 10:45"
+    },
+    "metric": {
+      "before_value": 0.0,
+      "after_value": 1.0
+    }
+  },
+  {
+    "incident": {
+      "system_component": "API",
+      "timestamp": "2024-02-10T09:15:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-02-10T09:20:00",
+      "outcome": "Rollback initiated"
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "API",
+      "timestamp": "2024-02-10T09:15:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-02-10T11:00:00",
+      "outcome": "Root cause analysis completed"
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "server-01",
+      "timestamp": "2024-01-15T14:30:00",
+      "cpu_usage": 92.0,
+      "alert_triggered_at": "2024-01-15T14:30:00",
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-01-16T08:00:00",
+      "outcome": "confirmed resolution at 09:15"
+    },
+    "metric": {
+      "before_value": 92.0,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "server-01",
+      "timestamp": "2024-01-16T08:00:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-01-16T09:15:00",
+      "outcome": "resolution confirmed"
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "Database",
+      "timestamp": "2024-01-20T03:00:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-01-20T04:30:00",
+      "outcome": "Emergency cleanup performed."
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "Database",
+      "timestamp": "2024-01-20T03:00:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-01-20T05:45:00",
+      "outcome": "Backup reattempted successfully."
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "Database",
+      "timestamp": "2024-01-20T03:00:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-01-20T04:30:00",
+      "outcome": "Added monitoring alert for storage capacity."
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "Cache System",
+      "timestamp": "2024-02-05T09:00:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-02-05T09:30:00",
+      "outcome": "Cache system restarted."
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  },
+  {
+    "incident": {
+      "system_component": "Database",
+      "timestamp": "2024-02-05T14:00:00",
+      "cpu_usage": null,
+      "alert_triggered_at": null,
+      "investigation_details": null
+    },
+    "action": {
+      "timing": "2024-02-05T15:00:00",
+      "outcome": "Query optimization implemented."
+    },
+    "metric": {
+      "before_value": null,
+      "after_value": null
+    }
+  }
+]
+
+Example 4: Preview generated schema
+--------------------------------------------------
+
+Generated Schema:
+extract system component, issue details, and resolution steps
+{
+  "$defs": {
+    "SystemComponentIssueResolutioncomponent": {
+      "description": "Details about the system component",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of the system component",
+          "title": "Name"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Type of the system component",
+          "title": "Type"
+        },
+        "specifications": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Specifications of the system component",
+          "title": "Specifications"
+        }
+      },
+      "title": "SystemComponentIssueResolutioncomponent",
+      "type": "object"
+    },
+    "SystemComponentIssueResolutionissue": {
+      "description": "Details about the issue related to the system component",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Description of the issue",
+          "title": "Description"
+        },
+        "severity_level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Severity level of the issue",
+          "title": "Severity Level"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Timestamp of when the issue was detected",
+          "format": "ISO 8601",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "title": "SystemComponentIssueResolutionissue",
+      "type": "object"
+    },
+    "SystemComponentIssueResolutionresolution": {
+      "description": "Details about the resolution of the issue",
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Action taken to resolve the issue",
+          "title": "Action"
+        },
+        "responsible_personnel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Personnel responsible for the resolution",
+          "title": "Responsible Personnel"
+        },
+        "time_taken": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Time taken for resolution",
+          "format": "HH:MM",
+          "title": "Time Taken",
+          "type": "string"
+        }
+      },
+      "title": "SystemComponentIssueResolutionresolution",
+      "type": "object"
+    }
+  },
+  "description": "Schema for extracting details about system components, issues, and resolutions.",
+  "properties": {
+    "component": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SystemComponentIssueResolutioncomponent"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Details about the system component"
+    },
+    "issue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SystemComponentIssueResolutionissue"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Details about the issue related to the system component"
+    },
+    "resolution": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SystemComponentIssueResolutionresolution"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Details about the resolution of the issue"
+    }
+  },
+  "title": "SystemComponentIssueResolution",
+  "type": "object"
+}
