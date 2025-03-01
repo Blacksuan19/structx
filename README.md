@@ -17,7 +17,9 @@ nested data structures.
 - 🚀 Multi-threaded processing for large datasets
 - ⚡ Async support
 - 🔧 Configurable extraction using OmegaConf
-- 📁 Support for multiple file formats (CSV, Excel, JSON, Parquet)
+- 📁 Support for multiple file formats (CSV, Excel, JSON, Parquet, PDF, TXT, and
+  more)
+- 📄 Support for unstructured text and document processing
 - 🏗️ Type-safe data models using Pydantic
 - 🎮 Easy-to-use interface
 - 🔌 Support for multiple LLM providers through litellm
@@ -29,16 +31,28 @@ nested data structures.
 pip install structx
 ```
 
+For PDF support:
+
+```bash
+pip install structx[pdf]
+```
+
+For DOCX support:
+
+```bash
+pip install structx[docx]
+```
+
+For all document formats:
+
+```bash
+pip install structx[docs]
+```
+
 ## Quick Start
 
 ```python
 from structx import Extractor
-
-# Example data
-data = [
-    {"description": "System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30."},
-    {"description": "Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space."}
-]
 
 # Initialize extractor using litellm
 extractor = Extractor.from_litellm(
@@ -47,31 +61,37 @@ extractor = Extractor.from_litellm(
     max_retries=3,     # Maximum number of retry attempts
     min_wait=1,        # Minimum seconds to wait between retries
     max_wait=10        # Maximum seconds to wait between retries
-    ...  # other parameters to litellm
 )
 
-# Extract as list of model instances
-results_list, failed = extractor.extract(
+# Extract from structured data
+data = [
+    {"description": "System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30."},
+    {"description": "Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space."}
+]
+
+results, failed = extractor.extract(
     data=data,
     query="extract incident dates and their significance",
     return_df=False
 )
 
-print("\nResults as model instances:")
-for result in results_list:
-    print(result.model_dump_json(indent=2))
+# Extract from raw text
+text = """
+System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30.
+Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space.
+"""
 
-
-# Extract as DataFrame
-# this will expand nested data structures into separate columns
-results_df, failed = extractor.extract(
-    data=data,
-    query="extract incident dates and their significance"
-    return_df=True
+results, failed = extractor.extract(
+    data=text,
+    query="extract incident dates and their significance",
+    return_df=False
 )
 
-print("\nResults as DataFrame:")
-print(results_df)
+# Extract from files
+results, failed = extractor.extract(
+    data="logs.csv",
+    query="extract incident dates and their significance"
+)
 ```
 
 ## Configuration
@@ -122,6 +142,56 @@ extractor = Extractor.from_litellm(
 ```
 
 ## Advanced Usage
+
+### Unstructured Text Support
+
+structx supports extracting structured data from various unstructured sources:
+
+```python
+# From a PDF file
+results, failed = extractor.extract(
+    data="document.pdf",
+    query="extract all dates and events",
+    chunk_size=2000,  # Size of text chunks
+    overlap=200       # Overlap between chunks
+)
+
+# From a text file
+results, failed = extractor.extract(
+    data="notes.txt",
+    query="extract all metrics and their values"
+)
+
+# From a Word document
+results, failed = extractor.extract(
+    data="report.docx",
+    query="extract key findings and recommendations"
+)
+
+# From raw text
+text = """
+System check on 2024-01-15 detected high CPU usage (92%) on server-01.
+Database backup failure occurred on 2024-01-20 03:00.
+"""
+results, failed = extractor.extract(
+    data=text,
+    query="extract incident dates and their significance"
+)
+```
+
+The library automatically:
+
+1. Detects file types and processes accordingly
+2. Chunks large documents for better processing
+3. Maintains source information in the results
+
+#### Chunking Parameters
+
+| Parameter  | Type | Default | Description                    |
+| ---------- | ---- | ------- | ------------------------------ |
+| chunk_size | int  | 1000    | Size of text chunks            |
+| overlap    | int  | 100     | Overlap between chunks         |
+| encoding   | str  | 'utf-8' | Text encoding for file reading |
 
 ### Using Different LLM Providers
 
@@ -243,6 +313,19 @@ retries increases exponentially (but is capped at `max_wait`):
 | min_wait    | int  | 1       | Minimum seconds to wait between retries |
 | max_wait    | int  | 10      | Maximum seconds to wait between retries |
 
+## Supported File Formats
+
+| Format  | Extension             | Requirements                |
+| ------- | --------------------- | --------------------------- |
+| CSV     | .csv                  | Built-in                    |
+| Excel   | .xlsx, .xls           | Built-in                    |
+| JSON    | .json                 | Built-in                    |
+| Parquet | .parquet              | Built-in                    |
+| Feather | .feather              | Built-in                    |
+| Text    | .txt, .md, .log, etc. | Built-in                    |
+| PDF     | .pdf                  | `pip install structx[pdf]`  |
+| Word    | .docx, .doc           | `pip install structx[docx]` |
+
 ## Requirements
 
 - Python 3.8+
@@ -254,6 +337,11 @@ retries increases exponentially (but is capped at `max_wait`):
 - PyYAML
 - tqdm
 - tenacity (for retry mechanism)
+
+Optional dependencies:
+
+- pypdf (for PDF support)
+- python-docx (for DOCX support)
 
 ## Development
 
@@ -269,7 +357,7 @@ python -m venv venv
 source venv/bin/activate
 
 # Install development dependencies
-pip install -e ".[dev]"
+pip install -e ".[dev,docs]"
 ```
 
 ## Contributing
