@@ -24,15 +24,13 @@ classifiers = [
 
 dependencies = [
     "instructor",
-    "openai",
-    "pandas",
-    "pydantic",
-    "PyYAML",
-    "tqdm",
+    "litellm",
     "loguru",
     "omegaconf",
-    "litellm",
+    "pandas",
+    "pydantic",
     "tenacity",
+    "tqdm",
 ]
 
 [project.optional-dependencies]

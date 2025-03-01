@@ -334,7 +334,6 @@ retries increases exponentially (but is capped at `max_wait`):
 - pandas
 - pydantic (v2+)
 - omegaconf
-- PyYAML
 - tqdm
 - tenacity (for retry mechanism)
 
