@@ -204,7 +204,7 @@ import instructor
 from openai import OpenAI, AzureOpenAI
 
 # patch your own client with instructor
-client = instructor.from_openai(AzureOpenAI)
+client = instructor.from_openai(AzureOpenAI())
 extractor = Extractor(
     client=client,
     model_name="gpt-4o-mini",
