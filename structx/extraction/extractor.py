@@ -572,6 +572,46 @@ class Extractor:
             # We got an existing loop, just use it
             return await loop.run_in_executor(None, extract_func)
 
+    @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
+    def extract_batch(
+        self,
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        queries: List[str],
+        return_df: bool = True,
+        expand_nested: bool = False,
+        **kwargs,
+    ) -> Dict[str, Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]]:
+        """
+        Process multiple queries on the same data
+
+        Args:
+            data: Input data (file path, DataFrame, list of dicts, or raw text)
+            queries: List of queries to process
+            return_df: Whether to return DataFrame
+            expand_nested: Whether to flatten nested structures
+            **kwargs: Additional options for file reading
+                - chunk_size: Size of text chunks (for unstructured text)
+                - overlap: Overlap between chunks (for unstructured text)
+                - encoding: Text encoding (for unstructured text)
+
+        Returns:
+            Dictionary mapping queries to their results (extracted data and failed extractions)
+        """
+        results = {}
+
+        for query in queries:
+            logger.info(f"\nProcessing query: {query}")
+            result, failed = self.extract(
+                data=data,
+                query=query,
+                return_df=return_df,
+                expand_nested=expand_nested,
+                **kwargs,
+            )
+            results[query] = (result, failed)
+
+        return results
+
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
     def get_schema(self, query: str, sample_text: str) -> str:
         """
@@ -599,33 +639,6 @@ class Extractor:
 
         # Return schema
         return json.dumps(ExtractionModel.model_json_schema(), indent=2)
-
-    @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
-    def extract_batch(
-        self,
-        data: Union[str, Path, pd.DataFrame],
-        queries: List[str],
-        file_kwargs: Optional[Dict] = None,
-    ) -> Dict[str, Tuple[pd.DataFrame, pd.DataFrame]]:
-        """
-        Process multiple queries on the same data
-
-        Args:
-            data: Path to input file or pandas DataFrame
-            queries: List of queries to process
-            file_kwargs: Optional kwargs for file reading (used only if data is a path)
-
-        Returns:
-            Dictionary mapping queries to their results
-        """
-        results = {}
-
-        for query in queries:
-            logger.info(f"\nProcessing query: {query}")
-            result_df, failed_df = self.extract(data, query, file_kwargs)
-            results[query] = (result_df, failed_df)
-
-        return results
 
     @classmethod
     def from_litellm(
