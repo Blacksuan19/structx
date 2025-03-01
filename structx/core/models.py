@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Optional
 
-from click import Option
 from pydantic import BaseModel, Field
 
 
