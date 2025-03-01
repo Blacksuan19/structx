@@ -615,16 +615,16 @@ class Extractor:
         return results
 
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
-    def get_schema(self, query: str, sample_text: str) -> str:
+    def get_schema(self, query: str, sample_text: str) -> Type[BaseModel]:
         """
-        Get JSON schema for extraction model without performing extraction
+        Get extraction model without performing extraction
 
         Args:
             query: Natural language query
             sample_text: Sample text for context
 
         Returns:
-            JSON schema of the generated model
+            Pydantic model for extraction
         """
         # Refine query
         refined_query = self._refine_query(query)
@@ -640,7 +640,7 @@ class Extractor:
         ExtractionModel = ModelGenerator.from_extraction_request(schema_request)
 
         # Return schema
-        return json.dumps(ExtractionModel.model_json_schema(), indent=2)
+        return ExtractionModel
 
     @classmethod
     def from_litellm(

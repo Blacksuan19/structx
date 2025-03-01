@@ -303,13 +303,36 @@ async def process_data():
 ### Preview Generated Schema
 
 ```python
-# Get the schema without performing extraction
-schema = extractor.get_schema(
-    query="extract metrics and issues",
-    sample_text="Your sample text here"
+# Get the schema model without performing extraction
+ModelClass = extractor.get_schema(
+    query="extract incident dates and their significance",
+    sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
 )
-print(schema)
+
+# Print the JSON schema
+print(ModelClass.model_json_schema(indent=2))
+
+# Explore field information
+for field_name, field in ModelClass.model_fields.items():
+    print(f"Field: {field_name}")
+    print(f"  Type: {field.annotation}")
+    print(f"  Description: {field.description}")
+
+# Create an instance manually
+instance = ModelClass(
+    metric_name="CPU Usage",
+    metric_value=95.2,
+    severity="Critical"
+)
+print(instance.model_dump_json(indent=2))
 ```
+
+This allows you to:
+
+1. Inspect the model structure
+2. Create instances manually
+3. Use the model for validation
+4. Access field metadata
 
 ### Retry Configuration
 
