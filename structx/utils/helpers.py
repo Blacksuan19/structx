@@ -1,6 +1,6 @@
 import json
 from functools import wraps
-from typing import Any, Callable, Dict, Type
+from typing import Any, Dict, Type
 
 from loguru import logger
 from pydantic import BaseModel
@@ -19,8 +19,7 @@ def handle_errors(
     Args:
         error_message: Base message for the error
         error_type: Type of exception to raise
-        log_args: Whether to log function arguments
-        log_result: Whether to log function result
+        default_return: Default return value if an error occurs
     """
 
     def decorator(func):
