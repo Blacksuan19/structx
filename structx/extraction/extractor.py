@@ -4,7 +4,18 @@ import logging
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import pandas as pd
 from instructor import Instructor
@@ -31,7 +42,8 @@ from structx.core.models import (
 from structx.extraction.generator import ModelGenerator
 from structx.utils.file_reader import FileReader
 from structx.utils.helpers import flatten_extracted_data, handle_errors
-from structx.utils.prompts import *  # noqa: F401 sue me
+from structx.utils.prompts import *
+from structx.utils.types import ResponseType  # noqa: F401 sue me
 
 
 class Extractor:
@@ -86,16 +98,18 @@ class Extractor:
     def _perform_llm_completion(
         self,
         messages: List[Dict[str, str]],
-        response_model: Type[BaseModel],
+        response_model: Type[ResponseType],
         config: DictStrAny,
-    ) -> BaseModel:
+    ) -> ResponseType:
         """Perform completion with the given model and prompt"""
-        return self.client.chat.completions.create(
+        result = self.client.chat.completions.create(
             model=self.model_name,
             response_model=response_model,
             messages=messages,
             **config,
         )
+
+        return cast(ResponseType, result)
 
     @handle_errors(error_message="Query analysis failed", error_type=ExtractionError)
     def _analyze_query(self, query: str, available_columns: List[str]) -> QueryAnalysis:
