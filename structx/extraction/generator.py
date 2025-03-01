@@ -95,7 +95,7 @@ class ModelGenerator(ModelMetaclass):
 
         # Check if it's a registered model
         if normalized_type in cls._model_registry:
-            return cls._model_registry[normalized_type]
+            return cls._get_registered_model(normalized_type)
 
         # Check if it's a generic type
         if any(
