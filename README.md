@@ -244,6 +244,50 @@ for result in results:
         print(f"- {metric.name}: {metric.value} {metric.unit}")
 ```
 
+### Multiple Query Processing
+
+You can process multiple queries on the same data in a single call using the
+`extract_queries` method. This is useful when you need to extract different
+types of information from the same text:
+
+```python
+# Define multiple queries
+queries = [
+    "extract all dates and their significance",
+    "extract technical issues and their severity",
+    "extract metrics and their values"
+]
+
+# Process all queries on the same data
+results = extractor.extract_queries(
+    data="incident_report.txt",
+    queries=queries,
+    return_df=True,
+    expand_nested=True
+)
+
+# Access results by query
+for query, (data, failed) in results.items():
+    print(f"\nResults for query: {query}")
+    print(f"Extracted {len(data)} items")
+    print(f"Failed {len(failed)} items")
+    print(data.head())
+```
+
+This approach is more efficient than making separate calls for each query since
+the data is loaded only once. The return value is a dictionary where:
+
+- Keys are the original queries
+- Values are tuples of (extracted_data, failed_rows)
+
+You can use all the same options as with the regular `extract` method,
+including:
+
+- Processing different data types (files, DataFrames, raw text)
+- Returning DataFrames or model instances
+- Expanding nested structures
+- Configuring chunking parameters
+
 ### Async Support
 
 ```python
