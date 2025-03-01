@@ -222,15 +222,7 @@ class Extractor:
         refined_query: QueryRefinement,
         guide: ExtractionGuide,
     ) -> Iterable[BaseModel]:
-        """
-        Extract structured data from text using a Pydantic model
-
-        Args:
-            text (str): Text to extract data from
-            extraction_model (Type[BaseModel]): Pydantic model for data extraction
-            refined_query (QueryRefinement): Refined query object
-            guide (ExtractionGuide): Extraction guide object
-        """
+        """Extract structured data from text using a Pydantic model"""
 
         result = self._perform_llm_completion(
             messages=[
@@ -397,11 +389,7 @@ class Extractor:
         semaphore = threading.Semaphore(self.max_threads)
         threads = []
 
-        with tqdm(
-            total=len(batch),
-            desc=f"Processing batch",
-            unit="row",
-        ) as pbar:
+        with tqdm(total=len(batch), desc=f"Processing batch", unit="row") as pbar:
             # Create and start threads for batch
             for idx, row in batch.iterrows():
                 thread = threading.Thread(
@@ -587,7 +575,7 @@ class Extractor:
             return await loop.run_in_executor(None, extract_func)
 
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
-    def extract_batch(
+    def extract_queries(
         self,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         queries: List[str],
