@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+from typing import Callable, Dict, List, Union
 
 import pandas as pd
 
@@ -7,93 +7,193 @@ from structx.core.exceptions import FileError
 
 
 class FileReader:
-    """Handles reading different file formats with validation"""
+    """Handles reading different file formats"""
 
-    SUPPORTED_EXTENSIONS = {
+    STRUCTURED_EXTENSIONS: Dict[
+        str, Callable[[Union[str, Path], Dict], pd.DataFrame]
+    ] = {
         ".csv": pd.read_csv,
         ".xlsx": pd.read_excel,
         ".xls": pd.read_excel,
         ".json": pd.read_json,
         ".parquet": pd.read_parquet,
+        ".feather": pd.read_feather,
     }
+
+    TEXT_EXTENSIONS: List[str] = [".txt", ".md", ".py", ".html", ".xml", ".log", ".rst"]
+    DOCUMENT_EXTENSIONS: List[str] = [".pdf", ".docx", ".doc"]
 
     @classmethod
     def validate_file(cls, file_path: Union[str, Path]) -> Path:
         """
         Validate file existence and format
-
-        Args:
-            file_path: Path to file
-
-        Returns:
-            Path object of validated file
-
-        Raises:
-            FileError: If file doesn't exist or format is unsupported
         """
         file_path = Path(file_path)
         if not file_path.exists():
             raise FileError(f"File not found: {file_path}")
 
-        if file_path.suffix.lower() not in cls.SUPPORTED_EXTENSIONS:
-            raise FileError(
-                f"Unsupported file format: {file_path.suffix}. "
-                f"Supported formats: {', '.join(cls.SUPPORTED_EXTENSIONS.keys())}"
-            )
-
         return file_path
+
+    @classmethod
+    def is_supported(cls, file_path: Union[str, Path]) -> bool:
+        """Check if file format is supported"""
+        extension = Path(file_path).suffix.lower()
+        return (
+            extension in cls.STRUCTURED_EXTENSIONS
+            or extension in cls.TEXT_EXTENSIONS
+            or extension in cls.DOCUMENT_EXTENSIONS
+        )
 
     @classmethod
     def read_file(cls, file_path: Union[str, Path], **kwargs) -> pd.DataFrame:
         """
-        Read file based on its extension with validation
+        Read file based on its extension
 
         Args:
-            file_path: Path to file
-            **kwargs: Additional arguments for the reader function
+            file_path: Path to input file
+            **kwargs: Additional options for file reading
+                - chunk_size: Size of text chunks (for unstructured text)
+                - overlap: Overlap between chunks (for unstructured text)
+                - encoding: Text encoding (for unstructured text)
 
         Returns:
-            DataFrame containing file contents
-
-        Raises:
-            FileError: If file reading fails
+            DataFrame with file contents
         """
-        try:
-            file_path = cls.validate_file(file_path)
-            reader = cls.SUPPORTED_EXTENSIONS[file_path.suffix.lower()]
+        file_path = cls.validate_file(file_path)
+        extension = file_path.suffix.lower()
 
-            df = reader(file_path, **kwargs)
+        # Handle structured data formats
+        if extension in cls.STRUCTURED_EXTENSIONS:
+            reader = cls.STRUCTURED_EXTENSIONS[extension]
+            return reader(file_path, **kwargs)
 
-            if df.empty:
-                raise FileError(f"File {file_path} is empty")
+        # Handle unstructured text formats
+        elif extension in cls.TEXT_EXTENSIONS:
+            return cls.read_text_file(file_path, **kwargs)
 
-            return df
+        # Handle document formats
+        elif extension in cls.DOCUMENT_EXTENSIONS:
+            if extension == ".pdf":
+                return cls.read_pdf_file(file_path, **kwargs)
+            elif extension in [".docx", ".doc"]:
+                return cls.read_docx_file(file_path, **kwargs)
 
-        except Exception as e:
-            if isinstance(e, FileError):
-                raise
-            raise FileError(f"Error reading file {file_path}: {str(e)}")
+        # Try as text file for unknown extensions
+        else:
+            try:
+                return cls.read_text_file(file_path, **kwargs)
+            except Exception as e:
+                raise FileError(
+                    f"Unsupported file format: {extension}. "
+                    f"Supported formats: "
+                    f"{', '.join(cls.STRUCTURED_EXTENSIONS.keys() + cls.TEXT_EXTENSIONS + cls.DOCUMENT_EXTENSIONS)}"
+                ) from e
 
     @classmethod
-    def get_sample(
-        cls, file_path: Union[str, Path], n: int = 1, **kwargs
-    ) -> pd.DataFrame:
-        """
-        Get sample rows from file with validation
+    def read_text_file(cls, file_path: Union[str, Path], **kwargs) -> pd.DataFrame:
+        """Read text file into DataFrame with chunking"""
+        encoding: str = kwargs.pop("encoding", "utf-8")
+        chunk_size: int = kwargs.pop("chunk_size", 1000)
+        overlap: int = kwargs.pop("overlap", 100)
 
-        Args:
-            file_path: Path to file
-            n: Number of rows to sample
-            **kwargs: Additional arguments for the reader function
+        try:
+            text = file_path.open(encoding=encoding).read()
 
-        Returns:
-            DataFrame containing sampled rows
+            # Split into chunks with overlap
+            chunks = []
+            for i in range(0, len(text), chunk_size - overlap):
+                chunks.append(text[i : i + chunk_size])
 
-        Raises:
-            FileError: If sampling fails
-        """
-        if n < 1:
-            raise FileError("Sample size must be at least 1")
+            # Create DataFrame with chunks and metadata
+            return pd.DataFrame(
+                {
+                    "text": chunks,
+                    "chunk_id": range(len(chunks)),
+                    "source": str(file_path),
+                }
+            )
+        except Exception as e:
+            raise FileError(f"Error reading text file {file_path}: {str(e)}") from e
 
-        kwargs["nrows"] = n
-        return cls.read_file(file_path, **kwargs)
+    @classmethod
+    def read_pdf_file(cls, file_path: Union[str, Path], **kwargs) -> pd.DataFrame:
+        """Read PDF file into DataFrame with chunking"""
+        try:
+            import pypdf  # Import here to avoid dependency if not used
+        except ImportError:
+            raise ImportError(
+                "pypdf package is required for PDF support. "
+                "Install it with: pip install pypdf"
+            )
+
+        chunk_size: int = kwargs.pop("chunk_size", 1000)
+        overlap: int = kwargs.pop("overlap", 100)
+
+        try:
+            # Read PDF
+            pdf = pypdf.PdfReader(file_path)
+
+            chunks = []
+            page_numbers = []
+
+            # Process each page
+            for page_num, page in enumerate(pdf.pages):
+                page_text = page.extract_text() + "\n\n"
+
+                # Split page text into chunks if needed
+                if len(page_text) <= chunk_size:
+                    chunks.append(page_text)
+                    page_numbers.append(page_num + 1)
+                else:
+                    # Split into chunks with overlap
+                    for i in range(0, len(page_text), chunk_size - overlap):
+                        chunks.append(page_text[i : i + chunk_size])
+                        page_numbers.append(page_num + 1)
+
+            # Create DataFrame with chunks and metadata
+            return pd.DataFrame(
+                {
+                    "text": chunks,
+                    "chunk_id": range(len(chunks)),
+                    "page": page_numbers,
+                    "source": str(file_path),
+                    "total_pages": len(pdf.pages),
+                }
+            )
+        except Exception as e:
+            raise FileError(f"Error reading PDF file {file_path}: {str(e)}") from e
+
+    @classmethod
+    def read_docx_file(cls, file_path: Union[str, Path], **kwargs) -> pd.DataFrame:
+        """Read DOCX file into DataFrame with chunking"""
+        try:
+            import docx  # Import here to avoid dependency if not used
+        except ImportError:
+            raise ImportError(
+                "python-docx package is required for DOCX support. "
+                "Install it with: pip install python-docx"
+            )
+
+        chunk_size = kwargs.pop("chunk_size", 1000)
+        overlap = kwargs.pop("overlap", 100)
+
+        try:
+            # Read DOCX
+            doc = docx.Document(file_path)
+            text = "\n\n".join([para.text for para in doc.paragraphs])
+
+            # Split into chunks with overlap
+            chunks = []
+            for i in range(0, len(text), chunk_size - overlap):
+                chunks.append(text[i : i + chunk_size])
+
+            # Create DataFrame with chunks and metadata
+            return pd.DataFrame(
+                {
+                    "text": chunks,
+                    "chunk_id": range(len(chunks)),
+                    "source": str(file_path),
+                }
+            )
+        except Exception as e:
+            raise FileError(f"Error reading DOCX file {file_path}: {str(e)}") from e

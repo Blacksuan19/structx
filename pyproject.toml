@@ -37,7 +37,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["black", "bumpver", "pip-tools", "wheel"]
-
+pdf = ["pypdf"]
+docx = ["python-docx"]
+docs = ["pypdf", "python-docx"]
 
 [tool.bumpver]
 current_version = "0.1.3"

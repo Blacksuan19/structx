@@ -457,75 +457,120 @@ class Extractor:
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract(
         self,
-        data: Union[str, Path, pd.DataFrame],
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         query: str,
         return_df: bool = False,
         expand_nested: bool = False,
-        file_kwargs: Optional[Dict] = None,
-    ):
+        **kwargs,
+    ) -> Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]:
         """
-        Extract structured data from file or DataFrame
+        Extract structured data
 
         Args:
-            data: Path to input file or pandas DataFrame
-            query: Natural language query describing what to extract
-            return_df: Whether to return the extracted DataFrame or a list of dictionaries (default: False)
-            expand_nested: Whether to expand nested structures in the result (default: False, only for `return_df=True`)
-            file_kwargs: Optional kwargs for file reading (used only if data is a path)
+            data: Input data (file path, DataFrame, list of dicts, or raw text)
+            query: Natural language query
+            return_df: Whether to return DataFrame
+            expand_nested: Whether to flatten nested structures
+            **kwargs: Additional options for file reading
+                - chunk_size: Size of text chunks (for unstructured text)
+                - overlap: Overlap between chunks (for unstructured text)
+                - encoding: Text encoding (for unstructured text)
 
         Returns:
             Tuple containing:
-                - List of extracted data (if return_df=False) or DataFrame with extracted data (if return_df=True)
+                - DataFrame or list of model instances with extracted data
                 - DataFrame with failed extractions
         """
-        # Handle input data
+        # Handle different input types
         if isinstance(data, pd.DataFrame):
             df = data
-        else:
-            file_kwargs = file_kwargs or {}
-            df = FileReader.read_file(data, **file_kwargs)
+        elif isinstance(data, list) and all(isinstance(item, dict) for item in data):
+            # List of dictionaries
+            df = pd.DataFrame(data)
+        elif isinstance(data, (str, Path)) and Path(str(data)).exists():
+            # It's a file path
+            df = FileReader.read_file(data, **kwargs)
+        elif isinstance(data, str):
+            # It's raw text
+            chunk_size: int = kwargs.get("chunk_size", 1000)
+            overlap: int = kwargs.get("overlap", 100)
 
-        # Process data
+            # Split into chunks with overlap
+            chunks = []
+            for i in range(0, len(data), chunk_size - overlap):
+                chunks.append(data[i : i + chunk_size])
+
+            df = pd.DataFrame(
+                {
+                    "text": chunks,
+                    "chunk_id": range(len(chunks)),
+                    "source": "raw_text",
+                }
+            )
+        else:
+            raise ValueError(f"Unsupported data type: {type(data)}")
+
+        # Ensure text column exists for analysis
+        if len(df.columns) == 1 and df.columns[0] != "text":
+            # If there's only one column, rename it to 'text'
+            df = df.rename(columns={df.columns[0]: "text"})
+
+        # Process the data
         return self._process_data(df, query, return_df, expand_nested)
 
     async def extract_async(
         self,
-        data: Union[str, Path, pd.DataFrame],
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         query: str,
         return_df: bool = False,
         expand_nested: bool = False,
-        file_kwargs: Optional[Dict] = None,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        **kwargs,
+    ) -> Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]:
         """
-        Asynchronously extract structured data from file or DataFrame
+        Asynchronously extract structured data
+
+        This is a wrapper around the synchronous extract method that runs it in a thread pool.
 
         Args:
-            data: Path to input file or pandas DataFrame
-            query: Natural language query describing what to extract
-            return_df: Whether to return the extracted DataFrame or a list of dictionaries (default: False)
-            expand_nested: Whether to expand nested structures in the result (default: False, only for `return_df=True`)
-            file_kwargs: Optional kwargs for file reading (used only if data is a path)
+            data: Input data (file path, DataFrame, list of dicts, or raw text)
+            query: Natural language query
+            return_df: Whether to return DataFrame
+            expand_nested: Whether to flatten nested structures
+            **kwargs: Additional options for file reading
 
         Returns:
             Tuple containing:
-                - DataFrame with extracted data
+                - DataFrame or list of model instances with extracted data
                 - DataFrame with failed extractions
         """
+        # Use functools.partial to create a callable with all arguments
+        from functools import partial
+
+        extract_func = partial(
+            self.extract,
+            data=data,
+            query=query,
+            return_df=return_df,
+            expand_nested=expand_nested,
+            **kwargs,
+        )
+
         try:
-            # Handle input data
-            if isinstance(data, pd.DataFrame):
-                df = data
-            else:
-                file_kwargs = file_kwargs or {}
-                df = await asyncio.to_thread(FileReader.read_file, data, **file_kwargs)
+            # Try to get the running loop
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
-            # Process data in thread pool
-            return await asyncio.to_thread(
-                self._process_data, df, query, return_df, expand_nested
-            )
-
-        except Exception as e:
-            raise ExtractionError(f"Async extraction failed: {str(e)}")
+            # Since we created a new loop, we need to run and close it
+            try:
+                return await loop.run_in_executor(None, extract_func)
+            finally:
+                loop.close()
+        else:
+            # We got an existing loop, just use it
+            return await loop.run_in_executor(None, extract_func)
 
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
     def get_schema(self, query: str, sample_text: str) -> str:
