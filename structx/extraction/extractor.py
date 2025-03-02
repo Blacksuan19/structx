@@ -571,7 +571,6 @@ class Extractor:
             model: Optional pre-generated Pydantic model class (if None, a model will be generated)
             return_df: Whether to return DataFrame
             expand_nested: Whether to flatten nested structures
-            return_model: Whether to return the extraction data model
             **kwargs: Additional options for file reading
                 - chunk_size: Size of text chunks (for unstructured text)
                 - overlap: Overlap between chunks (for unstructured text)
