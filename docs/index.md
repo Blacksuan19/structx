@@ -99,5 +99,5 @@ for item in result.data:
 ## License
 
 This project is licensed under the MIT License - see the
-[LICENSE](https://github.com/yourusername/structx/blob/main/LICENSE) file for
+[LICENSE](https://github.com/blacksuan19/structx/blob/master/LICENSE) file for
 details.
