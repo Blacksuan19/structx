@@ -187,7 +187,7 @@ class Extractor:
             config=self.config.refinement,
         )
 
-    def create_retry_decorator(self):
+    def _create_retry_decorator(self):
         """Create retry decorator with instance parameters"""
         return retry(
             stop=stop_after_attempt(self.max_retries),
@@ -211,7 +211,7 @@ class Extractor:
     ) -> Iterable[BaseModel]:
         """Extract data with enforced structure with retries"""
         # Apply retry decorator dynamically
-        retry_decorator = self.create_retry_decorator()
+        retry_decorator = self._create_retry_decorator()
         extract_with_retry = retry_decorator(self._extract_without_retry)
         return extract_with_retry(text, extraction_model, refined_query, guide)
 
