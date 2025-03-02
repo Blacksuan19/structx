@@ -242,29 +242,6 @@ extractor = Extractor.from_litellm(
 for more information on how to use litellm, refer to the
 [litellm documentation](https://docs.litellm.ai/docs/).
 
-### Complex Data Structures
-
-The library automatically handles nested data structures:
-
-```python
-results = extractor.extract(
-    data=data,
-    query="""
-    extract incident information including:
-    - timestamp of incident
-    - type of issue
-    - metrics (if any) with their values
-    - resolution steps taken
-    """,
-)
-
-# Access structured data
-for result in results.data:
-    print(f"Incident Time: {result.timestamp}")
-    for metric in result.metrics:
-        print(f"- {metric.name}: {metric.value} {metric.unit}")
-```
-
 ### Multiple Query Processing
 
 You can process multiple queries on the same data in a single call using the
