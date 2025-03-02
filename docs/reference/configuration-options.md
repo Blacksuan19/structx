@@ -64,12 +64,12 @@ extractor = Extractor.from_litellm(
 )
 ```
 
-### StructXConfig Object
+### ExtractionConfig Object
 
 ```python
-from structx import StructXConfig, StepConfig
+from structx import ExtractionConfig, StepConfig
 
-config = StructXConfig(
+config = ExtractionConfig(
     analysis=StepConfig(
         temperature=0.2,
         top_p=0.1,
@@ -107,13 +107,11 @@ Each step in the extraction process can be configured separately:
 
 ### Common Parameters
 
-| Parameter         | Type  | Default | Description                               |
-| ----------------- | ----- | ------- | ----------------------------------------- |
-| temperature       | float | varies  | Sampling temperature (0.0-1.0)            |
-| top_p             | float | varies  | Nucleus sampling parameter (0.0-1.0)      |
-| max_tokens        | int   | 2000    | Maximum tokens in completion              |
-| presence_penalty  | float | 0.0     | Penalty for token presence (-2.0 to 2.0)  |
-| frequency_penalty | float | 0.0     | Penalty for token frequency (-2.0 to 2.0) |
+| Parameter   | Type  | Default | Description                          |
+| ----------- | ----- | ------- | ------------------------------------ |
+| temperature | float | varies  | Sampling temperature (0.0-1.0)       |
+| top_p       | float | varies  | Nucleus sampling parameter (0.0-1.0) |
+| max_tokens  | int   | 2000    | Maximum tokens in completion         |
 
 ### Default Values
 
