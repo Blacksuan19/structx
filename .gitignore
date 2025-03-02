@@ -40,6 +40,8 @@ htmlcov/
 
 # Documentation
 docs/_build/
+site
+.cache
 
 # Misc
 .DS_Store

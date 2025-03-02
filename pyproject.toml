@@ -38,6 +38,14 @@ dev = ["black", "bumpver", "pip-tools", "wheel"]
 pdf = ["pypdf"]
 docx = ["python-docx"]
 docs = ["pypdf", "python-docx"]
+mkdocs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[markdown]",
+    "mkdocstrings[python]",
+    "mkdocs-git-revision-date-localized-plugin",
+    "mkdocs-material[imaging]",
+]
 
 [tool.bumpver]
 current_version = "0.2.1"
