@@ -244,9 +244,10 @@ for more information on how to use litellm, refer to the
 
 ### Multiple Query Processing
 
-You can process multiple queries on the same data in a single call using the
-`extract_queries` method. This is useful when you need to extract different
-types of information from the same text:
+structx allows processing multiple queries on the same data in a single call
+using the `extract_queries` method. This is useful when you need to extract
+different types of information from the same text without having it all on the
+same model:
 
 ```python
 # Define multiple queries
@@ -276,7 +277,7 @@ This approach is more efficient than making separate calls for each query since
 the data is loaded only once. The return value is a dictionary where:
 
 - Keys are the original queries
-- Values are tuples of (extracted_data, failed_rows)
+- Values are the extraction results
 
 You can use all the same options as with the regular `extract` method,
 including:
@@ -318,8 +319,9 @@ ModelClass = await extractor.get_schema_async(
 
 ### Preview Generated Schema
 
-You can preview the generated schema model without performing extraction. This
-is useful for inspecting the model structure and field information:
+structx supports previewing the generated schema model without performing
+extraction. This is useful for inspecting the model structure and field
+information:
 
 ```python
 # Get the schema model without performing extraction
@@ -336,14 +338,6 @@ for field_name, field in ModelClass.model_fields.items():
     print(f"Field: {field_name}")
     print(f"  Type: {field.annotation}")
     print(f"  Description: {field.description}")
-
-# Create an instance manually
-instance = ModelClass(
-    metric_name="CPU Usage",
-    metric_value=95.2,
-    severity="Critical"
-)
-print(instance.model_dump_json(indent=2))
 ```
 
 This allows you to:
