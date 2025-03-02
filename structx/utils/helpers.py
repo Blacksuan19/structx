@@ -1,11 +1,16 @@
+import functools
 import json
 from functools import wraps
-from typing import Any, Dict, Type
+from typing import Any, Awaitable, Callable, Dict, ParamSpec, Type, TypeVar
 
 from loguru import logger
 from pydantic import BaseModel
 
 from structx.core.exceptions import ExtractionError
+
+# Type variables for parameters and return type
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 def handle_errors(
@@ -88,3 +93,37 @@ def flatten_extracted_data(data: Dict[str, Any], prefix: str = "") -> Dict[str, 
             flattened[new_key] = value
 
     return flattened
+
+
+def async_wrapper(sync_method: Callable[P, R]) -> Callable[P, Awaitable[R]]:
+    """
+    Decorator to create async versions of sync methods with shared docstrings
+
+    Args:
+        sync_method: The synchronous method to wrap
+
+    Returns:
+        Async version of the method with preserved signature
+    """
+    method_name = sync_method.__name__
+
+    @functools.wraps(sync_method)
+    async def async_method(*args: P.args, **kwargs: P.kwargs) -> R:
+        """Asynchronous wrapper"""
+        self = args[0]  # The first argument is 'self'
+        # Use _run_async from the instance
+        return await self._run_async(sync_method, *args, **kwargs)
+
+    # Add a note that this is an async version
+    if sync_method.__doc__:
+        async_method.__doc__ = (
+            f"Asynchronous version of `{method_name}`.\n\n{sync_method.__doc__}"
+        )
+    else:
+        async_method.__doc__ = f"Asynchronous version of `{method_name}`."
+
+    # Rename the method
+    async_method.__name__ = f"{method_name}_async"
+    async_method.__qualname__ = f"{sync_method.__qualname__}_async"
+
+    return async_method

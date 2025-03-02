@@ -42,8 +42,8 @@ from structx.core.models import (
 from structx.extraction.generator import ModelGenerator
 from structx.utils.file_reader import FileReader
 from structx.utils.helpers import flatten_extracted_data, handle_errors
-from structx.utils.prompts import *
-from structx.utils.types import ResponseType  # noqa: F401 sue me
+from structx.utils.prompts import *  # noqa
+from structx.utils.types import ResponseType
 
 
 class Extractor:
@@ -521,42 +521,22 @@ class Extractor:
 
         return df
 
-    async def extract_async(
-        self,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
-        query: str,
-        return_df: bool = False,
-        expand_nested: bool = False,
-        **kwargs,
-    ) -> Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]:
+    async def _run_async(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
         """
-        Asynchronously extract structured data
-
-        This is a wrapper around the synchronous extract method that runs it in a thread pool.
+        Run a function asynchronously in a thread pool
 
         Args:
-            data: Input data (file path, DataFrame, list of dicts, or raw text)
-            query: Natural language query
-            return_df: Whether to return DataFrame
-            expand_nested: Whether to flatten nested structures
-            **kwargs: Additional options for file reading
+            func: Function to run
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
 
         Returns:
-            Tuple containing:
-                - DataFrame or list of model instances with extracted data
-                - DataFrame with failed extractions
+            Result of the function
         """
         # Use functools.partial to create a callable with all arguments
         from functools import partial
 
-        extract_func = partial(
-            self.extract,
-            data=data,
-            query=query,
-            return_df=return_df,
-            expand_nested=expand_nested,
-            **kwargs,
-        )
+        wrapped_func = partial(func, *args, **kwargs)
 
         try:
             # Try to get the running loop
@@ -568,11 +548,13 @@ class Extractor:
 
             # Since we created a new loop, we need to run and close it
             try:
-                return await loop.run_in_executor(None, extract_func)
+                return await loop.run_in_executor(None, wrapped_func)
             finally:
                 loop.close()
         else:
             # We got an existing loop, just use it
+            return await loop.run_in_executor(None, wrapped_func)
+
     @handle_errors(error_message="Extraction failed", error_type=ExtractionError)
     def extract(
         self,
@@ -731,3 +713,11 @@ class Extractor:
             min_wait=min_wait,
             max_wait=max_wait,
         )
+
+
+# add async versions of extraction methods
+from structx.utils.helpers import async_wrapper
+
+Extractor.extract_async = async_wrapper(Extractor.extract)
+Extractor.extract_queries_async = async_wrapper(Extractor.extract_queries)
+Extractor.get_schema_async = async_wrapper(Extractor.get_schema)
