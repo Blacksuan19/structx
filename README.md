@@ -69,29 +69,22 @@ data = [
     {"description": "Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space."}
 ]
 
-results, failed = extractor.extract(
+results = extractor.extract(
     data=data,
     query="extract incident dates and their significance",
     return_df=False
 )
 
-# Extract from raw text
-text = """
-System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30.
-Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space.
-"""
-
-results, failed = extractor.extract(
-    data=text,
-    query="extract incident dates and their significance",
-    return_df=False
-)
+# results object contains, extracted data, failed rows and generated data model
+print(results)
 
 # Extract from files
-results, failed = extractor.extract(
+results = extractor.extract(
     data="logs.csv",
     query="extract incident dates and their significance"
 )
+
+print(results.data)
 ```
 
 ## Configuration
@@ -149,21 +142,15 @@ structx supports extracting structured data from various unstructured sources:
 
 ```python
 # From a PDF file
-results, failed = extractor.extract(
+results = extractor.extract(
     data="document.pdf",
     query="extract all dates and events",
     chunk_size=2000,  # Size of text chunks
     overlap=200       # Overlap between chunks
 )
 
-# From a text file
-results, failed = extractor.extract(
-    data="notes.txt",
-    query="extract all metrics and their values"
-)
-
 # From a Word document
-results, failed = extractor.extract(
+results = extractor.extract(
     data="report.docx",
     query="extract key findings and recommendations"
 )
@@ -173,7 +160,7 @@ text = """
 System check on 2024-01-15 detected high CPU usage (92%) on server-01.
 Database backup failure occurred on 2024-01-20 03:00.
 """
-results, failed = extractor.extract(
+results = extractor.extract(
     data=text,
     query="extract incident dates and their significance"
 )
@@ -193,6 +180,39 @@ The library automatically:
 | overlap    | int  | 100     | Overlap between chunks         |
 | encoding   | str  | 'utf-8' | Text encoding for file reading |
 
+### Using your own Data Models
+
+structx generates Pydantic data models for structured data extraction. However,
+you can also use your own data models:
+
+```python
+from pydantic import BaseModel
+
+class Metric(BaseModel):
+    name: str
+    value: float
+    unit: str
+
+class Incident(BaseModel):
+    timestamp: str
+    issue_type: str
+    metrics: List[Metric]
+    resolution: str
+
+# Extract using custom data model
+results = extractor.extract(
+    data="incident_report.txt",
+    query="extract incident information including:",
+    model=Incident
+)
+
+# Access structured data
+for result in results.data:
+    print(f"Incident Time: {result.timestamp}")
+    for metric in result.metrics:
+        print(f"- {metric.name}: {metric.value} {metric.unit}")
+```
+
 ### Using Different LLM Providers
 
 structx supports multiple LLM providers through litellm. You can easily switch
@@ -202,6 +222,7 @@ required parameters to litellm:
 ```python
 import instructor
 from openai import OpenAI, AzureOpenAI
+import os
 
 # patch your own client with instructor
 client = instructor.from_openai(AzureOpenAI())
@@ -212,9 +233,9 @@ extractor = Extractor(
 
 
 # use litellm
+os.environ["ANTHROPIC_API_KEY"] = "your-anthropic-key"
 extractor = Extractor.from_litellm(
-    model="claude-2",
-    api_key="your-anthropic-key"
+    model="claude-3-5-sonnet",
 )
 ```
 
@@ -226,7 +247,7 @@ for more information on how to use litellm, refer to the
 The library automatically handles nested data structures:
 
 ```python
-results, failed = extractor.extract(
+results = extractor.extract(
     data=data,
     query="""
     extract incident information including:
@@ -238,7 +259,7 @@ results, failed = extractor.extract(
 )
 
 # Access structured data
-for result in results:
+for result in results.data:
     print(f"Incident Time: {result.timestamp}")
     for metric in result.metrics:
         print(f"- {metric.name}: {metric.value} {metric.unit}")
@@ -267,11 +288,11 @@ results = extractor.extract_queries(
 )
 
 # Access results by query
-for query, (data, failed) in results.items():
+for query, result in results.items():
     print(f"\nResults for query: {query}")
-    print(f"Extracted {len(data)} items")
-    print(f"Failed {len(failed)} items")
-    print(data.head())
+    print(f"Extracted {result.success_count} items")
+    print(f"Failed {result.failure_count} items")
+    print(result.data.head())
 ```
 
 This approach is more efficient than making separate calls for each query since
@@ -290,17 +311,38 @@ including:
 
 ### Async Support
 
+structx supports asynchronous workflows using Python's `asyncio` library. for
+each of the extraction methods, you can use the `_async` version to perform the
+extraction asynchronously:
+
 ```python
-async def process_data():
-    results, failed = await extractor.extract_async(
-        data=data,
-        query="extract incident dates and their significance",
-        return_df=False
-    )
-    return results, failed
+# async extraction
+results = await extractor.extract_async(
+    data=data,
+    query="extract incident dates and their significance",
+    return_df=False
+)
+
+# async extraction with multiple queries
+results = await extractor.extract_queries_async(
+    data="incident_report.txt",
+    queries=queries,
+    return_df=True,
+    expand_nested=True
+)
+
+# async schema generation
+ModelClass = await extractor.get_schema_async(
+    query="extract incident dates and their significance",
+    sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
+)
+
 ```
 
 ### Preview Generated Schema
+
+You can preview the generated schema model without performing extraction. This
+is useful for inspecting the model structure and field information:
 
 ```python
 # Get the schema model without performing extraction
@@ -333,6 +375,7 @@ This allows you to:
 2. Create instances manually
 3. Use the model for validation
 4. Access field metadata
+5. use the model for extraction later on
 
 ### Retry Configuration
 
