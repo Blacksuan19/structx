@@ -128,6 +128,8 @@ Generated model: IncidentExtraction
 }
 ```
 
+for more examples refer to the [examples](examples) directory.
+
 ## Configuration
 
 structx uses OmegaConf for flexible configuration management. Configure
