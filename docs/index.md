@@ -53,8 +53,6 @@ interface with powerful capabilities.
 pip install structx
 ```
 
-````
-
 For PDF support:
 
 ```bash
@@ -103,4 +101,3 @@ for item in result.data:
 This project is licensed under the MIT License - see the
 [LICENSE](https://github.com/yourusername/structx/blob/main/LICENSE) file for
 details.
-````
