@@ -287,6 +287,29 @@ including:
 - Expanding nested structures
 - Configuring chunking parameters
 
+### Preview Generated Schema
+
+structx supports previewing the generated schema model without performing
+extraction. This is useful for inspecting the model structure and field
+information:
+
+```python
+# Get the schema model without performing extraction
+ModelClass = extractor.get_schema(
+    query="extract incident dates and their significance",
+    sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
+)
+
+# Print the JSON schema
+print(ModelClass.model_json_schema(indent=2))
+
+# Explore field information
+for field_name, field in ModelClass.model_fields.items():
+    print(f"Field: {field_name}")
+    print(f"  Type: {field.annotation}")
+    print(f"  Description: {field.description}")
+```
+
 ### Async Support
 
 structx supports asynchronous workflows using Python's `asyncio` library. for
@@ -315,29 +338,6 @@ ModelClass = await extractor.get_schema_async(
     sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
 )
 
-```
-
-### Preview Generated Schema
-
-structx supports previewing the generated schema model without performing
-extraction. This is useful for inspecting the model structure and field
-information:
-
-```python
-# Get the schema model without performing extraction
-ModelClass = extractor.get_schema(
-    query="extract incident dates and their significance",
-    sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
-)
-
-# Print the JSON schema
-print(ModelClass.model_json_schema(indent=2))
-
-# Explore field information
-for field_name, field in ModelClass.model_fields.items():
-    print(f"Field: {field_name}")
-    print(f"  Type: {field.annotation}")
-    print(f"  Description: {field.description}")
 ```
 
 This allows you to:
