@@ -36,6 +36,7 @@ from structx.core.exceptions import ConfigurationError, ExtractionError
 from structx.core.models import (
     ExtractionGuide,
     ExtractionRequest,
+    ExtractionResult,
     QueryAnalysis,
     QueryRefinement,
 )
@@ -199,22 +200,6 @@ class Extractor:
             after=after_log(logger, logging.DEBUG),
         )
 
-    @handle_errors(
-        "Data extraction failed after all retries", error_type=ExtractionError
-    )
-    def _extract_with_model(
-        self,
-        text: str,
-        extraction_model: Type[BaseModel],
-        refined_query: QueryRefinement,
-        guide: ExtractionGuide,
-    ) -> Iterable[BaseModel]:
-        """Extract data with enforced structure with retries"""
-        # Apply retry decorator dynamically
-        retry_decorator = self._create_retry_decorator()
-        extract_with_retry = retry_decorator(self._extract_without_retry)
-        return extract_with_retry(text, extraction_model, refined_query, guide)
-
     def _extract_without_retry(
         self,
         text: str,
@@ -244,6 +229,22 @@ class Extractor:
         # Validate result
         validated = [extraction_model.model_validate(item) for item in result]
         return validated
+
+    @handle_errors(
+        "Data extraction failed after all retries", error_type=ExtractionError
+    )
+    def _extract_with_model(
+        self,
+        text: str,
+        extraction_model: Type[BaseModel],
+        refined_query: QueryRefinement,
+        guide: ExtractionGuide,
+    ) -> Iterable[BaseModel]:
+        """Extract data with enforced structure with retries"""
+        # Apply retry decorator dynamically
+        retry_decorator = self._create_retry_decorator()
+        extract_with_retry = retry_decorator(self._extract_without_retry)
+        return extract_with_retry(text, extraction_model, refined_query, guide)
 
     @handle_errors(
         error_message="Failed to initialize extraction", error_type=ExtractionError
@@ -431,11 +432,8 @@ class Extractor:
         query: str,
         return_df: bool,
         expand_nested: bool = False,
-        return_model: bool = False,
         extraction_model: Optional[Type[BaseModel]] = None,
-    ) -> Tuple[
-        Union[pd.DataFrame, List[BaseModel]], pd.DataFrame, Optional[Type[BaseModel]]
-    ]:
+    ) -> ExtractionResult:
         """Process DataFrame with extraction"""
         # Initialize extraction
         if extraction_model:
@@ -475,11 +473,10 @@ class Extractor:
         self._log_extraction_stats(len(df), failed_rows)
 
         # Return results
-        failed_df = pd.DataFrame(failed_rows)
-        return (
-            (result_df if return_df else result_list),
-            failed_df,
-            ExtractionModel if return_model else None,
+        return ExtractionResult(
+            data=result_df if return_df else result_list,
+            failed=pd.DataFrame(failed_rows),
+            model=ExtractionModel,
         )
 
     def _prepare_data(
@@ -563,9 +560,8 @@ class Extractor:
         model: Optional[Type[BaseModel]] = None,
         return_df: bool = False,
         expand_nested: bool = False,
-        return_model: bool = False,
         **kwargs,
-    ) -> Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]:
+    ) -> ExtractionResult:
         """
         Extract structured data from text
 
@@ -582,14 +578,10 @@ class Extractor:
                 - encoding: Text encoding (for unstructured text)
 
         Returns:
-            Tuple containing:
-                - DataFrame or list of model instances with extracted data
-                - DataFrame with failed extractions
+            Extraction result with extracted data, failed rows, and model (if requested)
         """
         df = self._prepare_data(data, **kwargs)
-        return self._process_data(
-            df, query, return_df, expand_nested, return_model, model
-        )
+        return self._process_data(df, query, return_df, expand_nested, model)
 
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract_queries(
@@ -598,9 +590,8 @@ class Extractor:
         queries: List[str],
         return_df: bool = True,
         expand_nested: bool = False,
-        return_model: bool = False,
         **kwargs,
-    ) -> Dict[str, Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]]:
+    ) -> Dict[str, ExtractionResult]:
         """
         Process multiple queries on the same data
 
@@ -621,15 +612,14 @@ class Extractor:
 
         for query in queries:
             logger.info(f"\nProcessing query: {query}")
-            result, failed = self.extract(
+            result = self.extract(
                 data=data,
                 query=query,
                 return_df=return_df,
                 expand_nested=expand_nested,
-                return_model=return_model,
                 **kwargs,
             )
-            results[query] = (result, failed)
+            results[query] = result
 
         return results
 

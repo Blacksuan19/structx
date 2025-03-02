@@ -7,10 +7,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from structx.core.exceptions import ExtractionError
-
-# Type variables for parameters and return type
-P = ParamSpec("P")
-R = TypeVar("R")
+from structx.utils.types import P, R
 
 
 def handle_errors(
