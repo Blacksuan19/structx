@@ -69,22 +69,63 @@ data = [
     {"description": "Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space."}
 ]
 
-results = extractor.extract(
+# Extract data and get ExtractionResult object
+result = extractor.extract(
     data=data,
     query="extract incident dates and their significance",
     return_df=False
 )
 
-# results object contains, extracted data, failed rows and generated data model
-print(results)
+# ExtractionResult contains extracted data, failed rows, and the generated model
+print(f"Extraction successful: {result.success_count} items extracted")
+print(f"Success rate: {result.success_rate:.1f}%")
+
+# Access extracted data (list of model instances)
+for item in result.data:
+    print(f"Date: {item.incident_date}")
+    print(f"Significance: {item.significance}")
+
+# Access the generated model
+print(f"Generated model: {result.model.__name__}")
+print(result.model_json_schema())
 
 # Extract from files
-results = extractor.extract(
+file_result = extractor.extract(
     data="logs.csv",
     query="extract incident dates and their significance"
+    return_df=True
 )
 
-print(results.data)
+# Access as DataFrame
+print(file_result.data.head())
+```
+
+Example output:
+
+```json
+Extraction successful: 2 items extracted
+Success rate: 100.0%
+Date: 2024-01-15
+Significance: High CPU usage (92%) on server-01, alert triggered at 14:30
+Date: 2024-01-20 03:00
+Significance: Database backup failure due to insufficient storage space
+Generated model: IncidentExtraction
+{
+  "title": "IncidentExtraction",
+  "type": "object",
+  "properties": {
+    "incident_date": {
+      "title": "Incident Date",
+      "type": "string",
+      "description": "Date when the incident occurred"
+    },
+    "significance": {
+      "title": "Significance",
+      "type": "string",
+      "description": "Description of the incident and its significance"
+    }
+  }
+}
 ```
 
 ## Configuration
@@ -142,7 +183,7 @@ structx supports extracting structured data from various unstructured sources:
 
 ```python
 # From a PDF file
-results = extractor.extract(
+result = extractor.extract(
     data="document.pdf",
     query="extract all dates and events",
     chunk_size=2000,  # Size of text chunks
@@ -150,7 +191,7 @@ results = extractor.extract(
 )
 
 # From a Word document
-results = extractor.extract(
+result = extractor.extract(
     data="report.docx",
     query="extract key findings and recommendations"
 )
@@ -160,10 +201,13 @@ text = """
 System check on 2024-01-15 detected high CPU usage (92%) on server-01.
 Database backup failure occurred on 2024-01-20 03:00.
 """
-results = extractor.extract(
+result = extractor.extract(
     data=text,
     query="extract incident dates and their significance"
 )
+
+print(f"Extracted {result.success_count} items with {result.failure_count} failures")
+print(f"Success rate: {result.success_rate:.1f}%")
 ```
 
 The library automatically:
@@ -187,6 +231,7 @@ you can also use your own data models:
 
 ```python
 from pydantic import BaseModel
+from typing import List
 
 class Metric(BaseModel):
     name: str
@@ -200,17 +245,26 @@ class Incident(BaseModel):
     resolution: str
 
 # Extract using custom data model
-results = extractor.extract(
+result = extractor.extract(
     data="incident_report.txt",
-    query="extract incident information including:",
+    query="extract incident information including timestamps, issues, and metrics",
     model=Incident
 )
 
 # Access structured data
-for result in results.data:
-    print(f"Incident Time: {result.timestamp}")
-    for metric in result.metrics:
+for item in result.data:
+    print(f"Incident Time: {item.timestamp}")
+    print(f"Issue Type: {item.issue_type}")
+    for metric in item.metrics:
         print(f"- {metric.name}: {metric.value} {metric.unit}")
+    print(f"Resolution: {item.resolution}")
+
+# Reuse the model for another extraction
+new_result = extractor.extract(
+    data="another_report.txt",
+    query="extract incident information",
+    model=result.model  # Reuse the model from previous extraction
+)
 ```
 
 ### Using Different LLM Providers
@@ -271,13 +325,36 @@ for query, result in results.items():
     print(f"Extracted {result.success_count} items")
     print(f"Failed {result.failure_count} items")
     print(result.data.head())
+
+    # Access the model for this query
+    print(f"Model: {result.model.__name__}")
+```
+
+Example output:
+
+```bash
+Results for query: extract all dates and their significance
+Extracted 5 items
+Failed 0 items
+   incident_date                                      significance
+0    2024-01-15  High CPU usage (92%) on server-01, alert at 14:30
+1    2024-01-20  Database backup failure due to insufficient space
+Model: DateExtractionModel
+
+Results for query: extract technical issues and their severity
+Extracted 5 items
+Failed 0 items
+            issue_type severity                               description
+0       CPU Overload     High  CPU usage at 92%, exceeding safe threshold
+1  Backup Failure   Critical  Database backup failed due to storage issue
+Model: IssueExtractionModel
 ```
 
 This approach is more efficient than making separate calls for each query since
 the data is loaded only once. The return value is a dictionary where:
 
 - Keys are the original queries
-- Values are the extraction results
+- Values are the extraction results (ExtractionResult objects)
 
 You can use all the same options as with the regular `extract` method,
 including:
@@ -308,36 +385,20 @@ for field_name, field in ModelClass.model_fields.items():
     print(f"Field: {field_name}")
     print(f"  Type: {field.annotation}")
     print(f"  Description: {field.description}")
-```
 
-### Async Support
-
-structx supports asynchronous workflows using Python's `asyncio` library. for
-each of the extraction methods, you can use the `_async` version to perform the
-extraction asynchronously:
-
-```python
-# async extraction
-results = await extractor.extract_async(
-    data=data,
-    query="extract incident dates and their significance",
-    return_df=False
+# Create an instance manually
+instance = ModelClass(
+    incident_date="2024-02-15",
+    significance="Example manually created instance"
 )
+print(instance.model_dump_json(indent=2))
 
-# async extraction with multiple queries
-results = await extractor.extract_queries_async(
+# Use the model for extraction
+result = extractor.extract(
     data="incident_report.txt",
-    queries=queries,
-    return_df=True,
-    expand_nested=True
-)
-
-# async schema generation
-ModelClass = await extractor.get_schema_async(
     query="extract incident dates and their significance",
-    sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
+    model=ModelClass
 )
-
 ```
 
 This allows you to:
@@ -346,7 +407,46 @@ This allows you to:
 2. Create instances manually
 3. Use the model for validation
 4. Access field metadata
-5. use the model for extraction later on
+5. Use the model for extraction later on
+
+### Async Support
+
+structx supports asynchronous workflows using Python's `asyncio` library. For
+each of the extraction methods, you can use the `_async` version to perform the
+extraction asynchronously:
+
+```python
+import asyncio
+
+async def process_data():
+    # async extraction
+    result = await extractor.extract_async(
+        data=data,
+        query="extract incident dates and their significance",
+        return_df=False
+    )
+
+    print(f"Extracted {result.success_count} items")
+
+    # async extraction with multiple queries
+    query_results = await extractor.extract_queries_async(
+        data="incident_report.txt",
+        queries=queries,
+        return_df=True,
+        expand_nested=True
+    )
+
+    # async schema generation
+    ModelClass = await extractor.get_schema_async(
+        query="extract incident dates and their significance",
+        sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
+    )
+
+    return result, query_results, ModelClass
+
+# Run the async function
+result, query_results, ModelClass = asyncio.run(process_data())
+```
 
 ### Retry Configuration
 
