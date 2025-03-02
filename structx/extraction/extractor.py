@@ -249,9 +249,14 @@ class Extractor:
         error_message="Failed to initialize extraction", error_type=ExtractionError
     )
     def _initialize_extraction(
-        self, df: pd.DataFrame, query: str
-    ) -> Tuple[QueryAnalysis, QueryRefinement, ExtractionGuide, Type[BaseModel]]:
-        """Initialize the extraction process by analyzing query and generating models"""
+        self, df: pd.DataFrame, query: str, generate_model: bool = True
+    ) -> Tuple[
+        QueryAnalysis,
+        QueryRefinement,
+        ExtractionGuide,
+        Optional[Type[BaseModel]],
+    ]:
+        """Initialize the extraction process by analyzing query and generating models if needed"""
         # Analyze query
         query_analysis = self._analyze_query(
             query, available_columns=df.columns.tolist()
@@ -266,6 +271,9 @@ class Extractor:
         # Get sample text and generate guide
         sample_text = df[query_analysis.target_column].iloc[0]
         guide = self._generate_extraction_guide(refined_query)
+
+        if not generate_model:
+            return query_analysis, refined_query, guide
 
         # Generate model
         schema_request = self._generate_extraction_schema(
@@ -418,13 +426,27 @@ class Extractor:
 
     @handle_errors(error_message="Data processing failed", error_type=ExtractionError)
     def _process_data(
-        self, df: pd.DataFrame, query: str, return_df: bool, expand_nested: bool = False
-    ) -> Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]:
+        self,
+        df: pd.DataFrame,
+        query: str,
+        return_df: bool,
+        expand_nested: bool = False,
+        return_model: bool = False,
+        extraction_model: Optional[Type[BaseModel]] = None,
+    ) -> Tuple[
+        Union[pd.DataFrame, List[BaseModel]], pd.DataFrame, Optional[Type[BaseModel]]
+    ]:
         """Process DataFrame with extraction"""
         # Initialize extraction
-        query_analysis, refined_query, guide, ExtractionModel = (
-            self._initialize_extraction(df, query)
-        )
+        if extraction_model:
+            query_analysis, refined_query, guide = self._initialize_extraction(
+                df, query, generate_model=False
+            )
+            ExtractionModel = extraction_model
+        else:
+            query_analysis, refined_query, guide, ExtractionModel = (
+                self._initialize_extraction(df, query, generate_model=True)
+            )
 
         # Initialize results
         result_df, result_list, failed_rows = self._initialize_results(
@@ -454,71 +476,50 @@ class Extractor:
 
         # Return results
         failed_df = pd.DataFrame(failed_rows)
-        return (result_df if return_df else result_list), failed_df
+        return (
+            (result_df if return_df else result_list),
+            failed_df,
+            ExtractionModel if return_model else None,
+        )
 
-    @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
-    def extract(
-        self,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
-        query: str,
-        return_df: bool = False,
-        expand_nested: bool = False,
-        **kwargs,
-    ) -> Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]:
+    def _prepare_data(
+        self, data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]], **kwargs
+    ) -> pd.DataFrame:
         """
-        Extract structured data
+        Convert input data to DataFrame
 
         Args:
             data: Input data (file path, DataFrame, list of dicts, or raw text)
-            query: Natural language query
-            return_df: Whether to return DataFrame
-            expand_nested: Whether to flatten nested structures
             **kwargs: Additional options for file reading
-                - chunk_size: Size of text chunks (for unstructured text)
-                - overlap: Overlap between chunks (for unstructured text)
-                - encoding: Text encoding (for unstructured text)
 
         Returns:
-            Tuple containing:
-                - DataFrame or list of model instances with extracted data
-                - DataFrame with failed extractions
+            DataFrame with data
         """
-        # Handle different input types
         if isinstance(data, pd.DataFrame):
             df = data
         elif isinstance(data, list) and all(isinstance(item, dict) for item in data):
-            # List of dictionaries
             df = pd.DataFrame(data)
         elif isinstance(data, (str, Path)) and Path(str(data)).exists():
-            # It's a file path
             df = FileReader.read_file(data, **kwargs)
         elif isinstance(data, str):
-            # It's raw text
-            chunk_size: int = kwargs.get("chunk_size", 1000)
-            overlap: int = kwargs.get("overlap", 100)
-
-            # Split into chunks with overlap
+            # Raw text
+            chunk_size = kwargs.get("chunk_size", 1000)
+            overlap = kwargs.get("overlap", 100)
             chunks = []
             for i in range(0, len(data), chunk_size - overlap):
                 chunks.append(data[i : i + chunk_size])
 
             df = pd.DataFrame(
-                {
-                    "text": chunks,
-                    "chunk_id": range(len(chunks)),
-                    "source": "raw_text",
-                }
+                {"text": chunks, "chunk_id": range(len(chunks)), "source": "raw_text"}
             )
         else:
             raise ValueError(f"Unsupported data type: {type(data)}")
 
-        # Ensure text column exists for analysis
-        if len(df.columns) == 1 and df.columns[0] != "text":
-            # If there's only one column, rename it to 'text'
-            df = df.rename(columns={df.columns[0]: "text"})
+        # Ensure text column exists
+        if "text" not in df.columns and len(df.columns) == 1:
+            df["text"] = df[df.columns[0]]
 
-        # Process the data
-        return self._process_data(df, query, return_df, expand_nested)
+        return df
 
     async def extract_async(
         self,
@@ -572,7 +573,41 @@ class Extractor:
                 loop.close()
         else:
             # We got an existing loop, just use it
-            return await loop.run_in_executor(None, extract_func)
+    @handle_errors(error_message="Extraction failed", error_type=ExtractionError)
+    def extract(
+        self,
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        query: str,
+        model: Optional[Type[BaseModel]] = None,
+        return_df: bool = False,
+        expand_nested: bool = False,
+        return_model: bool = False,
+        **kwargs,
+    ) -> Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]:
+        """
+        Extract structured data from text
+
+        Args:
+            data: Input data (file path, DataFrame, list of dicts, or raw text)
+            query: Natural language query
+            model: Optional pre-generated Pydantic model class (if None, a model will be generated)
+            return_df: Whether to return DataFrame
+            expand_nested: Whether to flatten nested structures
+            return_model: Whether to return the extraction data model
+            **kwargs: Additional options for file reading
+                - chunk_size: Size of text chunks (for unstructured text)
+                - overlap: Overlap between chunks (for unstructured text)
+                - encoding: Text encoding (for unstructured text)
+
+        Returns:
+            Tuple containing:
+                - DataFrame or list of model instances with extracted data
+                - DataFrame with failed extractions
+        """
+        df = self._prepare_data(data, **kwargs)
+        return self._process_data(
+            df, query, return_df, expand_nested, return_model, model
+        )
 
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract_queries(
@@ -581,6 +616,7 @@ class Extractor:
         queries: List[str],
         return_df: bool = True,
         expand_nested: bool = False,
+        return_model: bool = False,
         **kwargs,
     ) -> Dict[str, Tuple[Union[pd.DataFrame, List[BaseModel]], pd.DataFrame]]:
         """
@@ -608,6 +644,7 @@ class Extractor:
                 query=query,
                 return_df=return_df,
                 expand_nested=expand_nested,
+                return_model=return_model,
                 **kwargs,
             )
             results[query] = (result, failed)
