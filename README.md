@@ -102,7 +102,7 @@ print(file_result.data.head())
 
 Example output:
 
-```json
+```txt
 Extraction successful: 2 items extracted
 Success rate: 100.0%
 Date: 2024-01-15
@@ -110,6 +110,9 @@ Significance: High CPU usage (92%) on server-01, alert triggered at 14:30
 Date: 2024-01-20 03:00
 Significance: Database backup failure due to insufficient storage space
 Generated model: IncidentExtraction
+```
+
+```json
 {
   "title": "IncidentExtraction",
   "type": "object",
