@@ -19,10 +19,10 @@ These formats are supported without additional dependencies:
 
 These formats require additional dependencies:
 
-| Format | Extension   | Dependencies                |
-| ------ | ----------- | --------------------------- |
-| PDF    | .pdf        | `pip install structx[pdf]`  |
-| Word   | .docx, .doc | `pip install structx[docx]` |
+| Format | Extension   | Dependencies                    |
+| ------ | ----------- | ------------------------------- |
+| PDF    | .pdf        | `pip install structx-llm[pdf]`  |
+| Word   | .docx, .doc | `pip install structx-llm[docx]` |
 
 ## Input Types
 

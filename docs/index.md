@@ -50,25 +50,25 @@ interface with powerful capabilities.
 ## Installation
 
 ```bash
-pip install structx
+pip install structx-llm
 ```
 
 For PDF support:
 
 ```bash
-pip install structx[pdf]
+pip install structx-llm[pdf]
 ```
 
 For DOCX support:
 
 ```bash
-pip install structx[docx]
+pip install structx-llm[docx]
 ```
 
 For all document formats:
 
 ```bash
-pip install structx[docs]
+pip install structx-llm[docs]
 ```
 
 ## Quick Example

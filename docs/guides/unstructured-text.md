@@ -5,16 +5,16 @@ sources, including PDF documents, text files, and raw text.
 
 ## Supported File Formats
 
-| Format  | Extension             | Requirements                |
-| ------- | --------------------- | --------------------------- |
-| CSV     | .csv                  | Built-in                    |
-| Excel   | .xlsx, .xls           | Built-in                    |
-| JSON    | .json                 | Built-in                    |
-| Parquet | .parquet              | Built-in                    |
-| Feather | .feather              | Built-in                    |
-| Text    | .txt, .md, .log, etc. | Built-in                    |
-| PDF     | .pdf                  | `pip install structx[pdf]`  |
-| Word    | .docx, .doc           | `pip install structx[docx]` |
+| Format  | Extension             | Requirements                    |
+| ------- | --------------------- | ------------------------------- |
+| CSV     | .csv                  | Built-in                        |
+| Excel   | .xlsx, .xls           | Built-in                        |
+| JSON    | .json                 | Built-in                        |
+| Parquet | .parquet              | Built-in                        |
+| Feather | .feather              | Built-in                        |
+| Text    | .txt, .md, .log, etc. | Built-in                        |
+| PDF     | .pdf                  | `pip install structx-llm[pdf]`  |
+| Word    | .docx, .doc           | `pip install structx-llm[docx]` |
 
 ## Working with Text Files
 
@@ -31,7 +31,7 @@ result = extractor.extract(
 First, install the PDF dependencies:
 
 ```bash
-pip install structx[pdf]
+pip install structx-llm[pdf]
 ```
 
 Then extract data from PDF files:
@@ -48,7 +48,7 @@ result = extractor.extract(
 First, install the DOCX dependencies:
 
 ```bash
-pip install structx[docx]
+pip install structx-llm[docx]
 ```
 
 Then extract data from Word files:
