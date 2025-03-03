@@ -6,7 +6,7 @@ guidelines and instructions for contributing to the project.
 ## Getting Started
 
 1. **Fork the Repository**: Start by forking the
-   [structx repository](https://github.com/yourusername/structx).
+   [structx repository](https://github.com/blacksuan19/structx).
 
 2. **Clone Your Fork**:
 
@@ -41,10 +41,10 @@ We follow the [Black](https://black.readthedocs.io/) code style and use
 
 ```bash
 # Format code
-black structx tests
+black structx
 
 # Sort imports
-isort structx tests
+isort structx
 ```
 
 ### Type Hints
