@@ -88,8 +88,6 @@ plugins:
             heading_level: 2
             docstring_style: "google"
             docstring_section_style: "table"
-  - git-revision-date-localized:
-      enable_creation_date: true
   - social
 
 extra:
