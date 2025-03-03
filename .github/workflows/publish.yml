@@ -16,8 +16,7 @@ jobs:
 
       - name: Install dependecies
         run: |
-          python -m pip install -U pip wheel setuptools build twine 
-          python -m pip install "structx-llm[dev]"
+          python -m pip install -U pip wheel setuptools build twine
 
       - name: Build wheel package
         run: python -m build
