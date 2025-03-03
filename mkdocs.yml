@@ -29,6 +29,8 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Examples: examples.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
   - User Guide:
       - Basic Extraction: guides/basic-extraction.md
       - Custom Models: guides/custom-models.md
@@ -44,8 +46,6 @@ nav:
       - Supported Formats: reference/supported-formats.md
       - Configuration Options: reference/configuration-options.md
       - Error Handling: reference/error-handling.md
-  - Contributing: contributing.md
-  - Changelog: changelog.md
 
 markdown_extensions:
   - pymdownx.highlight:
