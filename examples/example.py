@@ -15,7 +15,7 @@ def main():
     sys.stdout = output
 
     # Start generating the README content
-    print("# structx Examples")
+    print("# Examples")
     print(
         "\nThis document contains examples of using the structx library for structured data extraction."
     )
@@ -234,7 +234,7 @@ Log ID,Description
     sys.stdout = sys.__stdout__
 
     # Write the captured output to README.md
-    with open("examples/README.md", "w") as f:
+    with open("docs/examples.md", "w") as f:
         f.write(output.getvalue())
 
     print(f"Examples README.md has been generated successfully!")

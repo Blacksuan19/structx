@@ -116,5 +116,4 @@ queries = [
 
 - Learn about [Async Operations](async-operations.md) for better performance
 - Explore the [API Reference](../api/extractor.md) for more details
-- Check out the [Examples](../examples/incident-analysis.md) for real-world use
-  cases
+- Check out the [Examples](../examples.md) for real-world use cases

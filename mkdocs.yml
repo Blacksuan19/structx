@@ -28,6 +28,7 @@ edit_uri: ""
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Examples: examples.md
   - User Guide:
       - Basic Extraction: guides/basic-extraction.md
       - Custom Models: guides/custom-models.md
@@ -39,10 +40,6 @@ nav:
       - Models: api/models.md
       - Configuration: api/configuration.md
       - Utilities: api/utilities.md
-  - Examples:
-      - Incident Analysis: examples/incident-analysis.md
-      - Document Processing: examples/document-processing.md
-      - Metrics Extraction: examples/metrics-extraction.md
   - Reference:
       - Supported Formats: reference/supported-formats.md
       - Configuration Options: reference/configuration-options.md

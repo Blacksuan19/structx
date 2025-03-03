@@ -109,4 +109,4 @@ results = asyncio.run(process_multiple_queries())
 
 - Check out the [API Reference](../api/extractor.md) for detailed method
   signatures
-- Explore [Examples](../examples/incident-analysis.md) for real-world use cases
+- Explore [Examples](../examples.md) for real-world use cases
