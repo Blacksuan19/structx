@@ -80,25 +80,17 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          selection:
+          options:
             inherited_members: true
-            members:
-              - "!^_[^_].*" # First hide all private methods (for ordering)
-              - ".*" # Then include all methods (for complete docs)
             filters:
-              - "!^__repr__$"
-              - "!^__init__$"
-              - "!^__.*__$" # Exclude all dunder methods (optional)
+              - "!^_[^_]" # show all non private members
+              - "!^__.*__$" # Exclude all dunder methods
           rendering:
             show_source: true
             show_if_no_docstring: false
             heading_level: 2
-            members_order: "alphabetical" # Options: "alphabetical" or "source"
             docstring_style: "google"
             docstring_section_style: "table"
-            order:
-              - "public"
-              - "private"
   - git-revision-date-localized:
       enable_creation_date: true
   - social
