@@ -23,7 +23,7 @@ theme:
 
 repo_url: https://github.com/blacksuan19/structx
 repo_name: Blacksuan19/structx
-edit_uri: edit/master/docs/
+edit_uri: ""
 
 nav:
   - Home: index.md
