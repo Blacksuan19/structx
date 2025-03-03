@@ -480,7 +480,7 @@ class Extractor:
         )
 
     def _prepare_data(
-        self, data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]], **kwargs
+        self, data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]], **kwargs: Any
     ) -> pd.DataFrame:
         """
         Convert input data to DataFrame
@@ -560,7 +560,7 @@ class Extractor:
         model: Optional[Type[BaseModel]] = None,
         return_df: bool = False,
         expand_nested: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> ExtractionResult:
         """
         Extract structured data from text
@@ -582,6 +582,30 @@ class Extractor:
         df = self._prepare_data(data, **kwargs)
         return self._process_data(df, query, return_df, expand_nested, model)
 
+    async def extract_async(
+        self,
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        query: str,
+        return_df: bool = False,
+        expand_nested: bool = False,
+        **kwargs: Any,
+    ) -> ExtractionResult:
+        """
+        Asynchronous version of `extract`.
+
+        Extract structured data from text
+
+        Args:
+            data: Input data (file path, DataFrame, list of dicts, or raw text)
+            query: Natural language query
+            return_df: Whether to return DataFrame
+            expand_nested: Whether to flatten nested structures
+            **kwargs: Additional options for file reading
+
+        Returns:
+            ExtractionResult containing extracted data, failed rows, and the model
+        """
+
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract_queries(
         self,
@@ -589,7 +613,7 @@ class Extractor:
         queries: List[str],
         return_df: bool = True,
         expand_nested: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> Dict[str, ExtractionResult]:
         """
         Process multiple queries on the same data
@@ -622,6 +646,30 @@ class Extractor:
 
         return results
 
+    async def extract_queries_async(
+        self,
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        queries: List[str],
+        return_df: bool = False,
+        expand_nested: bool = False,
+        **kwargs: Any,
+    ) -> Dict[str, ExtractionResult]:
+        """
+        Asynchronous version of `extract_queries`.
+
+        Extract structured data using multiple queries
+
+        Args:
+            data: Input data
+            queries: List of queries
+            return_df: Whether to return DataFrame
+            expand_nested: Whether to flatten nested structures
+            **kwargs: Additional options
+
+        Returns:
+            Dictionary mapping queries to ExtractionResult objects
+        """
+
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
     def get_schema(self, query: str, sample_text: str) -> Type[BaseModel]:
         """
@@ -649,6 +697,20 @@ class Extractor:
 
         # Return schema
         return ExtractionModel
+
+    async def get_schema_async(self, query: str, sample_text: str) -> Type[BaseModel]:
+        """
+        Asynchronous version of `get_schema`.
+
+        Get the dynamically generated model for extraction
+
+        Args:
+            query: Natural language query
+            sample_text: Sample text for context
+
+        Returns:
+            Dynamically generated Pydantic model class
+        """
 
     @classmethod
     def from_litellm(

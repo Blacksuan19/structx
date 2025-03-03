@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
 
 import pandas as pd
 
@@ -45,7 +45,7 @@ class FileReader:
         )
 
     @classmethod
-    def read_file(cls, file_path: Union[str, Path], **kwargs) -> pd.DataFrame:
+    def read_file(cls, file_path: Union[str, Path], **kwargs: Any) -> pd.DataFrame:
         """
         Read file based on its extension
 
