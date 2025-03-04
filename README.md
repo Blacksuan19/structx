@@ -24,10 +24,10 @@ nested data structures.
 ## Installation
 
 ```bash
-pip install structx
+pip install structx-llm
 
 # For document processing support:
-pip install structx[docs]
+pip install structx-llm[docs]
 ```
 
 ## Quick Start

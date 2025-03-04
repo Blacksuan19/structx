@@ -8,20 +8,20 @@ extraction.
 Install the core package:
 
 ```bash
-pip install structx
+pip install structx-llm
 ```
 
 For additional document format support:
 
 ```bash
 # For PDF support
-pip install structx[pdf]
+pip install structx-llm[pdf]
 
 # For DOCX support
-pip install structx[docx]
+pip install structx-llm[docx]
 
 # For all document formats
-pip install structx[docs]
+pip install structx-llm[docs]
 ```
 
 ## Basic Usage
