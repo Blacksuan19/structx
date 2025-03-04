@@ -3,7 +3,7 @@
 Type-safe structured data extraction from text using LLMs.
 
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg?style=for-the-badge)](https://structx.blacksuan19.dev "Documentation")
-[![PyPI](https://img.shields.io/badge/PyPi-0.2.12-blue?style=for-the-badge)](https://pypi.org/project/structx "Package")
+[![PyPI](https://img.shields.io/badge/PyPi-0.2.12-blue?style=for-the-badge)](https://pypi.org/project/structx-llm "Package")
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
 `structx` is a powerful Python library for extracting structured data from text
@@ -25,8 +25,11 @@ nested data structures.
 
 ```bash
 pip install structx-llm
+```
 
-# For document processing support:
+### For document processing support
+
+```bash
 pip install structx-llm[docs]
 ```
 
