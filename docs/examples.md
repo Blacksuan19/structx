@@ -1,9 +1,8 @@
 # Examples
 
-This document contains examples of using the structx library for structured data
-extraction.
+This document contains examples of using the structx library for structured data extraction.
 
-_Generated on: 2025-03-02 15:04:10_
+*Generated on: 2025-03-05 12:56:41*
 
 ## Setup
 
@@ -22,14 +21,13 @@ extractor = Extractor.from_litellm(
 ## Sample Data
 
 The following examples use this synthetic dataset of technical system logs:
-
-| Log ID | Description                                                                                                                                                                                                                                 |
-| -----: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|      1 | System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30. Investigation revealed memory leak in application A. Patch applied on 2024-01-16 08:00, confirmed resolution at 09:15.                     |
-|      2 | Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space. Emergency cleanup performed at 04:30. Backup reattempted successfully at 05:45. Added monitoring alert for storage capacity.                  |
-|      3 | Network connectivity drops reported on 2024-02-01 between 10:00-10:45. Affected: 3 application servers. Initial diagnosis at 10:15 identified router misconfiguration. Applied fix at 10:30, confirmed full restoration at 10:45.           |
-|      4 | Two distinct performance issues on 2024-02-05: cache invalidation errors at 09:00 and slow query responses at 14:00. Cache system restarted at 09:30. Query optimization implemented at 15:00. Both issues resolved by EOD.                 |
-|      5 | Configuration update on 2024-02-10 09:00 caused unexpected API behavior. Detected through monitoring at 09:15. Immediate rollback initiated at 09:20. Root cause analysis completed at 11:00. New update scheduled with additional testing. |
+|   Log ID | Description                                                                                                                                                                                                                                 |
+|---------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|        1 | System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30. Investigation revealed memory leak in application A. Patch applied on 2024-01-16 08:00, confirmed resolution at 09:15.                     |
+|        2 | Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space. Emergency cleanup performed at 04:30. Backup reattempted successfully at 05:45. Added monitoring alert for storage capacity.                  |
+|        3 | Network connectivity drops reported on 2024-02-01 between 10:00-10:45. Affected: 3 application servers. Initial diagnosis at 10:15 identified router misconfiguration. Applied fix at 10:30, confirmed full restoration at 10:45.           |
+|        4 | Two distinct performance issues on 2024-02-05: cache invalidation errors at 09:00 and slow query responses at 14:00. Cache system restarted at 09:30. Query optimization implemented at 15:00. Both issues resolved by EOD.                 |
+|        5 | Configuration update on 2024-02-10 09:00 caused unexpected API behavior. Detected through monitoring at 09:15. Immediate rollback initiated at 09:20. Root cause analysis completed at 11:00. New update scheduled with additional testing. |
 
 ```python
 # Create DataFrame from CSV data
@@ -38,8 +36,7 @@ df = pd.read_csv(StringIO(sample_data))
 
 ## Example 1: Extracting Incident Timing
 
-In this example, we extract the main incident date and time, along with any
-additional timestamps and their significance.
+In this example, we extract the main incident date and time, along with any additional timestamps and their significance.
 
 ```python
 # Extract incident timing
@@ -62,7 +59,7 @@ Extracted 5 items with 100.0% success rate
     "additional_timestamps": [
       {
         "timestamp": "2024-01-16 08:00:00",
-        "significance": "Patch applied to resolve the memory leak."
+        "significance": "Patch applied to resolve memory leak in application A."
       },
       {
         "timestamp": "2024-01-16 09:15:00",
@@ -75,45 +72,15 @@ Extracted 5 items with 100.0% success rate
     "additional_timestamps": [
       {
         "timestamp": "2024-02-05 09:30:00",
-        "significance": "Cache system restarted to address cache invalidation errors."
+        "significance": "Cache system restarted."
       },
       {
         "timestamp": "2024-02-05 14:00:00",
-        "significance": "Slow query responses identified as a performance issue."
+        "significance": "Slow query responses issue."
       },
       {
         "timestamp": "2024-02-05 15:00:00",
-        "significance": "Query optimization implemented to improve performance."
-      }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-02-10 09:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-02-10 09:15:00",
-        "significance": "Detected unexpected API behavior through monitoring."
-      },
-      {
-        "timestamp": "2024-02-10 09:20:00",
-        "significance": "Immediate rollback initiated."
-      },
-      {
-        "timestamp": "2024-02-10 11:00:00",
-        "significance": "Root cause analysis completed."
-      }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-01-20 03:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-01-20 04:30:00",
-        "significance": "Emergency cleanup performed to address insufficient storage space."
-      },
-      {
-        "timestamp": "2024-01-20 05:45:00",
-        "significance": "Backup reattempted successfully after cleanup."
+        "significance": "Query optimization implemented."
       }
     ]
   },
@@ -133,6 +100,40 @@ Extracted 5 items with 100.0% success rate
         "significance": "Confirmed full restoration of network connectivity."
       }
     ]
+  },
+  {
+    "main_incident_datetime": "2024-01-20 03:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-01-20 04:30:00",
+        "significance": "Emergency cleanup performed due to insufficient storage space."
+      },
+      {
+        "timestamp": "2024-01-20 05:45:00",
+        "significance": "Backup reattempted successfully after cleanup."
+      },
+      {
+        "timestamp": "2024-01-20 05:45:00",
+        "significance": "Added monitoring alert for storage capacity."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-10 09:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-10 09:15:00",
+        "significance": "Detected unexpected API behavior through monitoring."
+      },
+      {
+        "timestamp": "2024-02-10 09:20:00",
+        "significance": "Immediate rollback initiated."
+      },
+      {
+        "timestamp": "2024-02-10 11:00:00",
+        "significance": "Root cause analysis completed."
+      }
+    ]
   }
 ]
 ```
@@ -145,7 +146,7 @@ Model name: `IncidentTimestampExtraction`
 {
   "$defs": {
     "IncidentTimestampExtractionadditional_timestampsItem": {
-      "description": "A list of additional timestamps related to the incident, each with its significance.",
+      "description": "A collection of additional timestamps related to the incident, each with its significance.",
       "properties": {
         "timestamp": {
           "anyOf": [
@@ -158,7 +159,7 @@ Model name: `IncidentTimestampExtraction`
             }
           ],
           "default": null,
-          "description": "The additional timestamp.",
+          "description": "The specific date and time of the additional event.",
           "title": "Timestamp"
         },
         "significance": {
@@ -171,7 +172,7 @@ Model name: `IncidentTimestampExtraction`
             }
           ],
           "default": null,
-          "description": "Description of the significance of the additional timestamp.",
+          "description": "A description of the significance of the additional timestamp.",
           "title": "Significance"
         }
       },
@@ -208,7 +209,7 @@ Model name: `IncidentTimestampExtraction`
         }
       ],
       "default": null,
-      "description": "A list of additional timestamps related to the incident, each with its significance.",
+      "description": "A collection of additional timestamps related to the incident, each with its significance.",
       "title": "Additional Timestamps"
     }
   },
@@ -219,8 +220,7 @@ Model name: `IncidentTimestampExtraction`
 
 ## Example 2: Extracting Technical Details
 
-This example extracts more complex information about each incident including
-system components, issue types, severity, and resolution steps.
+This example extracts more complex information about each incident including system components, issue types, severity, and resolution steps.
 
 ```python
 # Extract technical details
@@ -236,19 +236,85 @@ result = extractor.extract(df, query)
 
 ### Results:
 
-Extracted 3 items with 60.0% success rate
+Extracted 5 items with 100.0% success rate
 
 ```json
 [
   {
     "incidents": [
       {
+        "system_component_affected": "server-01",
+        "issue_type": "high CPU usage",
+        "severity": "High",
+        "resolution_steps": [
+          [
+            "Investigated the issue"
+          ],
+          [
+            "Identified memory leak in application A"
+          ],
+          [
+            "Applied patch"
+          ],
+          [
+            "Confirmed resolution"
+          ]
+        ]
+      },
+      {
+        "system_component_affected": "application A",
+        "issue_type": "memory leak",
+        "severity": "High",
+        "resolution_steps": [
+          [
+            "Investigated the issue"
+          ],
+          [
+            "Identified memory leak"
+          ],
+          [
+            "Applied patch"
+          ],
+          [
+            "Confirmed resolution"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
         "system_component_affected": "Cache System",
         "issue_type": "Cache Invalidation Error",
-        "severity": "high",
+        "severity": "High",
         "resolution_steps": [
-          ["Restarted cache system at 09:30"],
-          ["Resolved by end of day"]
+          [
+            "Restarted cache system at 09:30"
+          ],
+          [
+            "Resolved by end of day"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component_affected": "application servers",
+        "issue_type": "Network connectivity drops",
+        "severity": "High",
+        "resolution_steps": [
+          [
+            "Initial diagnosis at 10:15 identified router misconfiguration"
+          ],
+          [
+            "Applied fix at 10:30"
+          ],
+          [
+            "Confirmed full restoration at 10:45"
+          ]
         ]
       }
     ]
@@ -258,12 +324,20 @@ Extracted 3 items with 60.0% success rate
       {
         "system_component_affected": "API",
         "issue_type": "Unexpected Behavior",
-        "severity": "high",
+        "severity": "High",
         "resolution_steps": [
-          ["Detected through monitoring at 09:15"],
-          ["Immediate rollback initiated at 09:20"],
-          ["Root cause analysis completed at 11:00"],
-          ["New update scheduled with additional testing"]
+          [
+            "Rollback initiated",
+            "2024-02-10T09:20:00"
+          ],
+          [
+            "Root cause analysis completed",
+            "2024-02-10T11:00:00"
+          ],
+          [
+            "New update scheduled with additional testing",
+            "2024-02-10T11:00:00"
+          ]
         ]
       }
     ]
@@ -273,12 +347,20 @@ Extracted 3 items with 60.0% success rate
       {
         "system_component_affected": "Database",
         "issue_type": "Backup Failure",
-        "severity": "high",
+        "severity": "High",
         "resolution_steps": [
-          ["Identified root cause: insufficient storage space."],
-          ["Performed emergency cleanup."],
-          ["Reattempted backup."],
-          ["Added monitoring alert for storage capacity."]
+          [
+            "Identified root cause: insufficient storage space"
+          ],
+          [
+            "Performed emergency cleanup"
+          ],
+          [
+            "Reattempted backup successfully"
+          ],
+          [
+            "Added monitoring alert for storage capacity"
+          ]
         ]
       }
     ]
@@ -288,8 +370,7 @@ Extracted 3 items with 60.0% success rate
 
 ## Example 3: Complex Nested Extraction
 
-This example demonstrates extracting complex nested structures with
-relationships between different elements.
+This example demonstrates extracting complex nested structures with relationships between different elements.
 
 ```python
 # Extract complex nested structures
@@ -304,33 +385,107 @@ result = extractor.extract(df, query)
 
 ### Results:
 
-Extracted 7 items with 100.0% success rate
+Extracted 6 items with 100.0% success rate
 
 ```json
 [
   {
     "incidents": [
       {
-        "system_component": "server-01",
-        "timestamp": "2024-01-15 14:30:00",
-        "cpu_usage": 92.0,
-        "memory_leak_application": "application A"
+        "system_component": "Cache System",
+        "timestamp": "2024-02-05 09:00:00"
       }
-    ]
-  },
-  {
-    "incidents": null
-  },
-  {
-    "incidents": null
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-05 09:30:00",
+        "outcome": "Cache system restarted"
+      }
+    ],
+    "metrics": []
   },
   {
     "incidents": [
       {
         "system_component": "Database",
-        "timestamp": "2024-01-20 03:00:00",
-        "cpu_usage": null,
-        "memory_leak_application": null
+        "timestamp": "2024-02-05 14:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-05 15:00:00",
+        "outcome": "Query optimization implemented"
+      }
+    ],
+    "metrics": []
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "application servers",
+        "timestamp": "2024-02-01 10:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-01 10:15:00",
+        "outcome": "initial diagnosis identified router misconfiguration"
+      },
+      {
+        "timing": "2024-02-01 10:30:00",
+        "outcome": "applied fix"
+      },
+      {
+        "timing": "2024-02-01 10:45:00",
+        "outcome": "confirmed full restoration"
+      }
+    ],
+    "metrics": []
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "Database",
+        "timestamp": "2024-01-20 03:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-01-20 04:30:00",
+        "outcome": "Emergency cleanup performed"
+      },
+      {
+        "timing": "2024-01-20 05:45:00",
+        "outcome": "Backup reattempted successfully"
+      },
+      {
+        "timing": "2024-01-20 05:45:00",
+        "outcome": "Added monitoring alert for storage capacity"
+      }
+    ],
+    "metrics": []
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "server-01",
+        "timestamp": "2024-01-15 14:30:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-01-16 08:00:00",
+        "outcome": "Patch applied"
+      },
+      {
+        "timing": "2024-01-16 09:15:00",
+        "outcome": "Confirmed resolution"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": 92.0,
+        "after_value": null
       }
     ]
   },
@@ -338,51 +493,27 @@ Extracted 7 items with 100.0% success rate
     "incidents": [
       {
         "system_component": "API",
-        "timestamp": "2024-02-10 09:15:00",
-        "cpu_usage": null,
-        "memory_leak_application": null
+        "timestamp": "2024-02-10 09:15:00"
       }
-    ]
-  },
-  {
-    "incidents": [
+    ],
+    "actions": [
       {
-        "system_component": "application server",
-        "timestamp": "2024-02-01 10:00:00",
-        "cpu_usage": null,
-        "memory_leak_application": null
+        "timing": "2024-02-10 09:20:00",
+        "outcome": "Rollback initiated"
       },
       {
-        "system_component": "router",
-        "timestamp": "2024-02-01 10:15:00",
-        "cpu_usage": null,
-        "memory_leak_application": null
+        "timing": "2024-02-10 11:00:00",
+        "outcome": "Root cause analysis completed"
       }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "Cache System",
-        "timestamp": "2024-02-05 09:00:00",
-        "cpu_usage": null,
-        "memory_leak_application": null
-      },
-      {
-        "system_component": "Database",
-        "timestamp": "2024-02-05 14:00:00",
-        "cpu_usage": null,
-        "memory_leak_application": null
-      }
-    ]
+    ],
+    "metrics": []
   }
 ]
 ```
 
 ## Example 4: Preview Generated Schema
 
-This example shows how to generate and inspect a schema without performing
-extraction.
+This example shows how to generate and inspect a schema without performing extraction.
 
 ```python
 # Generate schema without extraction
@@ -408,7 +539,7 @@ print(instance.model_dump_json())
 {
   "$defs": {
     "SystemComponentIssueResolutionissue": {
-      "description": "Details about the issue related to the system component",
+      "description": "Details about the issue encountered.",
       "properties": {
         "description": {
           "anyOf": [
@@ -420,7 +551,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Description of the issue",
+          "description": "Description of the issue.",
           "title": "Description"
         },
         "severity_level": {
@@ -433,7 +564,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Severity level of the issue",
+          "description": "Severity level of the issue (e.g., low, medium, high).",
           "title": "Severity Level"
         },
         "timestamp": {
@@ -446,17 +577,15 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Timestamp of when the issue was detected",
-          "format": "ISO 8601",
-          "title": "Timestamp",
-          "type": "string"
+          "description": "Timestamp of when the issue was detected, in ISO 8601 format.",
+          "title": "Timestamp"
         }
       },
       "title": "SystemComponentIssueResolutionissue",
       "type": "object"
     },
     "SystemComponentIssueResolutionresolution": {
-      "description": "Details about the resolution of the issue",
+      "description": "Details about the resolution of the issue.",
       "properties": {
         "action_taken": {
           "anyOf": [
@@ -468,7 +597,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Action taken to resolve the issue",
+          "description": "Action taken to resolve the issue.",
           "title": "Action Taken"
         },
         "responsible_personnel": {
@@ -481,7 +610,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Personnel responsible for the resolution",
+          "description": "Personnel responsible for the resolution.",
           "title": "Responsible Personnel"
         },
         "time_taken": {
@@ -494,17 +623,15 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Time taken for resolution",
-          "format": "HH:MM",
-          "title": "Time Taken",
-          "type": "string"
+          "description": "Time taken for resolution, in a standard format (e.g., HH:MM).",
+          "title": "Time Taken"
         }
       },
       "title": "SystemComponentIssueResolutionresolution",
       "type": "object"
     },
     "SystemComponentIssueResolutionsystem_component": {
-      "description": "Details about the system component",
+      "description": "Details about the system component.",
       "properties": {
         "name": {
           "anyOf": [
@@ -516,7 +643,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Name of the system component",
+          "description": "Name of the system component.",
           "title": "Name"
         },
         "type": {
@@ -529,7 +656,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Type of the system component",
+          "description": "Type of the system component.",
           "title": "Type"
         },
         "specifications": {
@@ -542,7 +669,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Specifications of the system component",
+          "description": "Specifications of the system component.",
           "title": "Specifications"
         }
       },
@@ -562,7 +689,7 @@ print(instance.model_dump_json())
         }
       ],
       "default": null,
-      "description": "Details about the system component"
+      "description": "Details about the system component."
     },
     "issue": {
       "anyOf": [
@@ -574,7 +701,7 @@ print(instance.model_dump_json())
         }
       ],
       "default": null,
-      "description": "Details about the issue related to the system component"
+      "description": "Details about the issue encountered."
     },
     "resolution": {
       "anyOf": [
@@ -586,7 +713,7 @@ print(instance.model_dump_json())
         }
       ],
       "default": null,
-      "description": "Details about the resolution of the issue"
+      "description": "Details about the resolution of the issue."
     }
   },
   "title": "SystemComponentIssueResolution",
