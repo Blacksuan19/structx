@@ -46,23 +46,6 @@ def handle_errors(
     return decorator
 
 
-def log_model_schema(model: BaseModel) -> None:
-    """
-    Log Pydantic model schema
-
-    Args:
-        model: Pydantic model
-    """
-    try:
-
-        schema = model.model_json_schema()
-        model_name = model.__class__.__name__
-        logger.debug(f"{model_name} schema: {json.dumps(schema, indent=2)}")
-    except Exception as e:
-        model_name = model.__class__.__name__
-        logger.warning(f"Error logging {model_name} schema: {e}")
-
-
 def flatten_extracted_data(data: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
     """
     Flatten nested structures for DataFrame storage

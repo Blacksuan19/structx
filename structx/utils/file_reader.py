@@ -35,16 +35,6 @@ class FileReader:
         return file_path
 
     @classmethod
-    def is_supported(cls, file_path: Union[str, Path]) -> bool:
-        """Check if file format is supported"""
-        extension = Path(file_path).suffix.lower()
-        return (
-            extension in cls.STRUCTURED_EXTENSIONS
-            or extension in cls.TEXT_EXTENSIONS
-            or extension in cls.DOCUMENT_EXTENSIONS
-        )
-
-    @classmethod
     def read_file(cls, file_path: Union[str, Path], **kwargs: Any) -> pd.DataFrame:
         """
         Read file based on its extension

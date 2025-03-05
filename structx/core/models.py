@@ -66,7 +66,6 @@ class ExtractionRequest(BaseModel):
     model_name: str = Field(description="Name for generated model")
     model_description: str = Field(description="Description of model purpose")
     fields: List[ModelField] = Field(description="Fields to extract")
-    extraction_strategy: str = Field(description="Strategy for extraction")
 
 
 @dataclass
