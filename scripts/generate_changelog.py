@@ -64,12 +64,6 @@ def process_changelog(file_path=Path("docs/changelog.md")):
         header_match = re.search(r"^(.*?)(?=## \[\d+\.\d+\.\d+\])", content, re.DOTALL)
         header = header_match.group(1) if header_match else ""
 
-        # Extract unreleased section
-        unreleased_match = re.search(
-            r"(## \[Unreleased\].*?)(?=## \[|\Z)", content, re.DOTALL
-        )
-        unreleased = unreleased_match.group(1) if unreleased_match else ""
-
         # Extract all version blocks
         version_pattern = r"## \[(\d+\.\d+\.\d+)\](?:\(.*?\))? - (\d{4}-\d{2}-\d{2})\n\n(.*?)(?=## \[|\Z)"
         versions = re.findall(version_pattern, content, re.DOTALL)
@@ -87,10 +81,6 @@ def process_changelog(file_path=Path("docs/changelog.md")):
 
         # Build the new changelog content
         new_content = header
-
-        # Add unreleased section if it exists (only once)
-        if unreleased and "## [Unreleased]" not in new_content:
-            new_content += unreleased
 
         # Sort dates in reverse chronological order
         for date_str in sorted(date_groups.keys(), reverse=True):
