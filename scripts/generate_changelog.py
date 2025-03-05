@@ -43,9 +43,20 @@ def run_auto_changelog(file_path: Path = Path("docs/changelog.md")):
         sys.exit(1)
 
 
-def process_changelog(file_path: Path = Path("docs/changelog.md")):
-    """Process the changelog to remove empty releases and group by date"""
+def process_changelog(file_path=Path("docs/changelog.md")):
+    """
+    Process the changelog to remove empty releases and group by date
+
+    Args:
+        file_path: Path to the changelog file (default: docs/changelog.md)
+    """
     try:
+        # Convert to Path object if string was passed
+        file_path = Path(file_path)
+
+        # Ensure the directory exists
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
         # Read the changelog file
         content = file_path.read_text()
 
@@ -70,17 +81,9 @@ def process_changelog(file_path: Path = Path("docs/changelog.md")):
             has_commits = bool(re.search(r"- .+`[a-f0-9]+`", changes))
 
             if has_commits:
-                # Fix formatting in commit messages
-                fixed_changes = changes
-
-                # Replace ### at the beginning of commit messages
-                fixed_changes = re.sub(r"- ### ", r"- ", fixed_changes)
-
-                # Replace other instances of ### in commit messages
-                fixed_changes = re.sub(r" ### ", r" ", fixed_changes)
-
-                # Add to date group
-                date_groups[date_str].append((version, fixed_changes.strip()))
+                # Extract all commit lines
+                commit_lines = re.findall(r"- .+`[a-f0-9]+`.*", changes)
+                date_groups[date_str].append((version, commit_lines))
 
         # Build the new changelog content
         new_content = header
@@ -91,22 +94,84 @@ def process_changelog(file_path: Path = Path("docs/changelog.md")):
 
         # Sort dates in reverse chronological order
         for date_str in sorted(date_groups.keys(), reverse=True):
-            versions = date_groups[date_str]
+            versions_data = date_groups[date_str]
 
             # Add date header
             new_content += f"## {date_str}\n\n"
 
-            # Add each version under this date
-            for version, changes in versions:
-                # Extract the compare URL if it exists
-                compare_url_match = re.search(
-                    r"\[" + re.escape(version) + r"\]\((.*?)\)", content
-                )
-                compare_url = (
-                    f"]({compare_url_match.group(1)})" if compare_url_match else "]"
+            # Sort versions in descending order
+            sorted_versions = sorted(
+                versions_data,
+                key=lambda x: [int(p) for p in x[0].split(".")],
+                reverse=True,
+            )
+
+            # Get the highest and lowest versions for this date
+            highest_version = sorted_versions[0][0]
+            lowest_version = sorted_versions[-1][0]
+
+            # Create a version range header if there are multiple versions
+            if highest_version != lowest_version:
+                # Order should be lowest to highest for the range display
+                version_header = f"### [{lowest_version} - {highest_version}]"
+
+                # Find the version before the lowest version for the compare URL
+                # First, extract all versions from the content
+                all_versions = re.findall(r"## \[(\d+\.\d+\.\d+)\]", content)
+                all_versions = sorted(
+                    all_versions, key=lambda v: [int(p) for p in v.split(".")]
                 )
 
-                new_content += f"### [{version}{compare_url}\n\n{changes}\n\n"
+                # Find the version before the lowest version in this group
+                try:
+                    lowest_version_index = all_versions.index(lowest_version)
+                    if lowest_version_index > 0:
+                        version_before_lowest = all_versions[lowest_version_index - 1]
+                        compare_url = f"(https://github.com/Blacksuan19/structx/compare/{version_before_lowest}...{highest_version})"
+                        version_header += compare_url
+                except (ValueError, IndexError):
+                    # Fallback if we can't determine the previous version
+                    pass
+            else:
+                # Just one version for this day
+                version_header = f"### [{highest_version}]"
+
+                # Try to get compare URL
+                compare_match = re.search(
+                    r"\[" + re.escape(highest_version) + r"\]\((.*?)\)", content
+                )
+
+                if compare_match:
+                    compare_url = compare_match.group(1)
+                    version_header += f"({compare_url})"
+
+            new_content += f"{version_header}\n\n"
+
+            # Collect all commit lines from all versions for this date
+            all_commits = []
+            for _, commits in sorted_versions:
+                for commit in commits:
+                    # Fix formatting in commit messages
+                    fixed_commit = re.sub(r"### ", "", commit)
+                    all_commits.append(fixed_commit)
+
+            # Remove duplicates while preserving order
+            unique_commits = []
+            seen = set()
+            for commit in all_commits:
+                # Use hash part as key to identify duplicates
+                hash_match = re.search(r"`([a-f0-9]+)`", commit)
+                if hash_match:
+                    hash_key = hash_match.group(1)
+                    if hash_key not in seen:
+                        seen.add(hash_key)
+                        unique_commits.append(commit)
+                else:
+                    # No hash found, keep it anyway
+                    unique_commits.append(commit)
+
+            # Add all unique commits
+            new_content += "\n".join(unique_commits) + "\n\n"
 
         # Write the updated changelog
         file_path.write_text(new_content)
