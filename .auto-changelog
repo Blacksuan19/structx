@@ -7,23 +7,5 @@
     "breakingPattern": "BREAKING CHANGE:",
     "ignoreCommitPattern": "^chore\\(release\\)|^docs\\(changelog\\)|Bump version|^Merge|^Release|^Version|^v\\d+\\.\\d+\\.\\d+",
     "issuePattern": "#(\\d+)",
-    "issueUrl": "https://github.com/yourusername/structx/issues/{id}",
-    "replaceText": {
-        "fix:": "### Bug Fixes",
-        "fix\\(.*\\):": "### Bug Fixes",
-        "feat:": "### Features",
-        "feat\\(.*\\):": "### Features",
-        "refactor:": "### Code Refactoring",
-        "refactor\\(.*\\):": "### Code Refactoring",
-        "perf:": "### Performance Improvements",
-        "perf\\(.*\\):": "### Performance Improvements",
-        "test:": "### Tests",
-        "test\\(.*\\):": "### Tests",
-        "build:": "### Build System",
-        "build\\(.*\\):": "### Build System",
-        "ci:": "### Continuous Integration",
-        "ci\\(.*\\):": "### Continuous Integration",
-        "chore:": "### Chores",
-        "chore\\(.*\\):": "### Chores"
-    }
+    "issueUrl": "https://github.com/blacksuan19/structx/issues/{id}"
 }
