@@ -16,6 +16,7 @@ nested data structures.
 - 🔄 Dynamic model generation from natural language queries
 - 🎯 Automatic schema inference and generation
 - 📊 Support for complex nested data structures
+- 🔄 Model refinement with natural language instructions
 - 📄 Support for unstructured text and document processing
 - 🚀 Multi-threaded processing with async support
 - 🔌 Support for multiple LLM providers through litellm
