@@ -20,7 +20,7 @@ from typing import (
 import pandas as pd
 from instructor import Instructor
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, create_model
 from tenacity import (
     after_log,
     before_sleep_log,
@@ -37,12 +37,17 @@ from structx.core.models import (
     ExtractionGuide,
     ExtractionRequest,
     ExtractionResult,
+    ModelField,
     QueryAnalysis,
     QueryRefinement,
 )
 from structx.extraction.generator import ModelGenerator
 from structx.utils.file_reader import FileReader
-from structx.utils.helpers import flatten_extracted_data, handle_errors
+from structx.utils.helpers import (
+    convert_pydantic_v1_to_v2,
+    flatten_extracted_data,
+    handle_errors,
+)
 from structx.utils.prompts import *  # noqa
 from structx.utils.types import ResponseType
 
@@ -711,6 +716,83 @@ class Extractor:
         Returns:
             Dynamically generated Pydantic model class
         """
+
+    def refine_data_model(
+        self,
+        model: Type[BaseModel],
+        instructions: str,
+        model_name: Optional[str] = None,
+    ) -> Type[BaseModel]:
+        """
+        Refine an existing data model based on natural language instructions
+
+        Args:
+            model: Existing Pydantic model to refine
+            instructions: Natural language instructions for refinement
+            model_name: Optional name for the refined model (defaults to original name with 'Refined' prefix)
+
+        Returns:
+            A new refined Pydantic model
+        """
+
+        # Default model name if not provided
+        if model_name is None:
+            model_name = f"Refined{model.__name__}"
+
+        # Get the schema of the existing model
+        model_schema = model.model_json_schema()
+        model_schema_str = json.dumps(model_schema, indent=2)
+
+        # Generate schema for the refined model directly
+        extraction_request = self.client.chat.completions.create(
+            model=self.model_name,
+            response_model=ExtractionRequest,
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a data model refinement specialist.
+                Analyze the existing model and the refinement instructions to create
+                a new model that incorporates the requested changes.""",
+                },
+                {
+                    "role": "user",
+                    "content": f"""
+                Refine the following data model according to these instructions:
+                
+                EXISTING MODEL SCHEMA:
+                ```json
+                {model_schema_str}
+                ```
+            REFINEMENT INSTRUCTIONS:
+            {instructions}
+            
+            Create a new model schema that:
+            1. Keeps fields from the original model that shouldn't change
+            2. Modifies fields as specified in the instructions
+            3. Adds new fields as specified in the instructions
+            4. Removes fields as specified in the instructions
+            
+            Important: Use Pydantic v2 syntax:
+            - Use `pattern` instead of `regex` for string patterns
+            - Use `model_config` instead of `Config` class
+            - Use `Field` with validation parameters instead of validators where possible
+            
+            Include a clear description of the model and each field.
+        """,
+                },
+            ],
+            **self.config.refinement,
+        )
+
+        # Set the model name if specified
+        if model_name:
+            extraction_request.model_name = model_name
+
+        refined_model = ModelGenerator.from_extraction_request(
+            convert_pydantic_v1_to_v2(extraction_request)
+        )
+
+        return refined_model
 
     @classmethod
     def from_litellm(
