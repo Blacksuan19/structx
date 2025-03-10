@@ -37,6 +37,7 @@ nav:
       - Unstructured Text: guides/unstructured-text.md
       - Multiple Queries: guides/multiple-queries.md
       - Async Operations: guides/async-operations.md
+      - Model Refinements: guides/model-refinement.md
   - API Reference:
       - Extractor: api/extractor.md
       - Models: api/models.md
