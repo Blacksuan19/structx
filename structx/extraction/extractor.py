@@ -20,7 +20,7 @@ from typing import (
 import pandas as pd
 from instructor import Instructor
 from loguru import logger
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel
 from tenacity import (
     after_log,
     before_sleep_log,
@@ -37,7 +37,6 @@ from structx.core.models import (
     ExtractionGuide,
     ExtractionRequest,
     ExtractionResult,
-    ModelField,
     QueryAnalysis,
     QueryRefinement,
 )
