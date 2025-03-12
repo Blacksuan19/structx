@@ -26,7 +26,6 @@ jobs:
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
-          title: "Latest Stable Build"
           files: |
             dist/*.whl
 
