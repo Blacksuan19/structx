@@ -90,7 +90,7 @@ if usage.cached_tokens:
 
 ## Usage with Model Refinement
 
-Token usage is also tracked when refining data models:
+Token usage is also tracked when [refining data models](model-refinement.md)
 
 ```python
 from pydantic import BaseModel

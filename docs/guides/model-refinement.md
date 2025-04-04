@@ -239,3 +239,14 @@ natural language. It's particularly useful for:
 By combining the flexibility of natural language with the type safety of
 Pydantic, `refine_data_model` helps you maintain robust data models with minimal
 effort.
+
+## Next Steps
+
+- Learn about [Token Usage Tracking](../guides/token-tracking.md) to monitor
+  resource consumption
+- Explore [Custom Models](../guides/custom-models.md) for creating specialized
+  extraction models
+- Try [Multiple Queries](../guides/multiple-queries.md) for complex extraction
+  scenarios
+- See how to use [Async Operations](../guides/async-operations.md) for better
+  performance

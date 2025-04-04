@@ -109,4 +109,7 @@ results = asyncio.run(process_multiple_queries())
 
 - Check out the [API Reference](../api/extractor.md) for detailed method
   signatures
-- Explore [Examples](../examples.md) for real-world use cases
+- Try [Model Refinement](model-refinement.md) to enhance your data models
+- Explore [Token Usage Tracking](token-tracking.md) to monitor resource
+  consumption
+- See [Examples](../examples.md) for real-world use cases

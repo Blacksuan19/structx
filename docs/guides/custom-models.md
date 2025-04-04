@@ -88,28 +88,31 @@ result = extractor.extract(
 
 You can extend generated models with additional fields or validation:
 
-```python
-# Generate a model
+For more advanced model modifications, you can also use the
+[Model Refinement](model-refinement.md) feature to update your models using
+natural language instructions:
+
+````python
+# Generate a base model
 IncidentModel = extractor.get_schema(
     query="extract incident dates and affected systems",
     sample_text="Sample text here"
 )
 
-# Extend the model
-from pydantic import Field
+# Refine it with natural language
+EnhancedIncidentModel = extractor.refine_data_model(
+    model=IncidentModel,
+    instructions="""
+    1. Add a 'severity' field with allowed values: 'low', 'medium', 'high'
+    2. Make incident_date a required field
+    3. Add validation for affected_systems to ensure it's a non-empty list
+    """
 
-class EnhancedIncidentModel(IncidentModel):
-    confidence_score: float = Field(default=0.0, ge=0, le=1.0)
-    extracted_by: str = Field(default="structx")
-    tags: List[str] = Field(default_factory=list)
-
-# Use the enhanced model
-result = extractor.extract(
-    data=df,
-    query="extract incident information",
-    model=EnhancedIncidentModel
+# check token usage
+usage = EnhancedIncidentModel.usage
+print(f"Total tokens used: {usage.total_tokens}")
+print(f"By step: {[(s.name, s.tokens) for s in usage.steps]}")
 )
-```
 
 ## Model Validation
 
@@ -129,7 +132,7 @@ try:
     print("Valid incident:", incident)
 except Exception as e:
     print("Validation error:", e)
-```
+````
 
 ## Best Practices
 
@@ -143,6 +146,8 @@ except Exception as e:
 
 ## Next Steps
 
-- Learn about [Unstructured Text](unstructured-text.md) handling
-- Explore [Multiple Queries](multiple-queries.md) for complex extractions
-- See how to use [Async Operations](async-operations.md) for better performance
+- Learn about [Model Refinement](model-refinement.md) for updating models with
+  natural language
+- Explore [Unstructured Text](unstructured-text.md) handling
+- See how to use [Multiple Queries](multiple-queries.md) for complex extractions
+- Try [Async Operations](async-operations.md) for better performance

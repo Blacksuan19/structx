@@ -164,6 +164,12 @@ extractor = Extractor.from_litellm(
 
 - Learn about [Basic Extraction](guides/basic-extraction.md) techniques
 - Explore [Custom Models](guides/custom-models.md) for specific extraction needs
-- See how to handle [Unstructured Text](guides/unstructured-text.md) like PDFs
+- See how to [Refine Data Models](guides/model-refinement.md) with natural
+  language instructions
+- Learn how to handle [Unstructured Text](guides/unstructured-text.md) like PDFs
   and documents
 - Check out the [API Reference](api/extractor.md) for detailed documentation
+- Explore [Token Usage Tracking](guides/token-tracking.md) for monitoring costs
+- Discover [Async Operations](guides/async-operations.md) for better performance
+- Understand [Multiple Queries](guides/multiple-queries.md) for complex
+  extraction scenarios

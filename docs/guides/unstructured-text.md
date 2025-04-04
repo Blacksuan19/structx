@@ -126,6 +126,7 @@ if 'page' in result.data.columns:
 
 - Learn about [Multiple Queries](multiple-queries.md) for extracting different
   types of information
+- Try [Model Refinement](model-refinement.md) to enhance your extraction models
 - Explore [Async Operations](async-operations.md) for processing large documents
   efficiently
 - See the [API Reference](../api/extractor.md) for all available options

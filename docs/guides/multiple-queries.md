@@ -115,5 +115,6 @@ queries = [
 ## Next Steps
 
 - Learn about [Async Operations](async-operations.md) for better performance
+- Try [Model Refinement](model-refinement.md) to enhance your data models
 - Explore the [API Reference](../api/extractor.md) for more details
 - Check out the [Examples](../examples.md) for real-world use cases
