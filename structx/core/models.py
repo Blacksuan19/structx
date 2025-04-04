@@ -5,6 +5,7 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from structx.utils.types import T
+from structx.utils.usage import ExtractorUsage, UsageSummary
 
 
 class ModelField(BaseModel):
@@ -82,6 +83,7 @@ class ExtractionResult(Generic[T]):
     data: Union[pd.DataFrame, List[T]]
     failed: pd.DataFrame
     model: Type[T]
+    usage: Optional[ExtractorUsage] = None
 
     @property
     def success_count(self) -> int:
@@ -101,9 +103,12 @@ class ExtractionResult(Generic[T]):
         total = self.success_count + self.failure_count
         return (self.success_count / total * 100) if total > 0 else 0
 
-    def model_json_schema(self) -> dict:
-        """Get JSON schema of the model"""
-        return self.model.model_json_schema()
+    def get_token_usage(self, detailed: bool = False) -> Optional[UsageSummary]:
+        """Get structured token usage information"""
+        if not self.usage:
+            return None
+
+        return self.usage.get_usage_summary(detailed=detailed)
 
     def __repr__(self) -> str:
         """String representation"""

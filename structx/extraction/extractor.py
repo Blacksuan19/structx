@@ -20,7 +20,7 @@ from typing import (
 import pandas as pd
 from instructor import Instructor
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, create_model
 from tenacity import (
     after_log,
     before_sleep_log,
@@ -30,6 +30,7 @@ from tenacity import (
     wait_exponential,
 )
 from tqdm import tqdm
+from zmq import has
 
 from structx.core.config import DictStrAny, ExtractionConfig
 from structx.core.exceptions import ConfigurationError, ExtractionError
@@ -49,6 +50,7 @@ from structx.utils.helpers import (
 )
 from structx.utils.prompts import *  # noqa
 from structx.utils.types import ResponseType
+from structx.utils.usage import ExtractionStep, ExtractorUsage, StepUsage
 
 
 class Extractor:
@@ -85,6 +87,8 @@ class Extractor:
         self.max_retries = max_retries
         self.min_wait = min_wait
         self.max_wait = max_wait
+        self.usage_lock = threading.Lock()
+        self.usage = ExtractorUsage()
 
         if not config:
             self.config = ExtractionConfig()
@@ -100,21 +104,33 @@ class Extractor:
 
         logger.info(f"Initialized Extractor with configuration: {self.config.conf}")
 
+    @handle_errors(error_message="LLM completion failed", error_type=ExtractionError)
     def _perform_llm_completion(
         self,
         messages: List[Dict[str, str]],
         response_model: Type[ResponseType],
         config: DictStrAny,
+        step: ExtractionStep,
     ) -> ResponseType:
-        """Perform completion with the given model and prompt"""
-        result = self.client.chat.completions.create(
+        """Perform LLM completion and track token usage"""
+        # Use create_with_completion as shown in Instructor docs
+        result, completion = self.client.chat.completions.create_with_completion(
             model=self.model_name,
             response_model=response_model,
             messages=messages,
             **config,
         )
 
-        return cast(ResponseType, result)
+        # Create usage object
+        usage = StepUsage.from_completion(completion, step)
+
+        # Add to usage tracking if available (thread-safe)
+        if usage:
+            with self.usage_lock:
+                self.usage.add_step_usage(usage)
+            logger.debug(f"Step {step.value}: {usage.total_tokens} tokens used")
+
+        return result
 
     @handle_errors(error_message="Query analysis failed", error_type=ExtractionError)
     def _analyze_query(self, query: str, available_columns: List[str]) -> QueryAnalysis:
@@ -131,6 +147,7 @@ class Extractor:
             ],
             response_model=QueryAnalysis,
             config=self.config.analysis,
+            step=ExtractionStep.ANALYSIS,
         )
 
     @handle_errors(error_message="Query refinement failed", error_type=ExtractionError)
@@ -147,6 +164,7 @@ class Extractor:
             ],
             response_model=QueryRefinement,
             config=self.config.refinement,
+            step=ExtractionStep.REFINEMENT,
         )
 
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
@@ -171,8 +189,10 @@ class Extractor:
             ],
             response_model=ExtractionRequest,
             config=self.config.refinement,
+            step=ExtractionStep.SCHEMA_GENERATION,
         )
 
+    @handle_errors(error_message="Guide generation failed", error_type=ExtractionError)
     def _generate_extraction_guide(
         self, refined_query: QueryRefinement
     ) -> ExtractionGuide:
@@ -190,6 +210,7 @@ class Extractor:
             ],
             response_model=ExtractionGuide,
             config=self.config.refinement,
+            step=ExtractionStep.REFINEMENT,
         )
 
     def _create_retry_decorator(self):
@@ -210,45 +231,102 @@ class Extractor:
         extraction_model: Type[BaseModel],
         refined_query: QueryRefinement,
         guide: ExtractionGuide,
-    ) -> Iterable[BaseModel]:
-        """Extract structured data from text using a Pydantic model"""
+    ) -> List[BaseModel]:
+        """Extract structured data with usage tracking"""
+        messages = [
+            {"role": "system", "content": extraction_system_prompt},
+            {
+                "role": "user",
+                "content": extraction_template.substitute(
+                    query=refined_query.refined_query,
+                    patterns=guide.structural_patterns,
+                    rules=guide.relationship_rules,
+                    text=text,
+                ),
+            },
+        ]
 
-        result = self._perform_llm_completion(
-            messages=[
-                {"role": "system", "content": extraction_system_prompt},
-                {
-                    "role": "user",
-                    "content": extraction_template.substitute(
-                        query=refined_query.refined_query,
-                        patterns=guide.structural_patterns,
-                        rules=guide.relationship_rules,
-                        text=text,
-                    ),
-                },
-            ],
-            response_model=Iterable[extraction_model],
-            config=self.config.extraction,
+        # Use create directly, not create_with_completion for extraction
+        # This returns a properly structured response for iterable models
+
+        class ResponseContainer(BaseModel):
+            """Container for the response"""
+
+            response: List[BaseModel]
+
+        response = self.client.chat.completions.create_iterable(
+            model=self.model_name,
+            response_model=extraction_model,
+            messages=messages,
+            **self.config.extraction,
         )
 
-        # Validate result
-        validated = [extraction_model.model_validate(item) for item in result]
-        return validated
+        response = list(response)
 
-    @handle_errors(
-        "Data extraction failed after all retries", error_type=ExtractionError
-    )
+        print("Response:", response)
+        print(f"{dir(response[0])=}")
+
+        # check if any of the items in the response has the _raw_response attribute
+        # we neeed to check item by item because the response is an iterable
+        if hasattr(response, "_raw_response"):
+            completion = response._raw_response
+            # Track usage
+            usage = StepUsage.from_completion(completion, ExtractionStep.EXTRACTION)
+            if usage:
+                with self.usage_lock:
+                    self.usage.add_step_usage(usage)
+
+        # Return validated items
+        return [extraction_model.model_validate(item) for item in response]
+
     def _extract_with_model(
         self,
         text: str,
         extraction_model: Type[BaseModel],
         refined_query: QueryRefinement,
         guide: ExtractionGuide,
-    ) -> Iterable[BaseModel]:
-        """Extract data with enforced structure with retries"""
-        # Apply retry decorator dynamically
+    ) -> List[BaseModel]:
+        """Extract data with enforced structure with retries and usage tracking"""
+        # Create a container model to wrap the list items
+        container_name = f"{extraction_model.__name__}Container"
+        container_model = create_model(
+            container_name,
+            __base__=BaseModel,
+            items=(
+                List[extraction_model],
+                Field(description=f"List of {extraction_model.__name__} items"),
+            ),
+        )
+
+        # Apply retry decorator
         retry_decorator = self._create_retry_decorator()
-        extract_with_retry = retry_decorator(self._extract_without_retry)
-        return extract_with_retry(text, extraction_model, refined_query, guide)
+
+        @retry_decorator
+        def extract_with_retry():
+            # Use _perform_llm_completion with the container model
+            container = self._perform_llm_completion(
+                messages=[
+                    {"role": "system", "content": extraction_system_prompt},
+                    {
+                        "role": "user",
+                        "content": extraction_template.substitute(
+                            query=refined_query.refined_query,
+                            patterns=guide.structural_patterns,
+                            rules=guide.relationship_rules,
+                            text=text,
+                        ),
+                    },
+                ],
+                response_model=container_model,
+                config=self.config.extraction,
+                step=ExtractionStep.EXTRACTION,
+            )
+
+            # Return just the items
+            return container.items
+
+        # Execute with retry
+        return extract_with_retry()
 
     @handle_errors(
         error_message="Failed to initialize extraction", error_type=ExtractionError
@@ -439,6 +517,9 @@ class Extractor:
         extraction_model: Optional[Type[BaseModel]] = None,
     ) -> ExtractionResult:
         """Process DataFrame with extraction"""
+        # Reset usage tracking
+        self.usage = ExtractorUsage()
+
         # Initialize extraction
         if extraction_model:
             query_analysis, refined_query, guide = self._initialize_extraction(
@@ -481,6 +562,7 @@ class Extractor:
             data=result_df if return_df else result_list,
             failed=pd.DataFrame(failed_rows),
             model=ExtractionModel,
+            usage=self.usage,
         )
 
     def _prepare_data(
@@ -699,6 +781,7 @@ class Extractor:
         # Create model
         ExtractionModel = ModelGenerator.from_extraction_request(schema_request)
 
+        ExtractionModel.usage = self.usage
         # Return schema
         return ExtractionModel
 
@@ -743,8 +826,7 @@ class Extractor:
         model_schema_str = json.dumps(model_schema, indent=2)
 
         # Generate schema for the refined model directly
-        extraction_request = self.client.chat.completions.create(
-            model=self.model_name,
+        extraction_request = self._perform_llm_completion(
             response_model=ExtractionRequest,
             messages=[
                 {
@@ -780,7 +862,8 @@ class Extractor:
         """,
                 },
             ],
-            **self.config.refinement,
+            config=self.config.refinement,
+            step=ExtractionStep.SCHEMA_GENERATION,
         )
 
         # Set the model name if specified
