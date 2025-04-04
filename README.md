@@ -17,6 +17,7 @@ nested data structures.
 - 🎯 Automatic schema inference and generation
 - 📊 Support for complex nested data structures
 - 🔄 Model refinement with natural language instructions
+- 📈 Token usage tracking with detailed step-by-step metrics
 - 📄 Support for unstructured text and document processing
 - 🚀 Multi-threaded processing with async support
 - 🔌 Support for multiple LLM providers through litellm
@@ -54,6 +55,12 @@ result = extractor.extract(
 # Access results
 print(f"Extracted {result.success_count} items")
 print(result.data[0].model_dump_json(indent=2))
+
+# Check token usage
+usage = result.get_token_usage()
+if usage:
+    print(f"Total tokens: {usage.total_tokens}")
+    print(f"By step: {[(s.name, s.tokens) for s in usage.steps]}")
 ```
 
 ## Documentation
@@ -67,6 +74,7 @@ For comprehensive documentation, examples, and guides, visit our
 - [Async Operations](https://structx.blacksuan19.dev/guides/async-operations)
 - [Multiple Queries](https://structx.blacksuan19.dev/guides/multiple-queries)
 - [Custom Models](https://structx.blacksuan19.dev/guides/custom-models)
+- [Token Usage Tracking](https://structx.blacksuan19.dev/guides/token-tracking)
 - [API Reference](https://structx.blacksuan19.dev/api/extractor)
 
 ## Examples

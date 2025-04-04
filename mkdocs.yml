@@ -37,11 +37,13 @@ nav:
       - Unstructured Text: guides/unstructured-text.md
       - Multiple Queries: guides/multiple-queries.md
       - Async Operations: guides/async-operations.md
-      - Model Refinements: guides/model-refinement.md
+      - Model Refinement: guides/model-refinement.md
+      - Token Tracking: guides/token-tracking.md
   - API Reference:
       - Extractor: api/extractor.md
       - Models: api/models.md
       - Configuration: api/configuration.md
+      - Token Tracking: api/token-tracking.md
       - Utilities: api/utilities.md
   - Reference:
       - Supported Formats: reference/supported-formats.md

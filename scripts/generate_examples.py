@@ -92,6 +92,14 @@ Log ID,Description
         f"\nExtracted {results1.success_count} items with {results1.success_rate:.1f}% success rate"
     )
 
+    print("\n### Token Usage:")
+    usage = results1.get_token_usage()
+    if usage:
+        print(f"Total tokens used: {usage.total_tokens}")
+        print("Tokens by step:")
+        for step in usage.steps:
+            print(f"- {step.name}: {step.tokens} tokens")
+
     # Convert extracted data to DataFrame and display as markdown table
     if hasattr(results1.data, "to_markdown"):
         # If already a DataFrame
@@ -146,6 +154,14 @@ Log ID,Description
         f"\nExtracted {results2.success_count} items with {results2.success_rate:.1f}% success rate"
     )
 
+    print("\n### Token Usage:")
+    usage = results2.get_token_usage()
+    if usage:
+        print(f"Total tokens used: {usage.total_tokens}")
+        print("Tokens by step:")
+        for step in usage.steps:
+            print(f"- {step.name}: {step.tokens} tokens")
+
     # Convert extracted data to DataFrame and display as markdown table
     if hasattr(results2.data, "to_markdown"):
         print(results2.data.to_markdown(index=False))
@@ -190,6 +206,14 @@ Log ID,Description
         f"\nExtracted {results3.success_count} items with {results3.success_rate:.1f}% success rate"
     )
 
+    print("\n### Token Usage:")
+    usage = results3.get_token_usage()
+    if usage:
+        print(f"Total tokens used: {usage.total_tokens}")
+        print("Tokens by step:")
+        for step in usage.steps:
+            print(f"- {step.name}: {step.tokens} tokens")
+
     # For complex nested structures, JSON might be more readable
     print("\n```json")
     print(
@@ -224,6 +248,16 @@ Log ID,Description
     print("```")
 
     DataModel = extractor.get_schema(query=q4, sample_text=df["Description"].iloc[0])
+
+    print("\n### Token Usage for Schema Generation:")
+    # Access usage via DataModel if it has the usage attribute
+    if hasattr(DataModel, "usage") and DataModel.usage:
+        usage = DataModel.usage.get_usage_summary()
+        print(f"Total tokens used: {usage.total_tokens}")
+        schema_tokens = next(
+            (s.tokens for s in usage.steps if s.name == "schema_generation"), 0
+        )
+        print(f"Schema generation: {schema_tokens} tokens")
 
     print("\n### Generated Schema:")
     print("\n```json")

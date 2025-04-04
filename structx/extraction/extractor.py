@@ -767,7 +767,7 @@ class Extractor:
             sample_text: Sample text for context
 
         Returns:
-            Pydantic model for extraction
+            Pydantic model for extraction with `.usage` attribute for token tracking
         """
         # Refine query
         refined_query = self._refine_query(query)
@@ -815,7 +815,7 @@ class Extractor:
             model_name: Optional name for the refined model (defaults to original name with 'Refined' prefix)
 
         Returns:
-            A new refined Pydantic model
+            A new refined Pydantic model with `.usage` attribute for token tracking
         """
 
         # Default model name if not provided

@@ -5,7 +5,11 @@ from pydantic import BaseModel, Field
 
 
 class ExtractionStep(Enum):
-    """Enumeration of extraction process steps"""
+    """
+    Enumeration of extraction process steps.
+
+    Represents the different steps in the extraction pipeline where token usage is tracked.
+    """
 
     ANALYSIS = "analysis"
     REFINEMENT = "refinement"
@@ -14,7 +18,12 @@ class ExtractionStep(Enum):
 
 
 class TokenDetails(BaseModel):
-    """Details about token usage"""
+    """
+    Details about token usage with advanced metrics.
+
+    Stores specialized token metrics such as reasoning (thinking) tokens,
+    audio tokens, and cached tokens when available from the LLM provider.
+    """
 
     audio_tokens: int = 0
     reasoning_tokens: int = 0
@@ -22,7 +31,12 @@ class TokenDetails(BaseModel):
 
 
 class StepUsage(BaseModel):
-    """Token usage for a single step in the extraction process"""
+    """
+    Token usage information for a single step in the extraction process.
+
+    Contains detailed token usage statistics for one step, including both prompt and
+    completion tokens, along with any provider-specific token details.
+    """
 
     prompt_tokens: int
     completion_tokens: int
@@ -35,7 +49,16 @@ class StepUsage(BaseModel):
     def from_completion(
         cls, completion: Any, step: ExtractionStep
     ) -> Optional["StepUsage"]:
-        """Create StepUsage from completion object"""
+        """
+        Create StepUsage from completion object.
+
+        Args:
+            completion: LLM completion response object
+            step: Which extraction step this usage belongs to
+
+        Returns:
+            StepUsage object or None if no usage data is available
+        """
         if not completion or not hasattr(completion, "usage"):
             return None
 
@@ -66,14 +89,32 @@ class StepUsage(BaseModel):
 
 
 class StepSummary(BaseModel):
-    """Summary of token usage for a step"""
+    """
+    Token usage summary for a single step.
+
+    Provides a simple summary of token consumption for a specific step
+    of the extraction process.
+
+    Attributes:
+        tokens: Number of tokens used in this step
+        name: Name of the step (analysis, refinement, etc.)
+    """
 
     tokens: int
     name: str
 
 
 class ExtractionSummary(BaseModel):
-    """Summary of token usage for extraction steps"""
+    """
+    Token usage summary for extraction steps.
+
+    Extends StepSummary with additional details about individual extraction steps.
+
+    Attributes:
+        tokens: Number of tokens used across all extraction steps
+        name: Always "extraction"
+        steps: Detailed breakdown of individual extraction calls
+    """
 
     tokens: int
     name: str = "extraction"
@@ -81,7 +122,20 @@ class ExtractionSummary(BaseModel):
 
 
 class UsageSummary(BaseModel):
-    """Overall token usage summary"""
+    """
+    Overall token usage summary across all extraction steps.
+
+    Provides a complete view of token usage throughout the extraction process,
+    including totals and per-step breakdowns.
+
+    Attributes:
+        total_tokens: Total tokens used across all steps
+        prompt_tokens: Total tokens used in prompts
+        completion_tokens: Total tokens generated in completions
+        thinking_tokens: Total thinking/reasoning tokens (if available)
+        cached_tokens: Total cached tokens (if available)
+        steps: List of per-step usage summaries
+    """
 
     total_tokens: int
     prompt_tokens: int
@@ -93,7 +147,15 @@ class UsageSummary(BaseModel):
     def get_step(
         self, step_name: str
     ) -> Optional[Union[StepSummary, ExtractionSummary]]:
-        """Get a step by name"""
+        """
+        Get a step summary by its name.
+
+        Args:
+            step_name: Name of the step to retrieve
+
+        Returns:
+            Step summary or None if not found
+        """
         for step in self.steps:
             if step.name == step_name:
                 return step
@@ -101,7 +163,12 @@ class UsageSummary(BaseModel):
 
 
 class ExtractorUsage(BaseModel):
-    """Aggregated token usage across all steps"""
+    """
+    Aggregated token usage tracking across all extraction steps.
+
+    Stores and manages token usage data for the entire extraction process,
+    providing methods to calculate totals and generate summaries.
+    """
 
     steps: Dict[ExtractionStep, Union[StepUsage, List[StepUsage]]] = Field(
         default_factory=dict
@@ -185,7 +252,14 @@ class ExtractorUsage(BaseModel):
         return self._get_token_sum("prompt_tokens_details.cached_tokens")
 
     def get_usage_summary(self, detailed: bool = False) -> UsageSummary:
-        """Get structured token usage summary"""
+        """Get structured token usage summary.
+
+        Args:
+            detailed: Whether to include detailed breakdown of extraction steps
+
+        Returns:
+            UsageSummary object with token usage information
+        """
         # Create step summaries for standard steps
         step_summaries = []
         for step_type in [

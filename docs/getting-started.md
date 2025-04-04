@@ -112,6 +112,21 @@ print(f"Model: {result.model.__name__}")
 print(result.model.model_json_schema())
 ```
 
+### Check Token Usage
+
+`structx` automatically tracks token usage for all operations, helping you
+monitor costs:
+
+```python
+# Check token usage
+usage = result.get_token_usage()
+print(f"Total tokens used: {usage.total_tokens}")
+
+# See usage breakdown by step
+for step in usage.steps:
+    print(f"{step.name}: {step.tokens} tokens")
+```
+
 ### Configure Extraction
 
 ```python

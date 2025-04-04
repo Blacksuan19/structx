@@ -72,12 +72,13 @@ class ExtractionRequest(BaseModel):
 @dataclass
 class ExtractionResult(Generic[T]):
     """
-    Container for extraction results
+    Container for extraction results.
 
     Attributes:
         data: Extracted data (DataFrame or list of model instances)
         failed: DataFrame with failed extractions
         model: Generated or provided model class
+        usage: Token usage information across all extraction steps
     """
 
     data: Union[pd.DataFrame, List[T]]
@@ -104,7 +105,34 @@ class ExtractionResult(Generic[T]):
         return (self.success_count / total * 100) if total > 0 else 0
 
     def get_token_usage(self, detailed: bool = False) -> Optional[UsageSummary]:
-        """Get structured token usage information"""
+        """
+        Get structured token usage information.
+
+        Provides a detailed breakdown of token usage across all steps of the
+        extraction process.
+
+        Args:
+            detailed: If True, includes detailed breakdown of each extraction step
+                    (useful for multi-document extraction)
+
+        Returns:
+            UsageSummary object with token usage information, or None if usage tracking
+            isn't available
+
+        Example:
+            ```python
+            result = extractor.extract(data, query)
+            usage = result.get_token_usage()
+            print(f"Total tokens: {usage.total_tokens}")
+
+            # Access step-specific usage
+            for step in usage.steps:
+                print(f"{step.name}: {step.tokens} tokens")
+
+
+
+        """
+
         if not self.usage:
             return None
 
