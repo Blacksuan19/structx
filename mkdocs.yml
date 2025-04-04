@@ -39,6 +39,8 @@ nav:
       - Async Operations: guides/async-operations.md
       - Model Refinement: guides/model-refinement.md
       - Token Tracking: guides/token-tracking.md
+      - Retry Mechanism: guides/retry-mechanism.md
+
   - API Reference:
       - Extractor: api/extractor.md
       - Models: api/models.md

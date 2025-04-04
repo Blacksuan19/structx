@@ -158,12 +158,23 @@ extractor = Extractor.from_litellm(
     api_key="your-api-key",
     config=config
 )
+
+# With retry settings
+extractor = Extractor.from_litellm(
+    model="gpt-4o-mini",
+    api_key="your-api-key",
+    max_retries=5,      # Maximum retry attempts
+    min_wait=2,         # Minimum seconds between retries
+    max_wait=30         # Maximum seconds between retries
+)
 ```
 
 ## Next Steps
 
 - Learn about [Basic Extraction](guides/basic-extraction.md) techniques
 - Explore [Custom Models](guides/custom-models.md) for specific extraction needs
+- Learn about the [Retry Mechanism](guides/retry-mechanism.md) for handling
+  transient errors
 - See how to [Refine Data Models](guides/model-refinement.md) with natural
   language instructions
 - Learn how to handle [Unstructured Text](guides/unstructured-text.md) like PDFs

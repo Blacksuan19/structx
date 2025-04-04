@@ -172,5 +172,6 @@ if result.failure_count > 0:
 - Learn about [Custom Models](custom-models.md) for specific extraction needs
 - Try [Model Refinement](model-refinement.md) to modify data models with natural
   language
+- Learn about [retry mechanisms](retry-mechanism.md) for robust error handling
 - Explore [Unstructured Text](unstructured-text.md) handling for documents
 - See how to use [Multiple Queries](multiple-queries.md) for complex extractions

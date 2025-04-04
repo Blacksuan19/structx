@@ -118,3 +118,13 @@ Different LLM providers charge differently for tokens:
 
 By tracking both prompt and completion tokens separately, `structx` helps you
 understand your costs more precisely.
+
+## Next Steps
+
+- Learn about the [Retry Mechanism](retry-mechanism.md) for handling transient
+  errors
+- Explore [Async Operations](async-operations.md) for better performance
+- Check out [Error Handling](../reference/error-handling.md) for more details on
+  handling errors
+- See the [Configuration Options](../reference/configuration-options.md) for all
+  available settings

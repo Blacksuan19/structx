@@ -112,4 +112,5 @@ results = asyncio.run(process_multiple_queries())
 - Try [Model Refinement](model-refinement.md) to enhance your data models
 - Explore [Token Usage Tracking](token-tracking.md) to monitor resource
   consumption
+- Learn about [retry mechanisms](retry-mechanism.md) for robust error handling
 - See [Examples](../examples.md) for real-world use cases

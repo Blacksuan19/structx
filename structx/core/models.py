@@ -128,9 +128,6 @@ class ExtractionResult(Generic[T]):
             # Access step-specific usage
             for step in usage.steps:
                 print(f"{step.name}: {step.tokens} tokens")
-
-
-
         """
 
         if not self.usage:

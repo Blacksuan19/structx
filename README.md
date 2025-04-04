@@ -43,7 +43,10 @@ from structx import Extractor
 # Initialize extractor
 extractor = Extractor.from_litellm(
     model="gpt-4o-mini",
-    api_key="your-api-key"
+    api_key="your-api-key",
+    max_retries=3,      # Automatically retry on transient errors
+    min_wait=1,         # Start with 1 second wait
+    max_wait=10         # Maximum 10 seconds between retries
 )
 
 # Extract structured data
