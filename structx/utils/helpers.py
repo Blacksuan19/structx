@@ -221,3 +221,47 @@ def convert_pydantic_v1_to_v2(request: ExtractionRequest) -> ExtractionRequest:
         model_description=request.model_description,
         fields=updated_fields,
     )
+
+
+def sanitize_regex_patterns(
+    extraction_request: "ExtractionRequest",
+) -> "ExtractionRequest":
+    """
+    Sanitize regex patterns in field validations to make them compatible with Pydantic V2
+
+    Args:
+        extraction_request: The extraction request to sanitize
+
+    Returns:
+        Sanitized extraction request
+    """
+
+    def fix_field_validation(field):
+        # Fix regex patterns in validation dict
+        if field.validation:
+            # For pattern/regex fields, sanitize the pattern
+            for pattern_key in ["pattern", "regex"]:
+                if pattern_key in field.validation:
+                    try:
+                        # Just test if the pattern compiles - if it does, leave it alone
+                        import re
+
+                        re.compile(field.validation[pattern_key])
+                    except re.error:
+                        # If pattern doesn't compile, we'll use a simpler approach:
+                        # Remove the pattern validation entirely rather than trying to fix it
+                        logger.warning(
+                            f"Removing invalid regex pattern: {field.validation[pattern_key]}"
+                        )
+                        del field.validation[pattern_key]
+
+        # Process nested fields recursively
+        if field.nested_fields:
+            for nested_field in field.nested_fields:
+                fix_field_validation(nested_field)
+
+    # Process all fields
+    for field in extraction_request.fields:
+        fix_field_validation(field)
+
+    return extraction_request

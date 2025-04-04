@@ -47,6 +47,7 @@ from structx.utils.helpers import (
     convert_pydantic_v1_to_v2,
     flatten_extracted_data,
     handle_errors,
+    sanitize_regex_patterns,
 )
 from structx.utils.prompts import *  # noqa
 from structx.utils.types import ResponseType
@@ -870,9 +871,15 @@ class Extractor:
         if model_name:
             extraction_request.model_name = model_name
 
-        refined_model = ModelGenerator.from_extraction_request(
-            convert_pydantic_v1_to_v2(extraction_request)
-        )
+        # Sanitize regex patterns to prevent validation errors
+        sanitized_request = sanitize_regex_patterns(extraction_request)
+
+        # Convert from v1 to v2 if needed and generate model
+        converted_request = convert_pydantic_v1_to_v2(sanitized_request)
+        refined_model = ModelGenerator.from_extraction_request(converted_request)
+
+        # Add usage tracking to the generated model
+        refined_model.usage = self.usage
 
         return refined_model
 
