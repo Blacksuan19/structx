@@ -9,6 +9,10 @@ TYPE_ALIASES = {
     "boolean": "bool",
     "array": "List",
     "object": "dict",
+    "date-time": "datetime",  # Add this mapping
+    "datetime": "datetime",  # Add this for consistency
+    "date": "date",  # Add this for completeness
+    "time": "time",  # Add this for completeness
 }
 
 SAFE_TYPES = {
