@@ -212,7 +212,7 @@ class Extractor:
             ],
             response_model=ExtractionGuide,
             config=self.config.refinement,
-            step=ExtractionStep.REFINEMENT,
+            step=ExtractionStep.GUIDE,
         )
 
     def _create_retry_decorator(self):

@@ -15,6 +15,7 @@ class ExtractionStep(Enum):
     REFINEMENT = "refinement"
     SCHEMA_GENERATION = "schema_generation"
     EXTRACTION = "extraction"
+    GUIDE = "guide"
 
 
 class TokenDetails(BaseModel):
@@ -266,6 +267,7 @@ class ExtractorUsage(BaseModel):
             ExtractionStep.ANALYSIS,
             ExtractionStep.REFINEMENT,
             ExtractionStep.SCHEMA_GENERATION,
+            ExtractionStep.GUIDE,
         ]:
             if step_type in self.steps and isinstance(self.steps[step_type], StepUsage):
                 step_summaries.append(
