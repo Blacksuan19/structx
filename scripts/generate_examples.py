@@ -101,7 +101,7 @@ Log ID,Description
         print(f"Total tokens used: {usage.total_tokens}")
         print("Tokens by step:")
         for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens")
+            print(f"- {step.name}: {step.tokens} tokens\n")
 
     # Convert extracted data to DataFrame and display as markdown table
     if hasattr(results1.data, "to_markdown"):
@@ -163,7 +163,7 @@ Log ID,Description
         print(f"Total tokens used: {usage.total_tokens}")
         print("Tokens by step:")
         for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens")
+            print(f"- {step.name}: {step.tokens} tokens\n")
 
     # Convert extracted data to DataFrame and display as markdown table
     if hasattr(results2.data, "to_markdown"):
@@ -215,7 +215,7 @@ Log ID,Description
         print(f"Total tokens used: {usage.total_tokens}")
         print("Tokens by step:")
         for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens")
+            print(f"- {step.name}: {step.tokens} tokens\n")
 
     # For complex nested structures, JSON might be more readable
     print("\n```json")
@@ -259,7 +259,7 @@ Log ID,Description
 
         print("\nBreakdown by step:")
         for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens")
+            print(f"- {step.name}: {step.tokens} tokens\n")
 
     print("\n### Generated Schema:")
     print("\n```json")
