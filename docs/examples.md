@@ -2,7 +2,7 @@
 
 This document contains examples of using the structx library for structured data extraction.
 
-*Generated on: 2025-04-04 19:46:09*
+*Generated on: 2025-04-05 14:35:43*
 
 ## Setup
 
@@ -53,107 +53,95 @@ print(result.data)
 Extracted 5 items with 100.0% success rate
 
 ### Token Usage:
-Total tokens used: 4929
+Total tokens used: 4867
 Tokens by step:
 - analysis: 197 tokens
 
-- refinement: 320 tokens
+- refinement: 303 tokens
 
-- schema_generation: 587 tokens
+- schema_generation: 559 tokens
 
-- guide: 329 tokens
+- guide: 336 tokens
 
-- extraction: 3496 tokens
+- extraction: 3472 tokens
 
 
 ```json
 [
   {
-    "main_incident_date_time": "2024-02-10 09:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-02-10 09:15:00",
-        "significance": "detected through monitoring"
-      },
-      {
-        "timestamp": "2024-02-10 09:20:00",
-        "significance": "immediate rollback initiated"
-      },
-      {
-        "timestamp": "2024-02-10 11:00:00",
-        "significance": "root cause analysis completed"
-      }
-    ]
-  },
-  {
-    "main_incident_date_time": "2024-01-15 00:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-01-15 14:30:00",
-        "significance": "alert triggered"
-      },
-      {
-        "timestamp": "2024-01-16 08:00:00",
-        "significance": "patch applied"
-      },
-      {
-        "timestamp": "2024-01-16 09:15:00",
-        "significance": "confirmed resolution"
-      }
-    ]
-  },
-  {
-    "main_incident_date_time": "2024-02-01 10:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-02-01 10:15:00",
-        "significance": "initial diagnosis"
-      },
-      {
-        "timestamp": "2024-02-01 10:30:00",
-        "significance": "applied fix"
-      },
-      {
-        "timestamp": "2024-02-01 10:45:00",
-        "significance": "confirmed full restoration"
-      }
-    ]
-  },
-  {
-    "main_incident_date_time": "2024-01-20 03:00:00",
+    "main_incident_datetime": "2024-01-20 03:00:00",
     "additional_timestamps": [
       {
         "timestamp": "2024-01-20 04:30:00",
-        "significance": "emergency cleanup performed"
+        "significance": "Emergency cleanup performed due to insufficient storage space."
       },
       {
         "timestamp": "2024-01-20 05:45:00",
-        "significance": "backup reattempted successfully"
+        "significance": "Backup reattempted successfully after cleanup."
       }
     ]
   },
   {
-    "main_incident_date_time": "2024-02-05 00:00:00",
+    "main_incident_datetime": "2024-01-15 14:30:00",
     "additional_timestamps": [
       {
-        "timestamp": "2024-02-05 09:00:00",
-        "significance": "cache invalidation errors"
+        "timestamp": "2024-01-16 08:00:00",
+        "significance": "Patch applied to resolve the memory leak."
+      },
+      {
+        "timestamp": "2024-01-16 09:15:00",
+        "significance": "Resolution confirmed after patch application."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-05 09:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-05 09:30:00",
+        "significance": "Cache system restarted"
       },
       {
         "timestamp": "2024-02-05 14:00:00",
-        "significance": "slow query responses"
-      },
-      {
-        "timestamp": "2024-02-05 09:30:00",
-        "significance": "cache system restarted"
+        "significance": "Slow query responses observed"
       },
       {
         "timestamp": "2024-02-05 15:00:00",
-        "significance": "query optimization implemented"
+        "significance": "Query optimization implemented"
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-01 10:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-01 10:15:00",
+        "significance": "Initial diagnosis identified router misconfiguration."
       },
       {
-        "timestamp": "2024-02-05 23:59:59",
-        "significance": "both issues resolved by EOD"
+        "timestamp": "2024-02-01 10:30:00",
+        "significance": "Applied fix to the router."
+      },
+      {
+        "timestamp": "2024-02-01 10:45:00",
+        "significance": "Confirmed full restoration of network connectivity."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-10 09:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-10 09:15:00",
+        "significance": "Detected unexpected API behavior through monitoring."
+      },
+      {
+        "timestamp": "2024-02-10 09:20:00",
+        "significance": "Immediate rollback initiated."
+      },
+      {
+        "timestamp": "2024-02-10 11:00:00",
+        "significance": "Root cause analysis completed."
       }
     ]
   }
@@ -162,13 +150,13 @@ Tokens by step:
 
 ### Generated Model:
 
-Model name: `IncidentTimestamp`
+Model name: `IncidentTimestampExtraction`
 
 ```json
 {
   "$defs": {
-    "IncidentTimestampadditional_timestampsItem": {
-      "description": "An array of objects containing additional timestamps and their significance.",
+    "IncidentTimestampExtractionadditional_timestampsItem": {
+      "description": "A collection of additional timestamps related to the incident, each with its significance.",
       "properties": {
         "timestamp": {
           "anyOf": [
@@ -194,17 +182,17 @@ Model name: `IncidentTimestamp`
             }
           ],
           "default": null,
-          "description": "Description of the significance of the timestamp (e.g., creation time, update time, resolution time).",
+          "description": "The context or significance of the additional timestamp.",
           "title": "Significance"
         }
       },
-      "title": "IncidentTimestampadditional_timestampsItem",
+      "title": "IncidentTimestampExtractionadditional_timestampsItem",
       "type": "object"
     }
   },
-  "description": "Schema for extracting incident date and time information along with additional timestamps and their significance.",
+  "description": "Schema for extracting incident timestamps and their significance from reports.",
   "properties": {
-    "main_incident_date_time": {
+    "main_incident_datetime": {
       "anyOf": [
         {
           "format": "date-time",
@@ -216,13 +204,13 @@ Model name: `IncidentTimestamp`
       ],
       "default": null,
       "description": "The main date and time of the incident, clearly identified.",
-      "title": "Main Incident Date Time"
+      "title": "Main Incident Datetime"
     },
     "additional_timestamps": {
       "anyOf": [
         {
           "items": {
-            "$ref": "#/$defs/IncidentTimestampadditional_timestampsItem"
+            "$ref": "#/$defs/IncidentTimestampExtractionadditional_timestampsItem"
           },
           "type": "array"
         },
@@ -231,11 +219,11 @@ Model name: `IncidentTimestamp`
         }
       ],
       "default": null,
-      "description": "An array of objects containing additional timestamps and their significance.",
+      "description": "A collection of additional timestamps related to the incident, each with its significance.",
       "title": "Additional Timestamps"
     }
   },
-  "title": "IncidentTimestamp",
+  "title": "IncidentTimestampExtraction",
   "type": "object"
 }
 ```
@@ -256,34 +244,22 @@ extract incident information including:
 result = extractor.extract(df, query)
 ```
 
-[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
-LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
-
-
-[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
-LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
-
-
-[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
-LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
-
-
 ### Results:
 
-Extracted 4 items with 80.0% success rate
+Extracted 5 items with 100.0% success rate
 
 ### Token Usage:
-Total tokens used: 12939
+Total tokens used: 16260
 Tokens by step:
 - analysis: 209 tokens
 
-- refinement: 347 tokens
+- refinement: 346 tokens
 
-- schema_generation: 640 tokens
+- schema_generation: 644 tokens
 
-- guide: 323 tokens
+- guide: 355 tokens
 
-- extraction: 11420 tokens
+- extraction: 14706 tokens
 
 
 ```json
@@ -291,15 +267,32 @@ Tokens by step:
   {
     "incidents": [
       {
-        "system_component_affected": "API",
-        "issue_type": "Unexpected behavior",
-        "severity": "High",
+        "system_component_affected": "Database",
+        "issue_type": "Backup Failure",
+        "severity": "high",
         "resolution_steps": [
           {
-            "step": "Detected through monitoring"
+            "step": "Emergency cleanup performed"
           },
           {
-            "step": "Immediate rollback initiated"
+            "step": "Backup reattempted successfully"
+          },
+          {
+            "step": "Added monitoring alert for storage capacity"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component_affected": "API",
+        "issue_type": "Unexpected behavior",
+        "severity": "high",
+        "resolution_steps": [
+          {
+            "step": "Rollback initiated"
           },
           {
             "step": "Root cause analysis completed"
@@ -314,21 +307,18 @@ Tokens by step:
   {
     "incidents": [
       {
-        "system_component_affected": "Database",
-        "issue_type": "Backup Failure",
-        "severity": "Critical",
+        "system_component_affected": "server-01",
+        "issue_type": "high CPU usage",
+        "severity": "high",
         "resolution_steps": [
           {
-            "step": "Identified root cause: insufficient storage space"
+            "step": "Investigated high CPU usage"
           },
           {
-            "step": "Performed emergency cleanup"
+            "step": "Identified memory leak in application A"
           },
           {
-            "step": "Reattempted backup successfully"
-          },
-          {
-            "step": "Added monitoring alert for storage capacity"
+            "step": "Applied patch"
           }
         ]
       }
@@ -337,8 +327,8 @@ Tokens by step:
   {
     "incidents": [
       {
-        "system_component_affected": "application servers",
-        "issue_type": "network connectivity drop",
+        "system_component_affected": "3 application servers",
+        "issue_type": "Network connectivity drops",
         "severity": "high",
         "resolution_steps": [
           {
@@ -357,24 +347,148 @@ Tokens by step:
   {
     "incidents": [
       {
-        "system_component_affected": "server-01",
-        "issue_type": "high CPU usage",
+        "system_component_affected": "Cache System",
+        "issue_type": "Cache Invalidation Error",
         "severity": "high",
         "resolution_steps": [
           {
-            "step": "Investigated the issue"
+            "step": "Cache system restarted at 09:30"
           },
           {
-            "step": "Identified memory leak in application A"
+            "step": "Issue resolved by EOD"
+          }
+        ]
+      },
+      {
+        "system_component_affected": "Database",
+        "issue_type": "Slow Query Response",
+        "severity": "medium",
+        "resolution_steps": [
+          {
+            "step": "Query optimization implemented at 15:00"
           },
           {
-            "step": "Applied patch"
+            "step": "Issue resolved by EOD"
           }
         ]
       }
     ]
   }
 ]
+```
+
+### Generated Model:
+
+Model name: `IncidentReport`
+
+```json
+{
+  "$defs": {
+    "IncidentReportincidentsItem": {
+      "description": "List of incidents reported.",
+      "properties": {
+        "system_component_affected": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The system component that was affected by the incident.",
+          "title": "System Component Affected"
+        },
+        "issue_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The type of issue encountered.",
+          "title": "Issue Type"
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The severity level of the incident (e.g., low, medium, high).",
+          "title": "Severity"
+        },
+        "resolution_steps": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/incidentsItemresolution_stepsItem"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Steps taken to resolve the incident.",
+          "title": "Resolution Steps"
+        }
+      },
+      "title": "IncidentReportincidentsItem",
+      "type": "object"
+    },
+    "incidentsItemresolution_stepsItem": {
+      "description": "Steps taken to resolve the incident.",
+      "properties": {
+        "step": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A specific step taken to resolve the incident.",
+          "title": "Step"
+        }
+      },
+      "title": "incidentsItemresolution_stepsItem",
+      "type": "object"
+    }
+  },
+  "description": "Schema for extracting structured incident information including system components, issue types, severity, and resolution steps.",
+  "properties": {
+    "incidents": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/IncidentReportincidentsItem"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "List of incidents reported.",
+      "title": "Incidents"
+    }
+  },
+  "title": "IncidentReport",
+  "type": "object"
+}
 ```
 
 ## Example 3: Complex Nested Extraction
@@ -394,171 +508,183 @@ result = extractor.extract(df, query)
 
 ### Results:
 
-Extracted 8 items with 100.0% success rate
+Extracted 6 items with 100.0% success rate
 
 ### Token Usage:
-Total tokens used: 9611
+Total tokens used: 5873
 Tokens by step:
 - analysis: 213 tokens
 
-- refinement: 330 tokens
+- refinement: 345 tokens
 
-- schema_generation: 857 tokens
+- schema_generation: 679 tokens
 
-- guide: 442 tokens
+- guide: 340 tokens
 
-- extraction: 7769 tokens
+- extraction: 4296 tokens
 
 
 ```json
 [
   {
-    "incident": {
-      "system_component": "API",
-      "timestamp": "2024-02-10T09:15:00",
-      "cpu_usage": null,
-      "alert_triggered_at": null,
-      "investigation_details": null
-    },
-    "action": {
-      "timing": "2024-02-10T09:20:00",
-      "outcome": "Rollback initiated"
-    },
-    "metric": {
-      "before_value": null,
-      "after_value": null
-    }
-  },
-  {
-    "incident": {
-      "system_component": "API",
-      "timestamp": "2024-02-10T11:00:00",
-      "cpu_usage": null,
-      "alert_triggered_at": null,
-      "investigation_details": null
-    },
-    "action": {
-      "timing": "2024-02-10T11:00:00",
-      "outcome": "Root cause analysis completed"
-    },
-    "metric": {
-      "before_value": null,
-      "after_value": null
-    }
-  },
-  {
-    "incident": {
-      "system_component": "Cache System",
-      "timestamp": "2024-02-05T09:00:00",
-      "cpu_usage": null,
-      "alert_triggered_at": null,
-      "investigation_details": null
-    },
-    "action": {
-      "timing": "2024-02-05T09:30:00",
-      "outcome": "Cache system restarted"
-    },
-    "metric": {
-      "before_value": null,
-      "after_value": null
-    }
-  },
-  {
-    "incident": {
-      "system_component": "Database Query",
-      "timestamp": "2024-02-05T14:00:00",
-      "cpu_usage": null,
-      "alert_triggered_at": null,
-      "investigation_details": null
-    },
-    "action": {
-      "timing": "2024-02-05T15:00:00",
-      "outcome": "Query optimization implemented"
-    },
-    "metric": {
-      "before_value": null,
-      "after_value": null
-    }
-  },
-  {
-    "incident": {
-      "system_component": "server-01",
-      "timestamp": "2024-01-15T14:30:00",
-      "cpu_usage": 92.0,
-      "alert_triggered_at": "2024-01-15T14:30:00",
-      "investigation_details": {
-        "issue_found": null,
-        "resolution_timestamp": null,
-        "confirmation_timestamp": null
+    "incidents": [
+      {
+        "system_component": "Database",
+        "timestamp": "2024-01-20 03:00:00"
       }
-    },
-    "action": {
-      "timing": "2024-01-16T08:00:00",
-      "outcome": "confirmed resolution at 09:15"
-    },
-    "metric": {
-      "before_value": 92.0,
-      "after_value": null
-    }
-  },
-  {
-    "incident": {
-      "system_component": "application servers",
-      "timestamp": "2024-02-01T10:00:00",
-      "cpu_usage": null,
-      "alert_triggered_at": null,
-      "investigation_details": null
-    },
-    "action": {
-      "timing": "2024-02-01T10:30:00",
-      "outcome": "full restoration confirmed"
-    },
-    "metric": {
-      "before_value": 0.0,
-      "after_value": 1.0
-    }
-  },
-  {
-    "incident": {
-      "system_component": "Database",
-      "timestamp": "2024-01-20T03:00:00",
-      "cpu_usage": null,
-      "alert_triggered_at": null,
-      "investigation_details": {
-        "issue_found": null,
-        "resolution_timestamp": null,
-        "confirmation_timestamp": null
+    ],
+    "actions": [
+      {
+        "timing": "2024-01-20 04:30:00",
+        "outcome": "Emergency cleanup performed"
+      },
+      {
+        "timing": "2024-01-20 05:45:00",
+        "outcome": "Backup reattempted successfully"
+      },
+      {
+        "timing": "2024-01-20 05:45:00",
+        "outcome": "Added monitoring alert for storage capacity"
       }
-    },
-    "action": {
-      "timing": "2024-01-20T04:30:00",
-      "outcome": "Emergency cleanup performed"
-    },
-    "metric": {
-      "before_value": 0.0,
-      "after_value": 1.0
-    }
+    ],
+    "metrics": [
+      {
+        "before_value": 0.0,
+        "after_value": 1.0
+      },
+      {
+        "before_value": 0.0,
+        "after_value": 1.0
+      },
+      {
+        "before_value": 0.0,
+        "after_value": 1.0
+      }
+    ]
   },
   {
-    "incident": {
-      "system_component": "Database",
-      "timestamp": "2024-01-20T05:45:00",
-      "cpu_usage": null,
-      "alert_triggered_at": null,
-      "investigation_details": {
-        "issue_found": null,
-        "resolution_timestamp": null,
-        "confirmation_timestamp": null
+    "incidents": [
+      {
+        "system_component": "server-01",
+        "timestamp": "2024-01-15 14:30:00"
       }
-    },
-    "action": {
-      "timing": "2024-01-20T05:45:00",
-      "outcome": "Backup reattempted successfully"
-    },
-    "metric": {
-      "before_value": 1.0,
-      "after_value": 2.0
-    }
+    ],
+    "actions": [
+      {
+        "timing": "2024-01-16 08:00:00",
+        "outcome": "Patch applied"
+      },
+      {
+        "timing": "2024-01-16 09:15:00",
+        "outcome": "Confirmed resolution"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": 92.0,
+        "after_value": null
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "cache",
+        "timestamp": "2024-02-05 09:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-05 09:30:00",
+        "outcome": "Cache system restarted"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": null,
+        "after_value": null
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "query",
+        "timestamp": "2024-02-05 14:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-05 15:00:00",
+        "outcome": "Query optimization implemented"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": null,
+        "after_value": null
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "API",
+        "timestamp": "2024-02-10 09:15:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-10 09:20:00",
+        "outcome": "Rollback initiated"
+      },
+      {
+        "timing": "2024-02-10 11:00:00",
+        "outcome": "Root cause analysis completed"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": 1.0,
+        "after_value": 0.0
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "application servers",
+        "timestamp": "2024-02-01 10:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-01 10:15:00",
+        "outcome": "initial diagnosis identified router misconfiguration"
+      },
+      {
+        "timing": "2024-02-01 10:30:00",
+        "outcome": "applied fix"
+      },
+      {
+        "timing": "2024-02-01 10:45:00",
+        "outcome": "confirmed full restoration"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": null,
+        "after_value": null
+      },
+      {
+        "before_value": null,
+        "after_value": null
+      },
+      {
+        "before_value": null,
+        "after_value": null
+      }
+    ]
   }
 ]
 ```
@@ -586,16 +712,16 @@ print(instance.model_dump_json())
 ```
 
 ### Token Usage for Schema Generation Process:
-Total tokens used: 4479
+Total tokens used: 3209
 
 Breakdown by step:
 - analysis: 0 tokens
 
-- refinement: 327 tokens
+- refinement: 326 tokens
 
-- schema_generation: 2023 tokens
+- schema_generation: 748 tokens
 
-- guide: 2129 tokens
+- guide: 2135 tokens
 
 - extraction: 0 tokens
 
@@ -606,7 +732,7 @@ Breakdown by step:
 {
   "$defs": {
     "SystemComponentIssueResolutionissue": {
-      "description": "Details about the issue associated with the system component.",
+      "description": "Details about the issue related to the system component.",
       "properties": {
         "description": {
           "anyOf": [
@@ -644,19 +770,17 @@ Breakdown by step:
             }
           ],
           "default": null,
-          "description": "Timestamp of when the issue was detected.",
-          "format": "ISO 8601",
-          "title": "Timestamp",
-          "type": "string"
+          "description": "Timestamp of when the issue was detected, in ISO 8601 format.",
+          "title": "Timestamp"
         }
       },
       "title": "SystemComponentIssueResolutionissue",
       "type": "object"
     },
-    "SystemComponentIssueResolutionresolution_stepsItem": {
-      "description": "Steps taken to resolve the issue.",
+    "SystemComponentIssueResolutionresolution": {
+      "description": "Details about the resolution of the issue.",
       "properties": {
-        "step": {
+        "action_taken": {
           "anyOf": [
             {
               "type": "string"
@@ -666,10 +790,10 @@ Breakdown by step:
             }
           ],
           "default": null,
-          "description": "Description of the resolution step.",
-          "title": "Step"
+          "description": "Action taken to resolve the issue.",
+          "title": "Action Taken"
         },
-        "effectiveness": {
+        "responsible_personnel": {
           "anyOf": [
             {
               "type": "string"
@@ -679,8 +803,8 @@ Breakdown by step:
             }
           ],
           "default": null,
-          "description": "Effectiveness of the resolution step.",
-          "title": "Effectiveness"
+          "description": "Personnel responsible for the resolution.",
+          "title": "Responsible Personnel"
         },
         "time_taken": {
           "anyOf": [
@@ -692,13 +816,11 @@ Breakdown by step:
             }
           ],
           "default": null,
-          "description": "Time taken to implement the resolution step.",
-          "format": "ISO 8601 duration",
-          "title": "Time Taken",
-          "type": "string"
+          "description": "Time taken for resolution, in ISO 8601 duration format.",
+          "title": "Time Taken"
         }
       },
-      "title": "SystemComponentIssueResolutionresolution_stepsItem",
+      "title": "SystemComponentIssueResolutionresolution",
       "type": "object"
     },
     "SystemComponentIssueResolutionsystem_component": {
@@ -748,7 +870,7 @@ Breakdown by step:
       "type": "object"
     }
   },
-  "description": "Schema for extracting details about system components, associated issues, and resolution steps.",
+  "description": "Schema for extracting details about system components, issues, and resolution steps.",
   "properties": {
     "system_component": {
       "anyOf": [
@@ -772,23 +894,19 @@ Breakdown by step:
         }
       ],
       "default": null,
-      "description": "Details about the issue associated with the system component."
+      "description": "Details about the issue related to the system component."
     },
-    "resolution_steps": {
+    "resolution": {
       "anyOf": [
         {
-          "items": {
-            "$ref": "#/$defs/SystemComponentIssueResolutionresolution_stepsItem"
-          },
-          "type": "array"
+          "$ref": "#/$defs/SystemComponentIssueResolutionresolution"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Steps taken to resolve the issue.",
-      "title": "Resolution Steps"
+      "description": "Details about the resolution of the issue."
     }
   },
   "title": "SystemComponentIssueResolution",
