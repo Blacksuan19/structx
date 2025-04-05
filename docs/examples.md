@@ -2,7 +2,7 @@
 
 This document contains examples of using the structx library for structured data extraction.
 
-*Generated on: 2025-03-05 12:56:41*
+*Generated on: 2025-04-04 19:36:45*
 
 ## Setup
 
@@ -52,38 +52,17 @@ print(result.data)
 
 Extracted 5 items with 100.0% success rate
 
+### Token Usage:
+Total tokens used: 4958
+Tokens by step:
+- analysis: 197 tokens
+- refinement: 303 tokens
+- schema_generation: 559 tokens
+- guide: 343 tokens
+- extraction: 3556 tokens
+
 ```json
 [
-  {
-    "main_incident_datetime": "2024-01-15 14:30:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-01-16 08:00:00",
-        "significance": "Patch applied to resolve memory leak in application A."
-      },
-      {
-        "timestamp": "2024-01-16 09:15:00",
-        "significance": "Resolution of the issue confirmed."
-      }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-02-05 09:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-02-05 09:30:00",
-        "significance": "Cache system restarted."
-      },
-      {
-        "timestamp": "2024-02-05 14:00:00",
-        "significance": "Slow query responses issue."
-      },
-      {
-        "timestamp": "2024-02-05 15:00:00",
-        "significance": "Query optimization implemented."
-      }
-    ]
-  },
   {
     "main_incident_datetime": "2024-02-01 10:00:00",
     "additional_timestamps": [
@@ -93,28 +72,11 @@ Extracted 5 items with 100.0% success rate
       },
       {
         "timestamp": "2024-02-01 10:30:00",
-        "significance": "Applied fix to the router."
+        "significance": "Applied fix for the router misconfiguration."
       },
       {
         "timestamp": "2024-02-01 10:45:00",
         "significance": "Confirmed full restoration of network connectivity."
-      }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-01-20 03:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-01-20 04:30:00",
-        "significance": "Emergency cleanup performed due to insufficient storage space."
-      },
-      {
-        "timestamp": "2024-01-20 05:45:00",
-        "significance": "Backup reattempted successfully after cleanup."
-      },
-      {
-        "timestamp": "2024-01-20 05:45:00",
-        "significance": "Added monitoring alert for storage capacity."
       }
     ]
   },
@@ -134,19 +96,70 @@ Extracted 5 items with 100.0% success rate
         "significance": "Root cause analysis completed."
       }
     ]
+  },
+  {
+    "main_incident_datetime": "2024-01-15 00:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-01-15 14:30:00",
+        "significance": "Alert triggered due to high CPU usage."
+      },
+      {
+        "timestamp": "2024-01-16 08:00:00",
+        "significance": "Patch applied to resolve memory leak."
+      },
+      {
+        "timestamp": "2024-01-16 09:15:00",
+        "significance": "Resolution confirmed after patch application."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-01-20 03:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-01-20 04:30:00",
+        "significance": "Emergency cleanup performed due to insufficient storage space."
+      },
+      {
+        "timestamp": "2024-01-20 05:45:00",
+        "significance": "Backup reattempted successfully after cleanup."
+      }
+    ]
+  },
+  {
+    "main_incident_datetime": "2024-02-05 00:00:00",
+    "additional_timestamps": [
+      {
+        "timestamp": "2024-02-05 09:00:00",
+        "significance": "Cache invalidation errors occurred."
+      },
+      {
+        "timestamp": "2024-02-05 14:00:00",
+        "significance": "Slow query responses were reported."
+      },
+      {
+        "timestamp": "2024-02-05 09:30:00",
+        "significance": "Cache system was restarted."
+      },
+      {
+        "timestamp": "2024-02-05 15:00:00",
+        "significance": "Query optimization was implemented."
+      }
+    ]
   }
 ]
 ```
 
 ### Generated Model:
 
-Model name: `IncidentTimestampExtraction`
+Model name: `IncidentTimestamps`
 
 ```json
 {
   "$defs": {
-    "IncidentTimestampExtractionadditional_timestampsItem": {
-      "description": "A collection of additional timestamps related to the incident, each with its significance.",
+    "IncidentTimestampsadditional_timestampsItem": {
+      "description": "A list of additional timestamps related to the incident, each with its significance.",
       "properties": {
         "timestamp": {
           "anyOf": [
@@ -176,11 +189,11 @@ Model name: `IncidentTimestampExtraction`
           "title": "Significance"
         }
       },
-      "title": "IncidentTimestampExtractionadditional_timestampsItem",
+      "title": "IncidentTimestampsadditional_timestampsItem",
       "type": "object"
     }
   },
-  "description": "Schema for extracting incident timestamps and their significance from reports.",
+  "description": "Schema for extracting incident timestamps and their significance",
   "properties": {
     "main_incident_datetime": {
       "anyOf": [
@@ -200,7 +213,7 @@ Model name: `IncidentTimestampExtraction`
       "anyOf": [
         {
           "items": {
-            "$ref": "#/$defs/IncidentTimestampExtractionadditional_timestampsItem"
+            "$ref": "#/$defs/IncidentTimestampsadditional_timestampsItem"
           },
           "type": "array"
         },
@@ -209,11 +222,11 @@ Model name: `IncidentTimestampExtraction`
         }
       ],
       "default": null,
-      "description": "A collection of additional timestamps related to the incident, each with its significance.",
+      "description": "A list of additional timestamps related to the incident, each with its significance.",
       "title": "Additional Timestamps"
     }
   },
-  "title": "IncidentTimestampExtraction",
+  "title": "IncidentTimestamps",
   "type": "object"
 }
 ```
@@ -234,87 +247,92 @@ extract incident information including:
 result = extractor.extract(df, query)
 ```
 
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
 ### Results:
 
-Extracted 5 items with 100.0% success rate
+Extracted 4 items with 80.0% success rate
+
+### Token Usage:
+Total tokens used: 13197
+Tokens by step:
+- analysis: 209 tokens
+- refinement: 346 tokens
+- schema_generation: 637 tokens
+- guide: 353 tokens
+- extraction: 11652 tokens
 
 ```json
 [
   {
     "incidents": [
       {
+        "system_component_affected": "Database",
+        "issue_type": "Backup Failure",
+        "severity": "High",
+        "resolution_steps": [
+          {
+            "step": "Emergency cleanup performed"
+          },
+          {
+            "step": "Backup reattempted successfully"
+          },
+          {
+            "step": "Added monitoring alert for storage capacity"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
         "system_component_affected": "server-01",
-        "issue_type": "high CPU usage",
+        "issue_type": "High CPU usage",
         "severity": "High",
         "resolution_steps": [
-          [
-            "Investigated the issue"
-          ],
-          [
-            "Identified memory leak in application A"
-          ],
-          [
-            "Applied patch"
-          ],
-          [
-            "Confirmed resolution"
-          ]
-        ]
-      },
-      {
-        "system_component_affected": "application A",
-        "issue_type": "memory leak",
-        "severity": "High",
-        "resolution_steps": [
-          [
-            "Investigated the issue"
-          ],
-          [
-            "Identified memory leak"
-          ],
-          [
-            "Applied patch"
-          ],
-          [
-            "Confirmed resolution"
-          ]
-        ]
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component_affected": "Cache System",
-        "issue_type": "Cache Invalidation Error",
-        "severity": "High",
-        "resolution_steps": [
-          [
-            "Restarted cache system at 09:30"
-          ],
-          [
-            "Resolved by end of day"
-          ]
-        ]
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component_affected": "application servers",
-        "issue_type": "Network connectivity drops",
-        "severity": "High",
-        "resolution_steps": [
-          [
-            "Initial diagnosis at 10:15 identified router misconfiguration"
-          ],
-          [
-            "Applied fix at 10:30"
-          ],
-          [
-            "Confirmed full restoration at 10:45"
-          ]
+          {
+            "step": "Investigated the issue"
+          },
+          {
+            "step": "Identified memory leak in application A"
+          },
+          {
+            "step": "Applied patch"
+          },
+          {
+            "step": "Confirmed resolution"
+          }
         ]
       }
     ]
@@ -326,18 +344,15 @@ Extracted 5 items with 100.0% success rate
         "issue_type": "Unexpected Behavior",
         "severity": "High",
         "resolution_steps": [
-          [
-            "Rollback initiated",
-            "2024-02-10T09:20:00"
-          ],
-          [
-            "Root cause analysis completed",
-            "2024-02-10T11:00:00"
-          ],
-          [
-            "New update scheduled with additional testing",
-            "2024-02-10T11:00:00"
-          ]
+          {
+            "step": "Rollback initiated"
+          },
+          {
+            "step": "Root cause analysis completed"
+          },
+          {
+            "step": "New update scheduled with additional testing"
+          }
         ]
       }
     ]
@@ -345,22 +360,19 @@ Extracted 5 items with 100.0% success rate
   {
     "incidents": [
       {
-        "system_component_affected": "Database",
-        "issue_type": "Backup Failure",
+        "system_component_affected": "application servers",
+        "issue_type": "Network connectivity drops",
         "severity": "High",
         "resolution_steps": [
-          [
-            "Identified root cause: insufficient storage space"
-          ],
-          [
-            "Performed emergency cleanup"
-          ],
-          [
-            "Reattempted backup successfully"
-          ],
-          [
-            "Added monitoring alert for storage capacity"
-          ]
+          {
+            "step": "Initial diagnosis at 10:15 identified router misconfiguration"
+          },
+          {
+            "step": "Applied fix at 10:30"
+          },
+          {
+            "step": "Confirmed full restoration at 10:45"
+          }
         ]
       }
     ]
@@ -387,84 +399,17 @@ result = extractor.extract(df, query)
 
 Extracted 6 items with 100.0% success rate
 
+### Token Usage:
+Total tokens used: 5849
+Tokens by step:
+- analysis: 228 tokens
+- refinement: 345 tokens
+- schema_generation: 681 tokens
+- guide: 343 tokens
+- extraction: 4252 tokens
+
 ```json
 [
-  {
-    "incidents": [
-      {
-        "system_component": "Cache System",
-        "timestamp": "2024-02-05 09:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-02-05 09:30:00",
-        "outcome": "Cache system restarted"
-      }
-    ],
-    "metrics": []
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "Database",
-        "timestamp": "2024-02-05 14:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-02-05 15:00:00",
-        "outcome": "Query optimization implemented"
-      }
-    ],
-    "metrics": []
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "application servers",
-        "timestamp": "2024-02-01 10:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-02-01 10:15:00",
-        "outcome": "initial diagnosis identified router misconfiguration"
-      },
-      {
-        "timing": "2024-02-01 10:30:00",
-        "outcome": "applied fix"
-      },
-      {
-        "timing": "2024-02-01 10:45:00",
-        "outcome": "confirmed full restoration"
-      }
-    ],
-    "metrics": []
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "Database",
-        "timestamp": "2024-01-20 03:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-01-20 04:30:00",
-        "outcome": "Emergency cleanup performed"
-      },
-      {
-        "timing": "2024-01-20 05:45:00",
-        "outcome": "Backup reattempted successfully"
-      },
-      {
-        "timing": "2024-01-20 05:45:00",
-        "outcome": "Added monitoring alert for storage capacity"
-      }
-    ],
-    "metrics": []
-  },
   {
     "incidents": [
       {
@@ -506,7 +451,103 @@ Extracted 6 items with 100.0% success rate
         "outcome": "Root cause analysis completed"
       }
     ],
+    "metrics": [
+      {
+        "before_value": null,
+        "after_value": null
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "Database",
+        "timestamp": "2024-01-20 03:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-01-20 04:30:00",
+        "outcome": "Emergency cleanup performed"
+      },
+      {
+        "timing": "2024-01-20 05:45:00",
+        "outcome": "Backup reattempted successfully"
+      },
+      {
+        "timing": "2024-01-20 05:45:00",
+        "outcome": "Added monitoring alert for storage capacity"
+      }
+    ],
     "metrics": []
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "Cache System",
+        "timestamp": "2024-02-05 09:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-05 09:30:00",
+        "outcome": "Cache system restarted"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": null,
+        "after_value": null
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "Database Query",
+        "timestamp": "2024-02-05 14:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-05 15:00:00",
+        "outcome": "Query optimization implemented"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": null,
+        "after_value": null
+      }
+    ]
+  },
+  {
+    "incidents": [
+      {
+        "system_component": "application servers",
+        "timestamp": "2024-02-01 10:00:00"
+      }
+    ],
+    "actions": [
+      {
+        "timing": "2024-02-01 10:15:00",
+        "outcome": "initial diagnosis identified router misconfiguration"
+      },
+      {
+        "timing": "2024-02-01 10:30:00",
+        "outcome": "applied fix"
+      },
+      {
+        "timing": "2024-02-01 10:45:00",
+        "outcome": "confirmed full restoration"
+      }
+    ],
+    "metrics": [
+      {
+        "before_value": null,
+        "after_value": null
+      }
+    ]
   }
 ]
 ```
@@ -533,13 +574,23 @@ instance = DataModel(
 print(instance.model_dump_json())
 ```
 
+### Token Usage for Schema Generation Process:
+Total tokens used: 3176
+
+Breakdown by step:
+- analysis: 0 tokens
+- refinement: 322 tokens
+- schema_generation: 752 tokens
+- guide: 2102 tokens
+- extraction: 0 tokens
+
 ### Generated Schema:
 
 ```json
 {
   "$defs": {
     "SystemComponentIssueResolutionissue": {
-      "description": "Details about the issue encountered.",
+      "description": "Details about the issue related to the system component.",
       "properties": {
         "description": {
           "anyOf": [
@@ -564,7 +615,7 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Severity level of the issue (e.g., low, medium, high).",
+          "description": "Severity level of the issue.",
           "title": "Severity Level"
         },
         "timestamp": {
@@ -577,17 +628,17 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Timestamp of when the issue was detected, in ISO 8601 format.",
+          "description": "Timestamp when the issue was detected, in ISO 8601 format.",
           "title": "Timestamp"
         }
       },
       "title": "SystemComponentIssueResolutionissue",
       "type": "object"
     },
-    "SystemComponentIssueResolutionresolution": {
-      "description": "Details about the resolution of the issue.",
+    "SystemComponentIssueResolutionresolutionItem": {
+      "description": "List of resolution steps taken to address the issue.",
       "properties": {
-        "action_taken": {
+        "action": {
           "anyOf": [
             {
               "type": "string"
@@ -598,7 +649,7 @@ print(instance.model_dump_json())
           ],
           "default": null,
           "description": "Action taken to resolve the issue.",
-          "title": "Action Taken"
+          "title": "Action"
         },
         "responsible_personnel": {
           "anyOf": [
@@ -610,10 +661,10 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Personnel responsible for the resolution.",
+          "description": "Personnel responsible for the action.",
           "title": "Responsible Personnel"
         },
-        "time_taken": {
+        "action_timestamp": {
           "anyOf": [
             {
               "type": "string"
@@ -623,11 +674,11 @@ print(instance.model_dump_json())
             }
           ],
           "default": null,
-          "description": "Time taken for resolution, in a standard format (e.g., HH:MM).",
-          "title": "Time Taken"
+          "description": "Timestamp when the action was taken, in ISO 8601 format.",
+          "title": "Action Timestamp"
         }
       },
-      "title": "SystemComponentIssueResolutionresolution",
+      "title": "SystemComponentIssueResolutionresolutionItem",
       "type": "object"
     },
     "SystemComponentIssueResolutionsystem_component": {
@@ -677,7 +728,7 @@ print(instance.model_dump_json())
       "type": "object"
     }
   },
-  "description": "Schema for extracting details about system components, issues, and resolutions.",
+  "description": "Schema for extracting details about system components, associated issues, and resolution steps.",
   "properties": {
     "system_component": {
       "anyOf": [
@@ -701,19 +752,23 @@ print(instance.model_dump_json())
         }
       ],
       "default": null,
-      "description": "Details about the issue encountered."
+      "description": "Details about the issue related to the system component."
     },
     "resolution": {
       "anyOf": [
         {
-          "$ref": "#/$defs/SystemComponentIssueResolutionresolution"
+          "items": {
+            "$ref": "#/$defs/SystemComponentIssueResolutionresolutionItem"
+          },
+          "type": "array"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Details about the resolution of the issue."
+      "description": "List of resolution steps taken to address the issue.",
+      "title": "Resolution"
     }
   },
   "title": "SystemComponentIssueResolution",

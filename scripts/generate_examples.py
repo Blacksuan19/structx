@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 from io import StringIO
 
+import instructor
 import pandas as pd
 
 from structx import Extractor
@@ -61,7 +62,9 @@ Log ID,Description
 
     # Initialize extractor
     extractor = Extractor.from_litellm(
-        model="gpt-4o-mini", api_base=os.getenv("OPENAI_BASE_URL")
+        model="gpt-4o-mini",
+        api_base=os.getenv("OPENAI_BASE_URL"),
+        drop_params=True,
     )
 
     # Example 1: Extract incident timing
@@ -249,15 +252,14 @@ Log ID,Description
 
     DataModel = extractor.get_schema(query=q4, sample_text=df["Description"].iloc[0])
 
-    print("\n### Token Usage for Schema Generation:")
-    # Access usage via DataModel if it has the usage attribute
+    print("\n### Token Usage for Schema Generation Process:")
     if hasattr(DataModel, "usage") and DataModel.usage:
         usage = DataModel.usage.get_usage_summary()
         print(f"Total tokens used: {usage.total_tokens}")
-        schema_tokens = next(
-            (s.tokens for s in usage.steps if s.name == "schema_generation"), 0
-        )
-        print(f"Schema generation: {schema_tokens} tokens")
+
+        print("\nBreakdown by step:")
+        for step in usage.steps:
+            print(f"- {step.name}: {step.tokens} tokens")
 
     print("\n### Generated Schema:")
     print("\n```json")
