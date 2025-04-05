@@ -3,11 +3,88 @@ import os
 import sys
 from datetime import datetime
 from io import StringIO
+from pathlib import Path
+from typing import Dict, List
 
-import instructor
 import pandas as pd
 
 from structx import Extractor
+from structx.core.models import ExtractionResult
+from structx.utils.usage import UsageSummary
+
+
+def print_section_header(title: str, description: str = None):
+    """Print a section header with an optional description."""
+    print(f"\n## {title}")
+    if description:
+        print(f"\n{description}")
+
+
+def print_code_block(code_lines: List[str]):
+    """Print code in a markdown code block."""
+    print("\n```python")
+    for line in code_lines:
+        print(line)
+    print("```")
+
+
+def print_json(data: List[Dict]):
+    """Print data as a JSON code block."""
+    print("\n```json")
+    print(json.dumps(data, indent=2, default=str))
+    print("```")
+
+
+def print_token_usage(usage: UsageSummary):
+    """Print token usage information."""
+    print("\n### Token Usage:")
+    if usage:
+        print(f"Total tokens used: {usage.total_tokens}")
+        print("Tokens by step:")
+        for step in usage.steps:
+            print(f"- {step.name}: {step.tokens} tokens\n")
+
+
+def print_extraction_results(results: ExtractionResult):
+    """Print extraction results including stats, token usage, and data."""
+    print("\n### Results:")
+    print(
+        f"\nExtracted {results.success_count} items with {results.success_rate:.1f}% success rate"
+    )
+
+    print_token_usage(results.get_token_usage())
+
+    # Display results - either as markdown table or JSON
+    if hasattr(results.data, "to_markdown"):
+        print(results.data.to_markdown(index=False))
+    else:
+        print_json([item.model_dump() for item in results.data])
+
+
+def run_extraction_example(
+    extractor: Extractor,
+    df: pd.DataFrame,
+    title: str,
+    description: str,
+    query: str,
+    code_lines: List[str],
+) -> ExtractionResult:
+    """Run and document an extraction example."""
+    print_section_header(title, description)
+    print_code_block(code_lines)
+
+    results = extractor.extract(df, query)
+    print_extraction_results(results)
+
+    # For complex examples that benefit from showing the model schema
+    if (
+        title != "Example 3: Complex Nested Extraction"
+    ):  # Only show for simpler examples
+        print("\n### Generated Model:")
+        print(f"\nModel name: `{results.model.__name__}`")
+        print_json(results.model.model_json_schema())
+
+    return results
 
 
 def main():
@@ -22,21 +99,25 @@ def main():
     )
     print(f"\n*Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
 
-    print("\n## Setup")
-    print("\n```python")
-    print("from structx import Extractor")
-    print("import pandas as pd")
-    print("import os")
-    print("\n# Initialize the extractor")
-    print("extractor = Extractor.from_litellm(")
-    print('    model="gpt-4o-mini",')
-    print('    api_key="your-api-key"')
-    print(")")
-    print("```")
+    # Setup section
+    print_section_header("Setup")
+    print_code_block(
+        [
+            "from structx import Extractor",
+            "import pandas as pd",
+            "import os",
+            "\n# Initialize the extractor",
+            "extractor = Extractor.from_litellm(",
+            '    model="gpt-4o-mini",',
+            '    api_key="your-api-key"',
+            ")",
+        ]
+    )
 
-    print("\n## Sample Data")
-    print(
-        "\nThe following examples use this synthetic dataset of technical system logs:"
+    # Sample data section
+    print_section_header(
+        "Sample Data",
+        "The following examples use this synthetic dataset of technical system logs:",
     )
 
     # Synthetic sample data - technical system logs
@@ -54,11 +135,9 @@ Log ID,Description
 
     # Display sample data as markdown table
     print(df.to_markdown(index=False))
-
-    print("\n```python")
-    print("# Create DataFrame from CSV data")
-    print("df = pd.read_csv(StringIO(sample_data))")
-    print("```")
+    print_code_block(
+        ["# Create DataFrame from CSV data", "df = pd.read_csv(StringIO(sample_data))"]
+    )
 
     # Initialize extractor
     extractor = Extractor.from_litellm(
@@ -68,68 +147,24 @@ Log ID,Description
     )
 
     # Example 1: Extract incident timing
-    print("\n## Example 1: Extracting Incident Timing")
-    print(
-        "\nIn this example, we extract the main incident date and time, along with any additional timestamps and their significance."
-    )
-
     q1 = "extract the main incident date and time, and any additional timestamps with their significance"
-
-    print("\n```python")
-    print("# Extract incident timing")
-    print(
-        'query = "extract the main incident date and time, and any additional timestamps with their significance"'
+    run_extraction_example(
+        extractor=extractor,
+        df=df,
+        title="Example 1: Extracting Incident Timing",
+        description="In this example, we extract the main incident date and time, along with any additional timestamps and their significance.",
+        query=q1,
+        code_lines=[
+            "# Extract incident timing",
+            'query = "extract the main incident date and time, and any additional timestamps with their significance"',
+            "result = extractor.extract(df, query)",
+            "\n# Access the extraction results",
+            'print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")',
+            "print(result.data)",
+        ],
     )
-    print("result = extractor.extract(df, query)")
-    print("\n# Access the extraction results")
-    print(
-        'print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")'
-    )
-    print("print(result.data)")
-    print("```")
-
-    results1 = extractor.extract(df, q1)
-
-    print("\n### Results:")
-    print(
-        f"\nExtracted {results1.success_count} items with {results1.success_rate:.1f}% success rate"
-    )
-
-    print("\n### Token Usage:")
-    usage = results1.get_token_usage()
-    if usage:
-        print(f"Total tokens used: {usage.total_tokens}")
-        print("Tokens by step:")
-        for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens\n")
-
-    # Convert extracted data to DataFrame and display as markdown table
-    if hasattr(results1.data, "to_markdown"):
-        # If already a DataFrame
-        print(results1.data.to_markdown(index=False))
-    else:
-        # display as JSON
-
-        print("\n```json")
-        print(
-            json.dumps(
-                [item.model_dump() for item in results1.data], indent=2, default=str
-            )
-        )
-        print("```")
-
-    print("\n### Generated Model:")
-    print(f"\nModel name: `{results1.model.__name__}`")
-    print("\n```json")
-    print(json.dumps(results1.model.model_json_schema(), indent=2))
-    print("```")
 
     # Example 2: Extract technical details
-    print("\n## Example 2: Extracting Technical Details")
-    print(
-        "\nThis example extracts more complex information about each incident including system components, issue types, severity, and resolution steps."
-    )
-
     q2 = """
     extract incident information including:
     - system component affected
@@ -137,124 +172,80 @@ Log ID,Description
     - severity
     - resolution steps
     """
-
-    print("\n```python")
-    print("# Extract technical details")
-    print('query = """')
-    print("extract incident information including:")
-    print("- system component affected")
-    print("- issue type")
-    print("- severity")
-    print("- resolution steps")
-    print('"""')
-    print("result = extractor.extract(df, query)")
-    print("```")
-
-    results2 = extractor.extract(df, q2)
-
-    print("\n### Results:")
-    print(
-        f"\nExtracted {results2.success_count} items with {results2.success_rate:.1f}% success rate"
+    run_extraction_example(
+        extractor=extractor,
+        df=df,
+        title="Example 2: Extracting Technical Details",
+        description="This example extracts more complex information about each incident including system components, issue types, severity, and resolution steps.",
+        query=q2,
+        code_lines=[
+            "# Extract technical details",
+            'query = """',
+            "extract incident information including:",
+            "- system component affected",
+            "- issue type",
+            "- severity",
+            "- resolution steps",
+            '"""',
+            "result = extractor.extract(df, query)",
+        ],
     )
-
-    print("\n### Token Usage:")
-    usage = results2.get_token_usage()
-    if usage:
-        print(f"Total tokens used: {usage.total_tokens}")
-        print("Tokens by step:")
-        for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens\n")
-
-    # Convert extracted data to DataFrame and display as markdown table
-    if hasattr(results2.data, "to_markdown"):
-        print(results2.data.to_markdown(index=False))
-    else:
-        # display as JSON
-        print("\n```json")
-        print(
-            json.dumps(
-                [item.model_dump() for item in results2.data], indent=2, default=str
-            )
-        )
-        print("```")
 
     # Example 3: Complex nested extraction
-    print("\n## Example 3: Complex Nested Extraction")
-    print(
-        "\nThis example demonstrates extracting complex nested structures with relationships between different elements."
-    )
-
     q3 = """
     extract structured information where:
     - each incident has a system component and timestamp
     - actions have timing and outcome
     - metrics include before and after values if available
     """
-
-    print("\n```python")
-    print("# Extract complex nested structures")
-    print('query = """')
-    print("extract structured information where:")
-    print("- each incident has a system component and timestamp")
-    print("- actions have timing and outcome")
-    print("- metrics include before and after values if available")
-    print('"""')
-    print("result = extractor.extract(df, query)")
-    print("```")
-
-    results3 = extractor.extract(df, q3)
-
-    print("\n### Results:")
-    print(
-        f"\nExtracted {results3.success_count} items with {results3.success_rate:.1f}% success rate"
+    results3 = run_extraction_example(
+        extractor=extractor,
+        df=df,
+        title="Example 3: Complex Nested Extraction",
+        description="This example demonstrates extracting complex nested structures with relationships between different elements.",
+        query=q3,
+        code_lines=[
+            "# Extract complex nested structures",
+            'query = """',
+            "extract structured information where:",
+            "- each incident has a system component and timestamp",
+            "- actions have timing and outcome",
+            "- metrics include before and after values if available",
+            '"""',
+            "result = extractor.extract(df, query)",
+        ],
     )
-
-    print("\n### Token Usage:")
-    usage = results3.get_token_usage()
-    if usage:
-        print(f"Total tokens used: {usage.total_tokens}")
-        print("Tokens by step:")
-        for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens\n")
-
-    # For complex nested structures, JSON might be more readable
-    print("\n```json")
-    print(
-        json.dumps([item.model_dump() for item in results3.data], indent=2, default=str)
-    )
-    print("```")
 
     # Example 4: Preview schema
-    print("\n## Example 4: Preview Generated Schema")
-    print(
-        "\nThis example shows how to generate and inspect a schema without performing extraction."
+    print_section_header(
+        "Example 4: Preview Generated Schema",
+        "This example shows how to generate and inspect a schema without performing extraction.",
     )
 
     q4 = "extract system component, issue details, and resolution steps"
-
-    print("\n```python")
-    print("# Generate schema without extraction")
-    print('query = "extract system component, issue details, and resolution steps"')
-    print('sample_text = df["Description"].iloc[0]')
-    print("DataModel = extractor.get_schema(query=query, sample_text=sample_text)")
-    print("\n# Print schema")
-    print("print(DataModel.model_json_schema())")
-    print("\n# Create an instance manually")
-    print("instance = DataModel(")
-    print('    system_component="API Server",')
-    print('    issue_details="High latency in requests",')
-    print(
-        '    resolution_steps="Scaled up server resources and optimized database queries"'
+    print_code_block(
+        [
+            "# Generate schema without extraction",
+            'query = "extract system component, issue details, and resolution steps"',
+            'sample_text = df["Description"].iloc[0]',
+            "DataModel = extractor.get_schema(query=query, sample_text=sample_text)",
+            "\n# Print schema",
+            "print(DataModel.model_json_schema())",
+            "\n# Create an instance manually",
+            "instance = DataModel(",
+            '    system_component="API Server",',
+            '    issue_details="High latency in requests",',
+            '    resolution_steps="Scaled up server resources and optimized database queries"',
+            ")",
+            "print(instance.model_dump_json())",
+        ]
     )
-    print(")")
-    print("print(instance.model_dump_json())")
-    print("```")
 
     DataModel = extractor.get_schema(query=q4, sample_text=df["Description"].iloc[0])
 
     print("\n### Token Usage for Schema Generation Process:")
     if hasattr(DataModel, "usage") and DataModel.usage:
-        usage = DataModel.usage.get_usage_summary()
+        usage: UsageSummary = DataModel.usage.get_usage_summary()
         print(f"Total tokens used: {usage.total_tokens}")
 
         print("\nBreakdown by step:")
@@ -262,18 +253,14 @@ Log ID,Description
             print(f"- {step.name}: {step.tokens} tokens\n")
 
     print("\n### Generated Schema:")
-    print("\n```json")
-    print(json.dumps(DataModel.model_json_schema(), indent=2))
-    print("```")
+    print_json(DataModel.model_json_schema())
 
     # Restore stdout
     sys.stdout = sys.__stdout__
 
     # Write the captured output to README.md
-    with open("docs/examples.md", "w") as f:
-        f.write(output.getvalue())
-
-    print(f"Examples README.md has been generated successfully!")
+    Path("docs/examples.md").write_text(output.getvalue(), encoding="utf-8")
+    print(f"examples.md has been generated successfully!")
 
 
 if __name__ == "__main__":
