@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import logging
 import threading
@@ -558,12 +559,18 @@ class Extractor:
         # Log statistics
         self._log_extraction_stats(len(df), failed_rows)
 
+        # Create a deep copy of usage for the result
+        result_usage = copy.deepcopy(self.usage) if self.usage else None
+
+        # Reset the extractor's usage for the next operation
+        self.usage = ExtractorUsage()
+
         # Return results
         return ExtractionResult(
             data=result_df if return_df else result_list,
             failed=pd.DataFrame(failed_rows),
             model=ExtractionModel,
-            usage=self.usage,
+            usage=result_usage,
         )
 
     def _prepare_data(
@@ -782,8 +789,15 @@ class Extractor:
         # Create model
         ExtractionModel = ModelGenerator.from_extraction_request(schema_request)
 
-        ExtractionModel.usage = self.usage
-        # Return schema
+        # Create a deep copy of usage for the model
+        model_usage = copy.deepcopy(self.usage) if self.usage else None
+
+        # Reset the extractor's usage for the next operation
+        self.usage = ExtractorUsage()
+
+        # Add usage to model
+        ExtractionModel.usage = model_usage
+
         return ExtractionModel
 
     async def get_schema_async(self, query: str, sample_text: str) -> Type[BaseModel]:
@@ -878,8 +892,14 @@ class Extractor:
         converted_request = convert_pydantic_v1_to_v2(sanitized_request)
         refined_model = ModelGenerator.from_extraction_request(converted_request)
 
-        # Add usage tracking to the generated model
-        refined_model.usage = self.usage
+        # Create a deep copy of usage for the model
+        model_usage = copy.deepcopy(self.usage) if self.usage else None
+
+        # Reset the extractor's usage for the next operation
+        self.usage = ExtractorUsage()
+
+        # Add usage to model
+        refined_model.usage = model_usage
 
         return refined_model
 
