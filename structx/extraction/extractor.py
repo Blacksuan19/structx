@@ -5,18 +5,7 @@ import logging
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import pandas as pd
 from instructor import Instructor
@@ -31,7 +20,6 @@ from tenacity import (
     wait_exponential,
 )
 from tqdm import tqdm
-from zmq import has
 
 from structx.core.config import DictStrAny, ExtractionConfig
 from structx.core.exceptions import ConfigurationError, ExtractionError
@@ -227,60 +215,6 @@ class Extractor:
             after=after_log(logger, logging.DEBUG),
         )
 
-    def _extract_without_retry(
-        self,
-        text: str,
-        extraction_model: Type[BaseModel],
-        refined_query: QueryRefinement,
-        guide: ExtractionGuide,
-    ) -> List[BaseModel]:
-        """Extract structured data with usage tracking"""
-        messages = [
-            {"role": "system", "content": extraction_system_prompt},
-            {
-                "role": "user",
-                "content": extraction_template.substitute(
-                    query=refined_query.refined_query,
-                    patterns=guide.structural_patterns,
-                    rules=guide.relationship_rules,
-                    text=text,
-                ),
-            },
-        ]
-
-        # Use create directly, not create_with_completion for extraction
-        # This returns a properly structured response for iterable models
-
-        class ResponseContainer(BaseModel):
-            """Container for the response"""
-
-            response: List[BaseModel]
-
-        response = self.client.chat.completions.create_iterable(
-            model=self.model_name,
-            response_model=extraction_model,
-            messages=messages,
-            **self.config.extraction,
-        )
-
-        response = list(response)
-
-        print("Response:", response)
-        print(f"{dir(response[0])=}")
-
-        # check if any of the items in the response has the _raw_response attribute
-        # we neeed to check item by item because the response is an iterable
-        if hasattr(response, "_raw_response"):
-            completion = response._raw_response
-            # Track usage
-            usage = StepUsage.from_completion(completion, ExtractionStep.EXTRACTION)
-            if usage:
-                with self.usage_lock:
-                    self.usage.add_step_usage(usage)
-
-        # Return validated items
-        return [extraction_model.model_validate(item) for item in response]
-
     def _extract_with_model(
         self,
         text: str,
@@ -289,7 +223,10 @@ class Extractor:
         guide: ExtractionGuide,
     ) -> List[BaseModel]:
         """Extract data with enforced structure with retries and usage tracking"""
+
         # Create a container model to wrap the list items
+        # this is necessary to be able to track token usage, when passing an iterable data model
+        # result._raw_response does not exist making usage calculations not possible
         container_name = f"{extraction_model.__name__}Container"
         container_model = create_model(
             container_name,
@@ -304,7 +241,7 @@ class Extractor:
         retry_decorator = self._create_retry_decorator()
 
         @retry_decorator
-        def extract_with_retry():
+        def extract_with_retry() -> List[BaseModel]:
             # Use _perform_llm_completion with the container model
             container = self._perform_llm_completion(
                 messages=[
