@@ -11,7 +11,6 @@ class ExtractionStep(Enum):
     Represents the different steps in the extraction pipeline where token usage is tracked.
     """
 
-    ANALYSIS = "analysis"
     REFINEMENT = "refinement"
     SCHEMA_GENERATION = "schema_generation"
     EXTRACTION = "extraction"

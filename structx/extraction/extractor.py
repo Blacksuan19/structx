@@ -27,7 +27,6 @@ from structx.core.models import (
     ExtractionGuide,
     ExtractionRequest,
     ExtractionResult,
-    QueryAnalysis,
     QueryRefinement,
 )
 from structx.extraction.generator import ModelGenerator
@@ -122,24 +121,6 @@ class Extractor:
 
         return result
 
-    @handle_errors(error_message="Query analysis failed", error_type=ExtractionError)
-    def _analyze_query(self, query: str, available_columns: List[str]) -> QueryAnalysis:
-        """Analyze query to determine target column and extraction purpose"""
-        return self._perform_llm_completion(
-            messages=[
-                {"role": "system", "content": query_analysis_system_prompt},
-                {
-                    "role": "user",
-                    "content": query_analysis_template.substitute(
-                        query=query, available_columns=", ".join(available_columns)
-                    ),
-                },
-            ],
-            response_model=QueryAnalysis,
-            config=self.config.analysis,
-            step=ExtractionStep.ANALYSIS,
-        )
-
     @handle_errors(error_message="Query refinement failed", error_type=ExtractionError)
     def _refine_query(self, query: str) -> QueryRefinement:
         """Refine and expand query with structural requirements"""
@@ -184,7 +165,7 @@ class Extractor:
 
     @handle_errors(error_message="Guide generation failed", error_type=ExtractionError)
     def _generate_extraction_guide(
-        self, refined_query: QueryRefinement
+        self, refined_query: QueryRefinement, data_columns: List[str]
     ) -> ExtractionGuide:
         """Generate extraction guide based on refined query"""
 
@@ -194,7 +175,8 @@ class Extractor:
                 {
                     "role": "user",
                     "content": guide_template.substitute(
-                        data_characteristics=refined_query.data_characteristics
+                        data_characteristics=refined_query.data_characteristics,
+                        available_columns=data_columns,
                     ),
                 },
             ],
@@ -273,29 +255,24 @@ class Extractor:
     def _initialize_extraction(
         self, df: pd.DataFrame, query: str, generate_model: bool = True
     ) -> Tuple[
-        QueryAnalysis,
         QueryRefinement,
         ExtractionGuide,
         Optional[Type[BaseModel]],
     ]:
-        """Initialize the extraction process by analyzing query and generating models if needed"""
-        # Analyze query
-        query_analysis = self._analyze_query(
-            query, available_columns=df.columns.tolist()
-        )
-        logger.info(f"Target Columns: {query_analysis.target_columns}")
-        logger.info(f"Extraction Purpose: {query_analysis.extraction_purpose}")
-
+        """Initialize the extraction process by refining query and generating models if needed"""
         # Refine query
         refined_query = self._refine_query(query)
         logger.info(f"Refined Query: {refined_query.refined_query}")
 
-        # Get sample text and generate guide
-        sample_text = df[query_analysis.target_columns].iloc[0]
-        guide = self._generate_extraction_guide(refined_query)
+        # Generate guide
+        guide = self._generate_extraction_guide(refined_query, df.columns.tolist())
+        logger.info(f"Target Columns: {guide.target_columns}")
 
         if not generate_model:
-            return query_analysis, refined_query, guide
+            return refined_query, guide
+
+        # Get sample text for schema generation
+        sample_text = df[guide.target_columns].iloc[0]
 
         # Generate model
         schema_request = self._generate_extraction_schema(
@@ -305,7 +282,7 @@ class Extractor:
         logger.info("Generated Model Schema:")
         logger.info(json.dumps(ExtractionModel.model_json_schema(), indent=2))
 
-        return query_analysis, refined_query, guide, ExtractionModel
+        return refined_query, guide, ExtractionModel
 
     def _initialize_results(
         self, df: pd.DataFrame, extraction_model: Type[BaseModel]
@@ -413,7 +390,7 @@ class Extractor:
         self,
         batch: pd.DataFrame,
         worker_fn: Callable,
-        target_column: str,
+        target_columns: List[str],
     ) -> None:
         """Process a batch of data using threads"""
         semaphore = threading.Semaphore(self.max_threads)
@@ -424,7 +401,7 @@ class Extractor:
             for idx, row in batch.iterrows():
                 thread = threading.Thread(
                     target=worker_fn,
-                    args=(row[target_column], idx, semaphore, pbar),
+                    args=(row[target_columns].to_markdown(), idx, semaphore, pbar),
                 )
                 thread.start()
                 threads.append(thread)
@@ -466,8 +443,8 @@ class Extractor:
             )
             ExtractionModel = extraction_model
         else:
-            query_analysis, refined_query, guide, ExtractionModel = (
-                self._initialize_extraction(df, query, generate_model=True)
+            refined_query, guide, ExtractionModel = self._initialize_extraction(
+                df, query, generate_model=True
             )
 
         # Initialize results
@@ -491,7 +468,7 @@ class Extractor:
         for batch_start in range(0, len(df), self.batch_size):
             batch_end = min(batch_start + self.batch_size, len(df))
             batch = df.iloc[batch_start:batch_end]
-            self._process_batch(batch, worker_fn, query_analysis.target_columns)
+            self._process_batch(batch, worker_fn, guide.target_columns)
 
         # Log statistics
         self._log_extraction_stats(len(df), failed_rows)
@@ -716,7 +693,12 @@ class Extractor:
         # Refine query
         refined_query = self._refine_query(query)
 
-        guide = self._generate_extraction_guide(refined_query)
+        # Create a simple list of column names from the sample text
+        # Since we're not working with a DataFrame here, we'll assume a single column
+        columns = ["text"]
+
+        # Generate guide
+        guide = self._generate_extraction_guide(refined_query, columns)
 
         # Generate schema
         schema_request = self._generate_extraction_schema(

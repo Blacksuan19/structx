@@ -25,13 +25,6 @@ class ModelField(BaseModel):
         validate_assignment = True
 
 
-class QueryAnalysis(BaseModel):
-    """Result of query analysis"""
-
-    target_columns: List[str] = Field(description="Column containing text to analyze")
-    extraction_purpose: str = Field(description="Purpose of extraction")
-
-
 class QueryRefinement(BaseModel):
     """Refined query with structural information"""
 
@@ -46,6 +39,8 @@ class QueryRefinement(BaseModel):
 
 class ExtractionGuide(BaseModel):
     """Guide for structured extraction"""
+
+    target_columns: List[str] = Field(description="Columns to analyze")
 
     structural_patterns: Optional[Dict[str, str]] = Field(
         description="Patterns for structuring data"

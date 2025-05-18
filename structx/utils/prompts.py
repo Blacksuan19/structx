@@ -1,20 +1,5 @@
 from string import Template
 
-query_analysis_system_prompt = """You are a precise data extraction analyst.
-Analyze the user query to determine which columns are relevant for extraction."""
-
-
-query_analysis_template = Template(
-    """
-    Analyze the following query and determine:
-    1. Which column contains the text to analyze
-    2. What needs to be extracted from that text
-
-    Query: ${query}
-    Available columns: $available_columns
-    """
-)
-
 query_refinement_system_prompt = """You are a data structuring specialist.
 Analyze queries to determine the inherent structure of the data
 and provide clear requirements for extraction."""
@@ -68,17 +53,28 @@ schema_template = Template(
 
 guide_system_prompt = """You are a data modeling specialist.
 Create clear patterns for organizing complex, nested data structures.
-Provide patterns as simple string descriptions."""
+Provide patterns as simple string descriptions and identify the correct target columns to analyze."""
 
 
 guide_template = Template(
     """
     Create guidelines for structured data extraction based on these characteristics:
     ${data_characteristics}
+
+    here is the list of available columns in the dataset:
+    ${available_columns}
+    
     Provide:
     1. Structural patterns as key-value pairs of string descriptions
     2. Relationship rules as a list of clear instructions
     3. Organization principles as a list of guidelines
+    4. Target columns (target_columns) as a list of column names that contain the text to analyze
+    
+    The target_columns field is very important - it must contain only column names that actually exist in the dataset.
+    If unsure, use the first column or the 'text' column if available.
+    Keep all values as simple strings.
+    """
+)
     Keep all values as simple strings.
     """
 )

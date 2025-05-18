@@ -7,7 +7,6 @@ from structx.core.models import (
     ExtractionGuide,
     ExtractionRequest,
     ModelField,
-    QueryAnalysis,
     QueryRefinement,
 )
 from structx.extraction.extractor import Extractor
