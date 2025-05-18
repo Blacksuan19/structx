@@ -263,7 +263,6 @@ class ExtractorUsage(BaseModel):
         # Create step summaries for standard steps
         step_summaries = []
         for step_type in [
-            ExtractionStep.ANALYSIS,
             ExtractionStep.REFINEMENT,
             ExtractionStep.SCHEMA_GENERATION,
             ExtractionStep.GUIDE,

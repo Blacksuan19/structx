@@ -203,6 +203,7 @@ class Extractor:
         extraction_model: Type[BaseModel],
         refined_query: QueryRefinement,
         guide: ExtractionGuide,
+        is_custom_model: bool = False,
     ) -> List[BaseModel]:
         """Extract data with enforced structure with retries and usage tracking"""
 
@@ -219,11 +220,30 @@ class Extractor:
             ),
         )
 
+        # Get model schema for custom models to help with extraction
+        model_schema_info = ""
+        if is_custom_model:
+            model_schema = extraction_model.model_json_schema()
+            # Include field descriptions to help with extraction
+            for field, details in model_schema.get("properties", {}).items():
+                field_type = details.get("type", "unknown")
+                field_desc = details.get("description", "")
+                if "enum" in details:
+                    field_desc += (
+                        f" Possible values: {', '.join(map(str, details['enum']))}"
+                    )
+                model_schema_info += f"- {field} ({field_type}): {field_desc}\n"
+
         # Apply retry decorator
         retry_decorator = self._create_retry_decorator()
 
         @retry_decorator
         def extract_with_retry() -> List[BaseModel]:
+            # Prepare additional context for custom model extraction
+            extra_context = ""
+            if is_custom_model and model_schema_info:
+                extra_context = f"\nModel fields and descriptions:\n{model_schema_info}\n\nEnsure all applicable fields are populated with relevant information from the text."
+
             # Use _perform_llm_completion with the container model
             container = self._perform_llm_completion(
                 messages=[
@@ -233,7 +253,7 @@ class Extractor:
                         "content": extraction_template.substitute(
                             query=refined_query.refined_query,
                             patterns=guide.structural_patterns,
-                            rules=guide.relationship_rules,
+                            rules=guide.relationship_rules + [extra_context],
                             text=text,
                         ),
                     },
@@ -309,6 +329,7 @@ class Extractor:
         failed_rows: List[Dict],
         return_df: bool,
         expand_nested: bool,
+        is_custom_model: bool = False,
     ):
         """Create a worker function for threaded extraction"""
 
@@ -325,6 +346,7 @@ class Extractor:
                         extraction_model=extraction_model,
                         refined_query=refined_query,
                         guide=guide,
+                        is_custom_model=is_custom_model,
                     )
 
                     if return_df:
@@ -438,8 +460,10 @@ class Extractor:
 
         # Initialize extraction
         if extraction_model:
-            query_analysis, refined_query, guide = self._initialize_extraction(
-                df, query, generate_model=False
+            # When a custom model is provided, generate refinement and guide from the model
+            # instead of from the query to avoid conflicts
+            refined_query, guide = self._generate_from_model(
+                model=extraction_model, query=query, data_columns=df.columns.tolist()
             )
             ExtractionModel = extraction_model
         else:
@@ -452,7 +476,7 @@ class Extractor:
             df, ExtractionModel
         )
 
-        # Create worker function
+        # Create worker function - pass is_custom_model flag when using a provided model
         worker_fn = self._create_extraction_worker(
             extraction_model=ExtractionModel,
             refined_query=refined_query,
@@ -462,6 +486,7 @@ class Extractor:
             failed_rows=failed_rows,
             return_df=return_df,
             expand_nested=expand_nested,
+            is_custom_model=extraction_model is not None,
         )
 
         # Process in batches
@@ -821,6 +846,169 @@ class Extractor:
         refined_model.usage = model_usage
 
         return refined_model
+
+    def _generate_from_model(
+        self,
+        model: Type[BaseModel],
+        query: str,
+        data_columns: List[str],
+    ) -> Tuple[QueryRefinement, ExtractionGuide]:
+        """Generate refinement and guide from a provided model
+
+        When a custom model is provided, we reverse engineer the refinement and guide
+        to match the model structure, rather than generating them from the query.
+
+        Args:
+            model: The provided custom model
+            query: The original query (used as context)
+            data_columns: Available columns in the dataset
+
+        Returns:
+            Tuple of refined_query and extraction_guide
+        """
+        # Get model schema
+        model_schema = model.model_json_schema()
+
+        # Create refined query to match the model
+        model_description = (
+            model_schema.get("description", "")
+            or model_schema.get("title", "")
+            or model.__name__
+        )
+        model_properties = model_schema.get("properties", {})
+
+        # Extract data characteristics from the model properties
+        data_characteristics = []
+        field_descriptions = {}
+        for prop_name, prop_info in model_properties.items():
+            prop_description = prop_info.get("description", "")
+            prop_type = prop_info.get("type", "")
+            enum_values = prop_info.get("enum", [])
+
+            # Store field descriptions for column mapping
+            field_descriptions[prop_name] = {
+                "description": prop_description,
+                "type": prop_type,
+                "enum": enum_values,
+            }
+
+            # Build detailed characteristics
+            if prop_description:
+                if enum_values:
+                    data_characteristics.append(
+                        f"{prop_name} ({prop_type}): {prop_description}. Possible values: {', '.join(map(str, enum_values))}"
+                    )
+                else:
+                    data_characteristics.append(
+                        f"{prop_name} ({prop_type}): {prop_description}"
+                    )
+            else:
+                data_characteristics.append(f"{prop_name} ({prop_type})")
+
+        # Extract structure requirements
+        structural_requirements = {}
+        for prop_name, prop_info in model_properties.items():
+            if "type" in prop_info:
+                structural_requirements[prop_name] = prop_info["type"]
+
+        # Create a simplified query refinement with explicit field mapping instructions
+        model_fields = list(model_properties.keys())
+        refined_query = QueryRefinement(
+            refined_query=f"Extract {model_description} as specified in the provided model, filling all fields with relevant data from the appropriate columns. Original query: {query}",
+            data_characteristics=data_characteristics,
+            structural_requirements=structural_requirements,
+        )
+
+        # Create custom field-to-column mapping suggestions based on field names and data columns
+        # This helps guide the column selection for extraction
+        column_suggestions = self._suggest_column_mappings(
+            model_properties, data_columns, field_descriptions
+        )
+
+        # Generate guide with enhanced column mapping
+        guide_messages = [
+            {"role": "system", "content": guide_system_prompt},
+            {
+                "role": "user",
+                "content": custom_model_guide_template.substitute(
+                    data_characteristics=data_characteristics,
+                    available_columns=data_columns,
+                    model_fields=model_fields,
+                    column_suggestions=json.dumps(column_suggestions, indent=2),
+                ),
+            },
+        ]
+
+        guide = self._perform_llm_completion(
+            messages=guide_messages,
+            response_model=ExtractionGuide,
+            config=self.config.refinement,
+            step=ExtractionStep.GUIDE,
+        )
+
+        logger.info(f"Extraction Columns: {guide.target_columns}")
+        logger.info(
+            f"Generated refinement and guide from custom model: {model.__name__}"
+        )
+
+        return refined_query, guide
+
+    def _suggest_column_mappings(
+        self,
+        model_properties: Dict[str, Any],
+        data_columns: List[str],
+        field_descriptions: Dict[str, Dict[str, Any]],
+    ) -> Dict[str, List[str]]:
+        """Create intelligent mapping suggestions between model fields and data columns
+
+        Args:
+            model_properties: Properties from the model schema
+            data_columns: Available column names in the dataset
+            field_descriptions: Descriptions and types for model fields
+
+        Returns:
+            Dictionary mapping model field names to potential column names
+        """
+        mapping_suggestions = {}
+
+        for field_name in model_properties.keys():
+            potential_columns = []
+
+            # Find columns that might match this field based on name similarity
+            field_terms = set(field_name.lower().replace("_", " ").split())
+            field_description = (
+                field_descriptions.get(field_name, {}).get("description", "").lower()
+            )
+            field_desc_terms = set(
+                field_description.replace(",", " ").replace(".", " ").split()
+            )
+
+            for column in data_columns:
+                col_terms = set(column.lower().replace("_", " ").split())
+
+                # Check for direct matches or substring matches
+                if (
+                    field_name.lower() in column.lower()
+                    or column.lower() in field_name.lower()
+                    or any(term in column.lower() for term in field_terms)
+                    or any(term in column.lower() for term in field_desc_terms)
+                ):
+                    potential_columns.append(column)
+
+            # If no matches found through name/description similarity, suggest all columns
+            # as the field might be extracted from any text column
+            if not potential_columns:
+                # Add text columns or if not found, just add all columns
+                text_columns = [
+                    col
+                    for col in data_columns
+                    if "text" in col.lower() or "description" in col.lower()
+                ]
+                potential_columns = text_columns if text_columns else data_columns
+
+            mapping_suggestions[field_name] = potential_columns
+
+        return mapping_suggestions
 
     @classmethod
     def from_litellm(
