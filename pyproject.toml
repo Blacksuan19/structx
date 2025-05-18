@@ -41,6 +41,7 @@ dependencies = [
     "litellm",
     "loguru",
     "omegaconf",
+    "openpyxl>=3.1.5",
     "pandas",
     "pydantic",
     "tenacity",
