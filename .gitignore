@@ -21,6 +21,7 @@ wheels/
 *.egg
 build
 *.ipynb
+uv.lock
 
 # Virtual Environment
 venv/
