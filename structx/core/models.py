@@ -28,7 +28,7 @@ class ModelField(BaseModel):
 class QueryAnalysis(BaseModel):
     """Result of query analysis"""
 
-    target_column: str = Field(description="Column containing text to analyze")
+    target_columns: List[str] = Field(description="Column containing text to analyze")
     extraction_purpose: str = Field(description="Purpose of extraction")
 
 

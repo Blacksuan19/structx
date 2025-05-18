@@ -283,7 +283,7 @@ class Extractor:
         query_analysis = self._analyze_query(
             query, available_columns=df.columns.tolist()
         )
-        logger.info(f"Target Column: {query_analysis.target_column}")
+        logger.info(f"Target Columns: {query_analysis.target_columns}")
         logger.info(f"Extraction Purpose: {query_analysis.extraction_purpose}")
 
         # Refine query
@@ -291,7 +291,7 @@ class Extractor:
         logger.info(f"Refined Query: {refined_query.refined_query}")
 
         # Get sample text and generate guide
-        sample_text = df[query_analysis.target_column].iloc[0]
+        sample_text = df[query_analysis.target_columns].iloc[0]
         guide = self._generate_extraction_guide(refined_query)
 
         if not generate_model:
@@ -491,7 +491,7 @@ class Extractor:
         for batch_start in range(0, len(df), self.batch_size):
             batch_end = min(batch_start + self.batch_size, len(df))
             batch = df.iloc[batch_start:batch_end]
-            self._process_batch(batch, worker_fn, query_analysis.target_column)
+            self._process_batch(batch, worker_fn, query_analysis.target_columns)
 
         # Log statistics
         self._log_extraction_stats(len(df), failed_rows)

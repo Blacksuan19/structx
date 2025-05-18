@@ -1,8 +1,7 @@
 from string import Template
 
 query_analysis_system_prompt = """You are a precise data extraction analyst.
-Analyze queries to determine which column contains the target text
-and what information needs to be extracted."""
+Analyze the user query to determine which columns are relevant for extraction."""
 
 
 query_analysis_template = Template(
