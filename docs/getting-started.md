@@ -139,10 +139,6 @@ extractor = Extractor.from_litellm(
 
 # With a dictionary
 config = {
-    "analysis": {
-        "temperature": 0.2,
-        "top_p": 0.1
-    },
     "refinement": {
         "temperature": 0.1,
         "top_p": 0.05

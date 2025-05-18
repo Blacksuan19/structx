@@ -53,11 +53,12 @@ if extraction and hasattr(extraction, "steps"):
 
 Token usage is tracked across four main steps:
 
-1. **Analysis**: Analyzing your query to determine what to extract
-2. **Refinement**: Refining and expanding the query for better extraction
-3. **Schema Generation**: Generating the data model for extraction
+1. **Refinement**: Refining and expanding the query for better extraction (skipped if a model is provided)
+2. **Guide Generation**: Generating a guide for the extraction process
+3. **Schema Generation**: Generating the data model for extraction (skipped if a model is provided)
 4. **Extraction**: Performing the actual data extraction (potentially multiple
    calls)
+
 
 ## Token Usage with Multiple Queries
 

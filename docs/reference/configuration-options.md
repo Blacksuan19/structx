@@ -10,11 +10,6 @@ You can configure `structx` in several ways:
 
 ```yaml
 # config.yaml
-analysis:
-  temperature: 0.2
-  top_p: 0.1
-  max_tokens: 2000
-
 refinement:
   temperature: 0.1
   top_p: 0.05
@@ -39,11 +34,6 @@ extractor = Extractor.from_litellm(
 
 ```python
 config = {
-    "analysis": {
-        "temperature": 0.2,
-        "top_p": 0.1,
-        "max_tokens": 2000
-    },
     "refinement": {
         "temperature": 0.1,
         "top_p": 0.05,
@@ -70,11 +60,6 @@ extractor = Extractor.from_litellm(
 from structx import ExtractionConfig, StepConfig
 
 config = ExtractionConfig(
-    analysis=StepConfig(
-        temperature=0.2,
-        top_p=0.1,
-        max_tokens=2000
-    ),
     refinement=StepConfig(
         temperature=0.1,
         top_p=0.05,
@@ -101,9 +86,8 @@ extractor = Extractor.from_litellm(
 
 Each step in the extraction process can be configured separately:
 
-1. **Analysis**: Query analysis to determine what to extract
-2. **Refinement**: Query refinement and model generation
-3. **Extraction**: Actual data extraction
+1. **Refinement**: Query refinement and model generation
+2. **Extraction**: Actual data extraction
 
 ### Common Parameters
 
@@ -117,7 +101,6 @@ Each step in the extraction process can be configured separately:
 
 | Step       | Temperature | Top P | Max Tokens |
 | ---------- | ----------- | ----- | ---------- |
-| Analysis   | 0.2         | 0.1   | 2000       |
 | Refinement | 0.1         | 0.05  | 2000       |
 | Extraction | 0.0         | 0.1   | 2000       |
 

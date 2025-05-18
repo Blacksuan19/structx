@@ -6,15 +6,40 @@ This guide covers the fundamentals of data extraction with `structx`.
 
 When you use `structx` to extract data, the following happens:
 
-1. **Query Analysis**: The system analyzes your query to determine what to
-   extract
-2. **Query Refinement**: The query is expanded and refined for better extraction
-3. **Model Generation**: A Pydantic model is dynamically generated based on the
+1. **Query Refinement**: The query is expanded and refined for better extraction
+2. **Model Generation**: A Pydantic model is dynamically generated based on the
    query
-4. **Data Extraction**: The model is used to extract structured data from the
+3. **Data Extraction**: The model is used to extract structured data from the
    text
-5. **Result Collection**: Results are collected and returned as an
+4. **Result Collection**: Results are collected and returned as an
    `ExtractionResult` object
+
+### Simplified Workflow with Provided Model
+
+When you provide a data model, the workflow is optimized:
+
+1. **Model-Driven Guide Generation**: A guide is generated based on the model structure and available data columns
+2. **Data Extraction**: The provided model is used to extract structured data
+3. **Result Collection**: Results are collected and returned as an
+   `ExtractionResult` object
+
+This workflow is more efficient as it skips the query analysis step and uses the model structure to guide the extraction process. The guide generation focuses on mapping model fields to available data columns and ensuring proper data type handling.
+
+```python
+from pydantic import BaseModel
+
+class Incident(BaseModel):
+    date: str
+    system: str
+    severity: str
+
+# Extract using the provided model
+result = extractor.extract(
+    data=df,
+    query="extract incident details",
+    model=Incident
+)
+```
 
 ## Extraction Query
 
