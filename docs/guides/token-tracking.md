@@ -3,6 +3,45 @@
 `structx` provides detailed token usage tracking across all steps of the
 extraction process, helping you monitor costs and optimize your queries.
 
+## Token Tracking Flow
+
+```mermaid
+graph TD
+    A[Extraction Request] --> B[Query Refinement]
+    B --> C[Model Generation]
+    C --> D[Data Extraction]
+    D --> E[Result Collection]
+
+    B --> F1[Track Refinement Tokens]
+    C --> F2[Track Generation Tokens]
+    D --> F3[Track Extraction Tokens]
+
+    F1 --> G[Usage Aggregation]
+    F2 --> G
+    F3 --> G
+
+    G --> H[Total Usage Calculation]
+    H --> I[ExtractionResult with Usage]
+
+    subgraph "Token Categories"
+        J[Prompt Tokens]
+        K[Completion Tokens]
+        L[Total Tokens]
+    end
+
+    subgraph "Tracking Steps"
+        M[Refinement Step]
+        N[Generation Step]
+        O[Extraction Step]
+        P[Individual Extraction Items]
+    end
+
+    F1 --> M
+    F2 --> N
+    F3 --> O
+    O --> P
+```
+
 ## Basic Usage
 
 ```python
@@ -53,12 +92,13 @@ if extraction and hasattr(extraction, "steps"):
 
 Token usage is tracked across four main steps:
 
-1. **Refinement**: Refining and expanding the query for better extraction (skipped if a model is provided)
+1. **Refinement**: Refining and expanding the query for better extraction
+   (skipped if a model is provided)
 2. **Guide Generation**: Generating a guide for the extraction process
-3. **Schema Generation**: Generating the data model for extraction (skipped if a model is provided)
+3. **Schema Generation**: Generating the data model for extraction (skipped if a
+   model is provided)
 4. **Extraction**: Performing the actual data extraction (potentially multiple
    calls)
-
 
 ## Token Usage with Multiple Queries
 

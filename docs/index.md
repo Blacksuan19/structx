@@ -4,19 +4,21 @@
 
 - :material-text-box-search-outline: **Structured Data Extraction**
 
-  Extract structured data from unstructured text using LLMs
+  Extract structured data from unstructured text using LLMs with multimodal
+  support
 
 - :material-code-json: **Dynamic Model Generation**
 
-  Automatically generate type-safe Pydantic models
+  Automatically generate type-safe Pydantic models from natural language
 
-- :material-file-document-multiple: **Multiple File Formats**
+- :material-file-document-multiple: **Advanced Document Processing**
 
-  Support for CSV, Excel, JSON, PDF, TXT, and more
+  Unified PDF conversion pipeline for optimal extraction from any document
+  format
 
-- :material-lightning-bolt: **Async Support**
+- :material-lightning-bolt: **Multimodal Capabilities**
 
-  Asynchronous operations for high-throughput processing
+  Native instructor multimodal support with automatic PDF conversion
 
 </div>
 
@@ -31,22 +33,61 @@ Whether you're analyzing incident reports, processing documents, or extracting
 metrics from unstructured text, `structx` provides a simple, consistent
 interface with powerful capabilities.
 
+### How structx Works
+
+```mermaid
+graph TB
+    A[Input Data] --> B{Data Type Detection}
+    B -->|Structured| C[Direct Processing]
+    B -->|Unstructured| D[Document Conversion]
+
+    C --> E[Schema Generation]
+    D --> F[PDF Pipeline]
+    F --> G[Multimodal Processing]
+    G --> E
+
+    E --> H[LLM Extraction]
+    H --> I[Type-Safe Models]
+    I --> J[Structured Output]
+
+    subgraph "Document Types"
+        K[CSV/Excel/JSON] --> C
+        L[PDF] --> G
+        M[DOCX/TXT/MD] --> D
+    end
+
+    subgraph "Processing Pipeline"
+        N[Query Refinement] --> O[Model Generation]
+        O --> P[Data Extraction]
+        P --> Q[Result Collection]
+    end
+
+    E --> N
+```
+
 ## Key Features
 
-- 🔄 Dynamic model generation from natural language queries
-- 🎯 Automatic schema inference and generation
-- 📊 Support for complex nested data structures
-- 🔄 Model refinement with natural language instructions
-- 🚀 Multi-threaded processing for large datasets
-- ⚡ Async support
-- 🔧 Configurable extraction using OmegaConf
-- 📁 Support for multiple file formats (CSV, Excel, JSON, Parquet, PDF, TXT, and
-  more)
-- 📄 Support for unstructured text and document processing
-- 🏗️ Type-safe data models using Pydantic
-- 🎮 Easy-to-use interface
-- 🔌 Support for multiple LLM providers through litellm
-- 🔄 Automatic retry mechanism with exponential backoff
+- 🔄 **Dynamic Model Generation**: Create type-safe models from natural language
+  queries
+- 🎯 **Intelligent Schema Inference**: Automatic schema generation and
+  refinement
+- 📊 **Complex Data Structures**: Support for nested and hierarchical data
+- 🔄 **Natural Language Refinement**: Improve models with conversational
+  instructions
+- � **Multimodal Document Processing**: Advanced PDF conversion pipeline for any
+  document format
+- 🖼️ **Vision-Enabled Extraction**: Native instructor multimodal support for
+  PDFs
+- 🚀 **High-Performance Processing**: Multi-threaded and async operations
+- ⚡ **Smart Format Detection**: Automatic processing mode selection
+- 🔧 **Flexible Configuration**: Configurable extraction using OmegaConf
+- 📁 **Universal File Support**: CSV, Excel, JSON, Parquet, PDF, DOCX, TXT, and
+  more
+- 🏗️ **Type Safety**: Type-safe data models using Pydantic
+- 🎮 **Simple Interface**: Easy-to-use API with powerful capabilities
+- 🔌 **Multiple LLM Providers**: Support through litellm integration
+- 🔄 **Robust Error Handling**: Automatic retry mechanism with exponential
+  backoff
 
 ## Installation
 

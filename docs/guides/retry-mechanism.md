@@ -41,6 +41,44 @@ The retry mechanism uses exponential backoff, which means:
 This approach helps prevent overwhelming the API during temporary outages and
 gives the service time to recover.
 
+### Retry Flow
+
+```mermaid
+graph TD
+    A[LLM Request] --> B{Success?}
+    B -->|Yes| C[Return Result]
+    B -->|No| D{Retryable Error?}
+
+    D -->|No| E[Raise Exception]
+    D -->|Yes| F{Max Retries Reached?}
+
+    F -->|Yes| G[Raise Final Exception]
+    F -->|No| H[Calculate Wait Time]
+
+    H --> I[Wait]
+    I --> J[Increment Retry Count]
+    J --> A
+
+    subgraph "Wait Time Calculation"
+        K["Base Wait = min_wait * 2^retry_count"]
+        L["Actual Wait = min of Base Wait and max_wait"]
+        M["Add Jitter plus or minus 10%"]
+    end
+
+    H --> K
+    K --> L
+    L --> M
+
+    subgraph "Retryable Errors"
+        N[Network Timeouts]
+        O[Rate Limiting]
+        P[Server Errors 5xx]
+        Q[Connection Errors]
+    end
+
+    D --> N
+```
+
 ## Retry-Eligible Errors
 
 The retry mechanism automatically handles:

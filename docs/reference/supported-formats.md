@@ -1,96 +1,179 @@
 # Supported Formats
 
-`structx` supports a variety of file formats for data extraction.
+`structx` supports a comprehensive variety of file formats for data extraction,
+with advanced unstructured document processing capabilities.
 
-## Built-in Support
+## Structured Data Formats
 
-These formats are supported without additional dependencies:
+These formats are processed directly as structured data without conversion:
 
-| Format  | Extension             | Description                         |
-| ------- | --------------------- | ----------------------------------- |
-| CSV     | .csv                  | Comma-separated values              |
-| Excel   | .xlsx, .xls           | Microsoft Excel spreadsheets        |
-| JSON    | .json                 | JavaScript Object Notation          |
-| Parquet | .parquet              | Columnar storage format             |
-| Feather | .feather              | Fast on-disk format for data frames |
-| Text    | .txt, .md, .log, etc. | Plain text files                    |
+| Format  | Extension   | Description                         | Processing Method        |
+| ------- | ----------- | ----------------------------------- | ------------------------ |
+| CSV     | .csv        | Comma-separated values              | Direct pandas processing |
+| Excel   | .xlsx, .xls | Microsoft Excel spreadsheets        | Direct pandas processing |
+| JSON    | .json       | JavaScript Object Notation          | Direct pandas processing |
+| Parquet | .parquet    | Columnar storage format             | Direct pandas processing |
+| Feather | .feather    | Fast on-disk format for data frames | Direct pandas processing |
 
-## Optional Dependencies
+## Unstructured Document Formats
 
-These formats require additional dependencies:
+These formats use the advanced multimodal PDF processing pipeline:
 
-| Format | Extension   | Dependencies                    |
-| ------ | ----------- | ------------------------------- |
-| PDF    | .pdf        | `pip install structx-llm[pdf]`  |
-| Word   | .docx, .doc | `pip install structx-llm[docx]` |
+| Format | Extension                               | Processing Method                     | Dependencies          |
+| ------ | --------------------------------------- | ------------------------------------- | --------------------- |
+| PDF    | .pdf                                    | Direct multimodal processing          | Built-in (instructor) |
+| Word   | .docx, .doc                             | Docling → Markdown → PDF → Multimodal | `structx-llm[docs]`   |
+| Text   | .txt, .md, .py, .html, .xml, .log, .rst | Markdown → PDF → Multimodal           | `structx-llm[docs]`   |
 
-## Input Types
+### Advanced Processing Features
 
-`structx` can extract data from:
+- **Multimodal PDF Processing**: Native instructor vision support for PDFs
+- **Intelligent Conversion**: Automatic document-to-PDF conversion with styling
+- **Structure Preservation**: Maintains tables, formatting, and layout
+- **Context Awareness**: Full document context without chunking limitations
+- **Fallback Support**: Automatic fallback to text processing if needed
 
-1. **File Paths**:
+## Processing Examples
 
-   ```python
-   result = extractor.extract(
-       data="path/to/file.csv",
-       query="extract key information"
-   )
-   ```
+### Structured Data
 
-2. **DataFrames**:
+```python
+# CSV files - direct pandas processing
+result = extractor.extract(
+    data="sales_data.csv",
+    query="extract top performing products and their revenue"
+)
 
-   ```python
-   import pandas as pd
+# Excel files with specific sheet
+result = extractor.extract(
+    data="financial_report.xlsx",
+    query="extract quarterly revenue figures",
+    file_options={"sheet_name": "Q4 Results"}
+)
 
-   df = pd.DataFrame({"text": ["Sample text 1", "Sample text 2"]})
+# JSON data
+result = extractor.extract(
+    data="api_logs.json",
+    query="extract error events and response times"
+)
+```
 
-   result = extractor.extract(
-       data=df,
-       query="extract key information"
-   )
-   ```
+### Unstructured Documents (Multimodal Processing)
 
-3. **Lists of Dictionaries**:
+```python
+# PDF documents - direct multimodal processing
+result = extractor.extract(
+    data="contract.pdf",
+    query="extract parties, dates, and payment terms"
+)
 
-   ```python
-   data = [
-       {"text": "Sample text 1"},
-       {"text": "Sample text 2"}
-   ]
+# DOCX documents - converted via docling pipeline
+result = extractor.extract(
+    data="project_proposal.docx",
+    query="extract deliverables, timeline, and budget"
+)
 
-   result = extractor.extract(
-       data=data,
-       query="extract key information"
-   )
-   ```
+# Text files - converted to styled PDF
+result = extractor.extract(
+    data="meeting_notes.txt",
+    query="extract action items and responsible parties"
+)
 
-4. **Raw Text**:
+# Markdown files - enhanced PDF conversion
+result = extractor.extract(
+    data="README.md",
+    query="extract installation steps and requirements"
+)
 
-   ```python
-   text = """
-   Sample text with information to extract.
-   More text with additional information.
-   """
+# Code files - syntax highlighted PDF
+result = extractor.extract(
+    data="main.py",
+    query="extract function definitions and their purposes"
+)
+```
 
-   result = extractor.extract(
-       data=text,
-       query="extract key information"
-   )
-   ```
+### Processing Mode Options
 
-## File Reading Options
+```python
+# Default: multimodal PDF processing (recommended)
+result = extractor.extract(
+    data="document.docx",
+    query="extract information"
+    # mode="multimodal_pdf" is default
+)
 
-When reading files, you can provide additional options:
+# Alternative: simple text processing
+result = extractor.extract(
+    data="document.txt",
+    query="extract information",
+    mode="simple_text",
+    chunk_size=1500,
+    chunk_overlap=200
+)
+
+# Alternative: simple PDF processing
+result = extractor.extract(
+    data="document.pdf",
+    query="extract information",
+    mode="simple_pdf"
+)
+```
+
+## Input Data Types
+
+`structx` can extract data from various input formats:
+
+### 1. File Paths
 
 ```python
 result = extractor.extract(
-    data="document.pdf",
-    query="extract key information",
-    chunk_size=2000,  # Size of text chunks
-    overlap=200,      # Overlap between chunks
-    encoding="utf-8"  # Text encoding
+    data="path/to/file.csv",
+    query="extract key information"
 )
 ```
+
+### 2. DataFrames
+
+```python
+import pandas as pd
+
+df = pd.DataFrame({"text": ["Sample text 1", "Sample text 2"]})
+
+result = extractor.extract(
+    data=df,
+    query="extract key information"
+)
+```
+
+### 3. Lists of Dictionaries
+
+```python
+data = [
+    {"text": "Sample text 1"},
+    {"text": "Sample text 2"}
+]
+
+result = extractor.extract(
+    data=data,
+    query="extract key information"
+)
+```
+
+### 4. Raw Text
+
+```python
+text = """
+Sample text with information to extract.
+More text with additional information.
+"""
+
+result = extractor.extract(
+    data=text,
+    query="extract key information"
+)
+```
+
+## File Reading Options
 
 ### CSV Options
 
@@ -98,9 +181,11 @@ result = extractor.extract(
 result = extractor.extract(
     data="data.csv",
     query="extract key information",
-    delimiter=";",    # Custom delimiter
-    encoding="latin1", # Custom encoding
-    skiprows=1        # Skip header row
+    file_options={
+        "delimiter": ";",      # Custom delimiter
+        "encoding": "latin1",  # Custom encoding
+        "skiprows": 1          # Skip header row
+    }
 )
 ```
 
@@ -110,19 +195,22 @@ result = extractor.extract(
 result = extractor.extract(
     data="data.xlsx",
     query="extract key information",
-    sheet_name="Sheet2",  # Specific sheet
-    skiprows=3            # Skip header rows
+    file_options={
+        "sheet_name": "Sheet2",  # Specific sheet
+        "skiprows": 3            # Skip header rows
+    }
 )
 ```
 
-### PDF Options
+### Document Processing Options
 
 ```python
 result = extractor.extract(
     data="document.pdf",
     query="extract key information",
-    chunk_size=2000,  # Size of text chunks
-    overlap=200       # Overlap between chunks
+    mode="multimodal_pdf",    # Default mode (recommended)
+    chunk_size=2000,          # Only used in fallback simple modes
+    chunk_overlap=200         # Only used in fallback simple modes
 )
 ```
 

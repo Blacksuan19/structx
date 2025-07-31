@@ -94,6 +94,7 @@ plugins:
             docstring_style: "google"
             docstring_section_style: "table"
   - social
+  - mermaid2
 
 extra:
   social:
