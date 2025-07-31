@@ -51,9 +51,38 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["black", "bumpver", "pip-tools", "wheel"]
-pdf = ["pypdf"]
-docx = ["python-docx"]
-docs = ["pypdf", "python-docx"]
+pdf = [
+    "pypdf2",                 # PDF text extraction fallback
+    "instructor[multimodal]", # Multimodal PDF processing
+    "weasyprint",             # PDF generation from HTML/markdown
+    "markdown",               # Markdown processing for conversion
+]
+docx = [
+    "python-docx", # Basic DOCX support 
+    "docling",     # Advanced DOCX conversion via docling
+    "markdown",    # Markdown processing
+    "weasyprint",  # PDF generation
+]
+docs = [
+    "pypdf2",                 # PDF text extraction
+    "python-docx",            # DOCX support
+    "instructor[multimodal]", # Multimodal processing
+    "docling",                # Advanced document conversion
+    "weasyprint",             # PDF generation from HTML/markdown
+    "markdown",               # Markdown processing and extensions
+]
+# Legacy support - kept for backward compatibility
+unstructured = ["unstructured[all-docs]"]
+docling = ["docling", "markdown", "weasyprint"]
+advanced = [
+    "pypdf2",
+    "python-docx",
+    "instructor[multimodal]",
+    "docling",
+    "weasyprint",
+    "markdown",
+    "unstructured[all-docs]",
+]
 mkdocs = [
     "mkdocs",
     "mkdocs-material",
@@ -61,6 +90,7 @@ mkdocs = [
     "mkdocstrings[python]",
     "mkdocs-git-revision-date-localized-plugin",
     "mkdocs-material[imaging]",
+    "mkdocs-mermaid2-plugin",
 ]
 
 [tool.bumpver]
