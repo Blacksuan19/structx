@@ -14,16 +14,65 @@ When you use `structx` to extract data, the following happens:
 4. **Result Collection**: Results are collected and returned as an
    `ExtractionResult` object
 
+### Standard Extraction Flow
+
+```mermaid
+graph LR
+    A[Raw Query] --> B[Query Refinement]
+    B --> C[Schema Generation]
+    C --> D[Model Creation]
+    D --> E[Data Extraction]
+    E --> F[Result Collection]
+    F --> G[ExtractionResult]
+
+    subgraph "LLM Operations"
+        B1[Analyze Query] --> B2[Generate Context]
+        B2 --> B3[Refine Query]
+
+        C1[Infer Schema] --> C2[Generate Fields]
+        C2 --> C3[Define Types]
+    end
+
+    B --> B1
+    C --> C1
+```
+
 ### Simplified Workflow with Provided Model
 
 When you provide a data model, the workflow is optimized:
 
-1. **Model-Driven Guide Generation**: A guide is generated based on the model structure and available data columns
+1. **Model-Driven Guide Generation**: A guide is generated based on the model
+   structure and available data columns
 2. **Data Extraction**: The provided model is used to extract structured data
 3. **Result Collection**: Results are collected and returned as an
    `ExtractionResult` object
 
-This workflow is more efficient as it skips the query analysis step and uses the model structure to guide the extraction process. The guide generation focuses on mapping model fields to available data columns and ensuring proper data type handling.
+This workflow is more efficient as it skips the query analysis step and uses the
+model structure to guide the extraction process. The guide generation focuses on
+mapping model fields to available data columns and ensuring proper data type
+handling.
+
+### Custom Model Flow
+
+```mermaid
+graph LR
+    A[Custom Model] --> B[Model Analysis]
+    B --> C[Field Mapping]
+    C --> D[Guide Generation]
+    D --> E[Direct Extraction]
+    E --> F[ExtractionResult]
+
+    subgraph "Model Processing"
+        B1[Schema Analysis] --> B2[Field Discovery]
+        B2 --> B3[Type Inference]
+
+        C1[Column Mapping] --> C2[Field Alignment]
+        C2 --> C3[Validation Rules]
+    end
+
+    B --> B1
+    C --> C1
+```
 
 ```python
 from pydantic import BaseModel

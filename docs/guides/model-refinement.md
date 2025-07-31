@@ -49,6 +49,39 @@ print(user)
 
 The `refine_data_model` method:
 
+### Model Refinement Process
+
+```mermaid
+graph LR
+    A[Original Model] --> B[Analyze Structure]
+    B --> C[Parse Instructions]
+    C --> D[Generate New Schema]
+    D --> E[Create Refined Model]
+    E --> F[Validate Changes]
+    F --> G[Return New Model]
+
+    subgraph "Analysis Phase"
+        B1[Extract Fields] --> B2[Identify Types]
+        B2 --> B3[Map Relationships]
+    end
+
+    subgraph "Refinement Phase"
+        C1[Parse Commands] --> C2[Plan Changes]
+        C2 --> C3[Apply Modifications]
+    end
+
+    subgraph "Generation Phase"
+        D1[Build Schema] --> D2[Define Types]
+        D2 --> D3[Add Validation]
+    end
+
+    B --> B1
+    C --> C1
+    D --> D1
+```
+
+The `refine_data_model` method:
+
 1. Takes an existing Pydantic model and natural language instructions
 2. Analyzes the model structure and the requested changes
 3. Generates a new model with the specified modifications

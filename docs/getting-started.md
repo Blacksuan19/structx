@@ -11,18 +11,25 @@ Install the core package:
 pip install structx-llm
 ```
 
-For additional document format support:
+For complete document processing capabilities (recommended):
 
 ```bash
-# For PDF support
-pip install structx-llm[pdf]
-
-# For DOCX support
-pip install structx-llm[docx]
-
-# For all document formats
+# Install with full document support including PDF conversion
 pip install structx-llm[docs]
+
+# Individual format support
+pip install structx-llm[pdf]   # PDF processing and conversion
+pip install structx-llm[docx]  # Advanced DOCX support
 ```
+
+### What You Get
+
+- **Core Package**: Basic structured data extraction from CSV, JSON, Excel
+- **[docs] Extra**: Advanced unstructured document processing with multimodal
+  PDF support
+  - Automatic document-to-PDF conversion
+  - Instructor's multimodal vision capabilities
+  - Enhanced extraction quality for all document types
 
 ## Basic Usage
 
@@ -71,13 +78,23 @@ result = extractor.extract(
     query="extract incident dates and affected systems"
 )
 
-# From a file
+# From a file (automatically detects format and uses optimal processing)
 result = extractor.extract(
-    data="logs.csv",
+    data="logs.csv",           # Structured data: direct processing
     query="extract incident dates and affected systems"
 )
 
-# From raw text
+result = extractor.extract(
+    data="report.pdf",         # Unstructured: multimodal PDF processing
+    query="extract key findings and recommendations"
+)
+
+result = extractor.extract(
+    data="notes.docx",         # Unstructured: converted to PDF then multimodal
+    query="extract action items and deadlines"
+)
+
+# From raw text (converted to PDF for better extraction)
 text = """
 System check on 2024-01-15 detected high CPU usage (92%) on server-01.
 Database backup failure occurred on 2024-01-20 03:00.

@@ -4,6 +4,41 @@ When you need to extract different types of information from the same data,
 `structx` provides the `extract_queries` method to process multiple queries
 efficiently.
 
+## Processing Flow
+
+```mermaid
+graph TD
+    A[Input Data] --> B[Multiple Queries]
+    B --> C{Processing Strategy}
+
+    C -->|Parallel| D[Concurrent Extraction]
+    C -->|Sequential| E[Sequential Extraction]
+
+    D --> F1[Query 1 Processing]
+    D --> F2[Query 2 Processing]
+    D --> F3[Query 3 Processing]
+
+    E --> G1[Query 1]
+    G1 --> G2[Query 2]
+    G2 --> G3[Query 3]
+
+    F1 --> H[Results Collection]
+    F2 --> H
+    F3 --> H
+    G3 --> H
+
+    H --> I[Combined Results Map]
+
+    subgraph "Per Query Process"
+        J[Schema Generation] --> K[Model Creation]
+        K --> L[Data Extraction]
+        L --> M[Result Object]
+    end
+
+    F1 --> J
+    G1 --> J
+```
+
 ## Basic Usage
 
 ```python

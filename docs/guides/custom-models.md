@@ -3,6 +3,41 @@
 While `structx` dynamically generates models based on your queries, you can also
 use your own custom Pydantic models for extraction.
 
+## Custom Model Processing Flow
+
+```mermaid
+graph LR
+    A[Custom Model] --> B[Model Analysis]
+    B --> C[Field Mapping]
+    C --> D[Guide Generation]
+    D --> E[Direct Extraction]
+    E --> F[Type Validation]
+    F --> G[Result Object]
+
+    subgraph "Model Analysis"
+        B1[Extract Schema] --> B2[Analyze Fields]
+        B2 --> B3[Identify Types]
+        B3 --> B4[Parse Descriptions]
+    end
+
+    subgraph "Field Mapping"
+        C1[Data Column Detection] --> C2[Field Alignment]
+        C2 --> C3[Type Compatibility]
+        C3 --> C4[Mapping Strategy]
+    end
+
+    subgraph "Extraction Benefits"
+        H[Skip Query Analysis]
+        I[Skip Model Generation]
+        J[Direct Type Safety]
+        K[Validation Included]
+    end
+
+    B --> B1
+    C --> C1
+    E --> H
+```
+
 ## Using Custom Models
 
 ### Define Your Model

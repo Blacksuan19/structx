@@ -33,6 +33,38 @@ For each synchronous method, there is an async counterpart:
 
 Process multiple files in parallel:
 
+### Async Processing Flow
+
+```mermaid
+graph TB
+    A[Multiple Files] --> B[Create Async Tasks]
+    B --> C[Parallel Execution]
+
+    C --> D1[File 1 Processing]
+    C --> D2[File 2 Processing]
+    C --> D3[File 3 Processing]
+    C --> D4[File N Processing]
+
+    D1 --> E1[Result 1]
+    D2 --> E2[Result 2]
+    D3 --> E3[Result 3]
+    D4 --> E4[Result N]
+
+    E1 --> F[Gather Results]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+
+    F --> G[Combined Output]
+
+    subgraph "Concurrent Execution"
+        D1
+        D2
+        D3
+        D4
+    end
+```
+
 ```python
 import asyncio
 
