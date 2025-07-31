@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "structx-llm"
-version = "0.3.1"
+version = "0.4.0"
 description = "Structured data extraction from text using LLMs and dynamic model generation"
 authors = [{ name = "blacksuan19", email = "py@blacksuan19.dev" }]
 license-files = ["LICENSE"]
@@ -94,7 +94,7 @@ mkdocs = [
 ]
 
 [tool.bumpver]
-current_version = "0.3.1"
+current_version = "0.4.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
