@@ -149,3 +149,35 @@ extraction_template = Template(
     ${text}
     """
 )
+
+# Refinement prompt for existing models
+refinement_system_prompt = """You are a data model refinement specialist.
+Analyze the existing model and the refinement instructions to create
+a new model that incorporates the requested changes."""
+
+refinement_template = Template(
+    """
+    Refine the following data model according to these instructions:
+    
+    EXISTING MODEL SCHEMA:
+    ```json
+    ${model_schema}
+    ```
+    
+    REFINEMENT INSTRUCTIONS:
+    ${instructions}
+    
+    Create a new model schema that:
+    1. Keeps fields from the original model that shouldn't change
+    2. Modifies fields as specified in the instructions
+    3. Adds new fields as specified in the instructions
+    4. Removes fields as specified in the instructions
+    
+    Important: Use Pydantic v2 syntax:
+    - Use `pattern` instead of `regex` for string patterns
+    - Use `model_config` instead of `Config` class
+    - Use `Field` with validation parameters instead of validators where possible
+    
+    Include a clear description of the model and each field.
+    """
+)

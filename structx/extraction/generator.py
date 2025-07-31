@@ -166,12 +166,16 @@ class ModelGenerator(ModelMetaclass):
                 else:
                     field_type = List[field_type]
 
+            # Prepare validation dict without description to avoid conflicts
+            validation_dict = (field.validation or {}).copy()
+            validation_dict.pop("description", None)
+
             field_definitions[field.name] = (
                 Optional[field_type],
                 Field(
                     default=None,
                     description=field.description,
-                    **field.validation or {},
+                    **validation_dict,
                 ),
             )
 
