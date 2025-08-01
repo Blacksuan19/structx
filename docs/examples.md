@@ -2,7 +2,7 @@
 
 This document contains examples of using the structx library for structured data extraction from unstructured documents.
 
-*Generated on: 2025-07-31 20:16:34*
+*Generated on: 2025-07-31 22:22:37*
 
 ## Setup
 
@@ -46,57 +46,41 @@ print(result.data)
 Extracted 1 items with 100.0% success rate
 
 ### Token Usage:
-Total tokens used: 10098
+Total tokens used: 18638
+
 Tokens by step:
-- refinement: 309 tokens
 
-- schema_generation: 1177 tokens
+- refinement: 306 tokens
 
-- guide: 446 tokens
+- schema_generation: 1205 tokens
 
-- extraction: 8166 tokens
+- guide: 454 tokens
+
+- extraction: 16673 tokens
 
 
 ```json
 [
   {
-    "legal_terms_and_conditions": [
-      {
-        "term": "The Consultant shall provide the Services with reasonable skill and care."
+    "legal_terms_and_conditions": {
+      "term": "This agreement includes terms related to the provision of consultancy services, deliverables, intellectual property rights, payment terms, warranties, limitations of liability, termination, and subcontracting. The agreement is governed by English law and subject to the exclusive jurisdiction of English courts."
+    },
+    "obligations_of_parties": {
+      "consultant_obligations": {
+        "obligation": "The Consultant shall provide the Services with reasonable skill and care, deliver the Deliverables according to the agreed timetable, and ensure that the Deliverables conform to the specified requirements and are free from material defects."
       },
-      {
-        "term": "The Client must provide written feedback concerning the Consultant's proposals."
-      },
-      {
-        "term": "The Consultant warrants that the Deliverables will conform with the requirements and be free from material defects."
+      "client_obligations": {
+        "obligation": "The Client must provide feedback on the Consultant's proposals and pay the Charges within 30 days of receiving an invoice."
       }
-    ],
-    "obligations_of_parties": [
-      {
-        "party": "Consultant",
-        "obligation": "Provide the Services to the Client in accordance with the Agreement."
-      },
-      {
-        "party": "Consultant",
-        "obligation": "Deliver the Deliverables to the Client."
-      },
-      {
-        "party": "Client",
-        "obligation": "Provide written feedback to the Consultant concerning proposals and materials."
-      }
-    ],
-    "deliverables": [
-      {
-        "deliverable": "Deliverables specified in Part 2 of Schedule 1",
-        "due_date": "As per the timetable set out in Part 3 of Schedule 1"
-      }
-    ],
-    "payment_terms": [
-      {
-        "payment_schedule": "Invoices issued from time to time during the Term or on invoicing dates set out in Part 5 of Schedule 1",
-        "payment_condition": "Client must pay within 30 days following the issue of an invoice."
-      }
-    ]
+    },
+    "deliverables": {
+      "deliverable": "Deliverables as specified in Part 2 of Schedule 1",
+      "deadline": null
+    },
+    "payment_terms": {
+      "payment_term": "The Client shall pay the Charges to the Consultant within 30 days of receiving an invoice. Late payments may incur interest at 8% per annum above the Bank of England base rate.",
+      "due_date": null
+    }
   }
 ]
 ```
@@ -108,8 +92,8 @@ Tokens by step:
 ```json
 {
   "$defs": {
-    "ConsultancyAgreementTermsdeliverablesItem": {
-      "description": "Organized deliverables in a sequential manner to reflect the order of completion.",
+    "ConsultancyAgreementTermsdeliverables": {
+      "description": "List of deliverables expected from the consultancy, ordered chronologically by deadline.",
       "properties": {
         "deliverable": {
           "anyOf": [
@@ -121,12 +105,13 @@ Tokens by step:
             }
           ],
           "default": null,
-          "description": "Description of the deliverable.",
+          "description": "A specific deliverable item.",
           "title": "Deliverable"
         },
-        "due_date": {
+        "deadline": {
           "anyOf": [
             {
+              "format": "date",
               "type": "string"
             },
             {
@@ -134,15 +119,15 @@ Tokens by step:
             }
           ],
           "default": null,
-          "description": "The due date for the deliverable.",
-          "title": "Due Date"
+          "description": "The deadline for the deliverable.",
+          "title": "Deadline"
         }
       },
-      "title": "ConsultancyAgreementTermsdeliverablesItem",
+      "title": "ConsultancyAgreementTermsdeliverables",
       "type": "object"
     },
-    "ConsultancyAgreementTermslegal_terms_and_conditionsItem": {
-      "description": "Grouped related legal terms and conditions for clarity.",
+    "ConsultancyAgreementTermslegal_terms_and_conditions": {
+      "description": "A collection of legal terms and conditions outlined in the agreement.",
       "properties": {
         "term": {
           "anyOf": [
@@ -158,13 +143,44 @@ Tokens by step:
           "title": "Term"
         }
       },
-      "title": "ConsultancyAgreementTermslegal_terms_and_conditionsItem",
+      "title": "ConsultancyAgreementTermslegal_terms_and_conditions",
       "type": "object"
     },
-    "ConsultancyAgreementTermsobligations_of_partiesItem": {
-      "description": "Clearly outlined obligations of the parties involved, easy to reference.",
+    "ConsultancyAgreementTermsobligations_of_parties": {
+      "description": "Key obligations of the parties involved in the agreement.",
       "properties": {
-        "party": {
+        "consultant_obligations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/obligations_of_partiesconsultant_obligations"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Obligations specific to the consultant."
+        },
+        "client_obligations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/obligations_of_partiesclient_obligations"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Obligations specific to the client."
+        }
+      },
+      "title": "ConsultancyAgreementTermsobligations_of_parties",
+      "type": "object"
+    },
+    "ConsultancyAgreementTermspayment_terms": {
+      "description": "Payment terms organized by due date.",
+      "properties": {
+        "payment_term": {
           "anyOf": [
             {
               "type": "string"
@@ -174,9 +190,30 @@ Tokens by step:
             }
           ],
           "default": null,
-          "description": "The party responsible for the obligation, either 'Consultant' or 'Client'.",
-          "title": "Party"
+          "description": "A specific payment term.",
+          "title": "Payment Term"
         },
+        "due_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The due date for the payment term.",
+          "title": "Due Date"
+        }
+      },
+      "title": "ConsultancyAgreementTermspayment_terms",
+      "type": "object"
+    },
+    "obligations_of_partiesclient_obligations": {
+      "description": "Obligations specific to the client.",
+      "properties": {
         "obligation": {
           "anyOf": [
             {
@@ -187,17 +224,17 @@ Tokens by step:
             }
           ],
           "default": null,
-          "description": "Description of the obligation.",
+          "description": "A specific obligation of the client.",
           "title": "Obligation"
         }
       },
-      "title": "ConsultancyAgreementTermsobligations_of_partiesItem",
+      "title": "obligations_of_partiesclient_obligations",
       "type": "object"
     },
-    "ConsultancyAgreementTermspayment_termsItem": {
-      "description": "Organized payment terms to reflect the schedule and conditions of payments.",
+    "obligations_of_partiesconsultant_obligations": {
+      "description": "Obligations specific to the consultant.",
       "properties": {
-        "payment_schedule": {
+        "obligation": {
           "anyOf": [
             {
               "type": "string"
@@ -207,24 +244,11 @@ Tokens by step:
             }
           ],
           "default": null,
-          "description": "The schedule of payments.",
-          "title": "Payment Schedule"
-        },
-        "payment_condition": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Conditions under which payments are made.",
-          "title": "Payment Condition"
+          "description": "A specific obligation of the consultant.",
+          "title": "Obligation"
         }
       },
-      "title": "ConsultancyAgreementTermspayment_termsItem",
+      "title": "obligations_of_partiesconsultant_obligations",
       "type": "object"
     }
   },
@@ -233,66 +257,50 @@ Tokens by step:
     "legal_terms_and_conditions": {
       "anyOf": [
         {
-          "items": {
-            "$ref": "#/$defs/ConsultancyAgreementTermslegal_terms_and_conditionsItem"
-          },
-          "type": "array"
+          "$ref": "#/$defs/ConsultancyAgreementTermslegal_terms_and_conditions"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Grouped related legal terms and conditions for clarity.",
-      "title": "Legal Terms And Conditions"
+      "description": "A collection of legal terms and conditions outlined in the agreement."
     },
     "obligations_of_parties": {
       "anyOf": [
         {
-          "items": {
-            "$ref": "#/$defs/ConsultancyAgreementTermsobligations_of_partiesItem"
-          },
-          "type": "array"
+          "$ref": "#/$defs/ConsultancyAgreementTermsobligations_of_parties"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Clearly outlined obligations of the parties involved, easy to reference.",
-      "title": "Obligations Of Parties"
+      "description": "Key obligations of the parties involved in the agreement."
     },
     "deliverables": {
       "anyOf": [
         {
-          "items": {
-            "$ref": "#/$defs/ConsultancyAgreementTermsdeliverablesItem"
-          },
-          "type": "array"
+          "$ref": "#/$defs/ConsultancyAgreementTermsdeliverables"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Organized deliverables in a sequential manner to reflect the order of completion.",
-      "title": "Deliverables"
+      "description": "List of deliverables expected from the consultancy, ordered chronologically by deadline."
     },
     "payment_terms": {
       "anyOf": [
         {
-          "items": {
-            "$ref": "#/$defs/ConsultancyAgreementTermspayment_termsItem"
-          },
-          "type": "array"
+          "$ref": "#/$defs/ConsultancyAgreementTermspayment_terms"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Organized payment terms to reflect the schedule and conditions of payments.",
-      "title": "Payment Terms"
+      "description": "Payment terms organized by due date."
     }
   },
   "title": "ConsultancyAgreementTerms",
@@ -317,57 +325,59 @@ result = extractor.extract(invoice_path, query)
 
 ### Results:
 
-Extracted 1 items with 100.0% success rate
+Extracted 6 items with 100.0% success rate
 
 ### Token Usage:
-Total tokens used: 5932
+Total tokens used: 3323
+
 Tokens by step:
-- refinement: 1180 tokens
 
-- schema_generation: 2744 tokens
+- refinement: 376 tokens
 
-- guide: 518 tokens
+- schema_generation: 1005 tokens
 
-- extraction: 1490 tokens
+- guide: 519 tokens
+
+- extraction: 1423 tokens
 
 
 ```json
 [
   {
-    "Professional Name": "FIRM NAME",
-    "Services": [
-      {
-        "Service Description": "Telephone conference with defense attorney regarding scheduling of Ms. Client\u2019s deposition",
-        "Hourly Rate": 175.0,
-        "Amount": 17.5
-      },
-      {
-        "Service Description": "Meeting with Ms. Client to review file and prepare for her deposition",
-        "Hourly Rate": 175.0,
-        "Amount": 262.5
-      },
-      {
-        "Service Description": "Attend the deposition of Ms. Client",
-        "Hourly Rate": 175.0,
-        "Amount": 700.0
-      },
-      {
-        "Service Description": "Review and summarize deposition of Ms. Client",
-        "Hourly Rate": 75.0,
-        "Amount": 112.5
-      },
-      {
-        "Service Description": "Prepare Motion for Summary Judgment, Memorandum in Support of Motion for Summary Judgment, and Affidavit of Ms. Client",
-        "Hourly Rate": 175.0,
-        "Amount": 525.0
-      },
-      {
-        "Service Description": "Court run to Civil District Court to file Motion for Summary Judgment; obtain hearing date from division; walk through service to Sheriff",
-        "Hourly Rate": 75.0,
-        "Amount": 75.0
-      }
-    ],
-    "Total Amount": 1692.5
+    "Professional Name": "JJJ",
+    "Service Description": "Telephone conference with defense attorney regarding scheduling of Ms. Client\u2019s deposition",
+    "Hourly Rate": 175.0,
+    "Total Amount": 17.5
+  },
+  {
+    "Professional Name": "JJJ",
+    "Service Description": "Meeting with Ms. Client to review file and prepare for her deposition",
+    "Hourly Rate": 175.0,
+    "Total Amount": 262.5
+  },
+  {
+    "Professional Name": "JJJ",
+    "Service Description": "Attend the deposition of Ms. Client",
+    "Hourly Rate": 175.0,
+    "Total Amount": 700.0
+  },
+  {
+    "Professional Name": "MLT",
+    "Service Description": "Review and summarize deposition of Ms. Client",
+    "Hourly Rate": 75.0,
+    "Total Amount": 112.5
+  },
+  {
+    "Professional Name": "JJJ",
+    "Service Description": "Prepare Motion for Summary Judgment, Memorandum in Support of Motion for Summary Judgment, and Affidavit of Ms. Client",
+    "Hourly Rate": 175.0,
+    "Total Amount": 525.0
+  },
+  {
+    "Professional Name": "MLT",
+    "Service Description": "Court run to Civil District Court to file Motion for Summary Judgment; obtain hearing date from division; walk through service to Sheriff",
+    "Hourly Rate": 75.0,
+    "Total Amount": 75.0
   }
 ]
 ```
@@ -378,57 +388,7 @@ Tokens by step:
 
 ```json
 {
-  "$defs": {
-    "InvoiceExtractionModelServicesItem": {
-      "description": "A list of services provided, including descriptions, hourly rates, and amounts.",
-      "properties": {
-        "Service Description": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "A detailed text description of the services provided.",
-          "title": "Service Description"
-        },
-        "Hourly Rate": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The rate charged per hour for the services.",
-          "format": "Must be formatted to two decimal places.",
-          "title": "Hourly Rate"
-        },
-        "Amount": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The total amount charged for the specific service rendered.",
-          "format": "Must be formatted to two decimal places.",
-          "title": "Amount"
-        }
-      },
-      "title": "InvoiceExtractionModelServicesItem",
-      "type": "object"
-    }
-  },
-  "description": "Extracts detailed information from invoices for professional services rendered, organizing data in a structured format.",
+  "description": "Extracts details from an invoice for professional services rendered.",
   "properties": {
     "Professional Name": {
       "anyOf": [
@@ -443,21 +403,31 @@ Tokens by step:
       "description": "The name of the individual or entity providing the service.",
       "title": "Professional Name"
     },
-    "Services": {
+    "Service Description": {
       "anyOf": [
         {
-          "items": {
-            "$ref": "#/$defs/InvoiceExtractionModelServicesItem"
-          },
-          "type": "array"
+          "type": "string"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "A list of services provided, including descriptions, hourly rates, and amounts.",
-      "title": "Services"
+      "description": "A detailed description of the services provided.",
+      "title": "Service Description"
+    },
+    "Hourly Rate": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The rate charged per hour for the services.",
+      "title": "Hourly Rate"
     },
     "Total Amount": {
       "anyOf": [
@@ -469,8 +439,7 @@ Tokens by step:
         }
       ],
       "default": null,
-      "description": "The total amount charged for all services rendered in the invoice.",
-      "format": "Must be formatted to two decimal places.",
+      "description": "The total amount charged for the services rendered.",
       "title": "Total Amount"
     }
   },
@@ -496,14 +465,17 @@ print(DataModel.model_json_schema())
 ```
 
 ### Token Usage for Schema Generation Process:
-Total tokens used: 1724
 
-Breakdown by step:
-- refinement: 305 tokens
+### Token Usage:
+Total tokens used: 3031
 
-- schema_generation: 976 tokens
+Tokens by step:
 
-- guide: 443 tokens
+- refinement: 286 tokens
+
+- schema_generation: 2325 tokens
+
+- guide: 420 tokens
 
 - extraction: 0 tokens
 
@@ -514,54 +486,46 @@ Breakdown by step:
 
 ```json
 {
-  "$defs": {
-    "ConfidentialityClauseExtractionConfidentialityClause": {
-      "description": "The confidentiality clause containing specific details about confidentiality obligations.",
-      "properties": {
-        "DefinitionOfConfidentialInformation": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The definition of what constitutes 'Confidential Information' within the document.",
-          "title": "Definitionofconfidentialinformation"
-        },
-        "DurationOfObligation": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The duration for which the confidentiality obligation is in effect.",
-          "title": "Durationofobligation"
-        }
-      },
-      "title": "ConfidentialityClauseExtractionConfidentialityClause",
-      "type": "object"
-    }
-  },
   "description": "Extracts the confidentiality clause from legal documents, including the definition of 'Confidential Information' and the duration of the confidentiality obligation.",
   "properties": {
-    "ConfidentialityClause": {
+    "confidentiality_clause": {
       "anyOf": [
         {
-          "$ref": "#/$defs/ConfidentialityClauseExtractionConfidentialityClause"
+          "type": "string"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "The confidentiality clause containing specific details about confidentiality obligations."
+      "description": "The full text of the confidentiality clause.",
+      "title": "Confidentiality Clause"
+    },
+    "confidential_information_definition": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The definition of 'Confidential Information' as specified in the document.",
+      "title": "Confidential Information Definition"
+    },
+    "confidentiality_duration": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The duration for which the confidentiality obligation is in effect.",
+      "title": "Confidentiality Duration"
     }
   },
   "title": "ConfidentialityClauseExtraction",

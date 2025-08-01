@@ -49,7 +49,7 @@ from structx import Extractor
 
 # Initialize extractor
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key"
 )
 

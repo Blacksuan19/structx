@@ -8,7 +8,8 @@ your data models as requirements change without having to manually rewrite them.
 
 ```python
 from structx import Extractor
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import List, date
 
 # Initialize the extractor
 extractor = Extractor.from_litellm(
@@ -16,33 +17,30 @@ extractor = Extractor.from_litellm(
     api_key="your-api-key"
 )
 
-# Original model
-class UserProfile(BaseModel):
-    name: str
-    email: str
-    age: int
+# Original model for a legal contract
+class Contract(BaseModel):
+    parties: List[str]
+    effective_date: date
 
 # Refine the model
 refined_model = extractor.refine_data_model(
-    model=UserProfile,
+    model=Contract,
     instructions="""
-    1. Add a 'phone_number' field as a string in the format '123-456-7890'
-    2. Change 'age' to 'birth_date' using datetime type
-    3. Add validation to ensure email contains '@'
+    1. Change 'parties' to a list of objects, each with 'name' and 'role' fields.
+    2. Add a 'governing_law' string field.
+    3. Add a 'termination_notice_days' integer field with a default of 30.
     """,
-    model_name="EnhancedUserProfile"  # Optional custom name
+    model_name="EnhancedContract"  # Optional custom name
 )
 
 # Create an instance of the refined model
-user = refined_model(
-    name="John Doe",
-    email="john@example.com",
-    birth_date="1990-01-01",
-    phone_number="123-456-7890"
+contract_instance = refined_model(
+    parties=[{"name": "Client Corp", "role": "Client"}, {"name": "Consultant LLC", "role": "Consultant"}],
+    effective_date="2025-01-01",
+    governing_law="State of Delaware"
 )
 
-print(user)
-# EnhancedUserProfile(name='John Doe', email='john@example.com', birth_date=datetime.datetime(1990, 1, 1, 0, 0), phone_number='123-456-7890')
+print(contract_instance)
 ```
 
 ## How It Works
@@ -50,6 +48,9 @@ print(user)
 The `refine_data_model` method:
 
 ### Model Refinement Process
+
+<details>
+<summary>View Model Refinement Process Diagram</summary>
 
 ```mermaid
 graph LR
@@ -80,6 +81,8 @@ graph LR
     D --> D1
 ```
 
+</details>
+
 The `refine_data_model` method:
 
 1. Takes an existing Pydantic model and natural language instructions
@@ -90,79 +93,66 @@ The `refine_data_model` method:
 
 ## Example Use Cases
 
-### Adding New Fields
+### Adding New Fields to an Invoice Model
 
 ```python
-class Product(BaseModel):
+class Invoice(BaseModel):
+    invoice_number: str
+    total_amount: float
+
+enhanced_invoice = extractor.refine_data_model(
+    model=Invoice,
+    instructions="Add a 'due_date' of type date and a 'line_items' field that is a list of strings."
+)
+```
+
+### Modifying Field Types and Validation in a Legal Document Model
+
+```python
+class LegalClause(BaseModel):
+    clause_title: str
+    clause_text: str
+
+validated_clause = extractor.refine_data_model(
+    model=LegalClause,
+    instructions="""
+    1. Add a 'clause_id' that must start with 'CL-'.
+    2. Ensure 'clause_title' is not empty.
+    3. Add a 'tags' field which is a list of strings.
+    """
+)
+```
+
+### Removing Fields from a Party Model
+
+```python
+class Party(BaseModel):
     name: str
-    price: float
-    category: str
+    address: str
+    contact_person: str
+    role: str
 
-enhanced_product = extractor.refine_data_model(
-    model=Product,
-    instructions="Add an 'in_stock' boolean field and a 'tags' field that accepts a list of strings"
+simplified_party = extractor.refine_data_model(
+    model=Party,
+    instructions="Remove the 'address' and 'contact_person' fields."
 )
-
-# Result: Product with name, price, category, in_stock, and tags fields
 ```
 
-### Modifying Field Types and Validation
+### Complex Transformations on a Financial Model
 
 ```python
-class Order(BaseModel):
-    id: str
-    items: List[str]
-    total: float
+class Financials(BaseModel):
+    revenue: float
+    expenses: float
 
-validated_order = extractor.refine_data_model(
-    model=Order,
+detailed_financials = extractor.refine_data_model(
+    model=Financials,
     instructions="""
-    1. Make 'id' follow the pattern 'ORD-' followed by 6 digits
-    2. Change 'items' to accept a list of dictionaries with 'product_id' and 'quantity' fields
-    3. Ensure 'total' is always positive
+    1. Split 'expenses' into 'operating_expenses' and 'capital_expenditures'.
+    2. Add a 'profit' field that should be calculated as revenue - (operating_expenses + capital_expenditures).
+    3. Add a 'currency' field that defaults to 'USD'.
     """
 )
-
-# Result: Order with validated id, structured items list, and positive total
-```
-
-### Removing Fields
-
-```python
-class UserSettings(BaseModel):
-    user_id: str
-    preferences: Dict[str, str]
-    last_login: datetime
-    created_at: datetime
-    updated_at: datetime
-
-simplified_settings = extractor.refine_data_model(
-    model=UserSettings,
-    instructions="Remove the 'created_at' and 'updated_at' fields"
-)
-
-# Result: UserSettings without created_at and updated_at fields
-```
-
-### Complex Transformations
-
-```python
-class SimpleAddress(BaseModel):
-    street: str
-    city: str
-    country: str
-
-detailed_address = extractor.refine_data_model(
-    model=SimpleAddress,
-    instructions="""
-    1. Split 'street' into 'street_name' and 'street_number'
-    2. Add a 'postal_code' field with appropriate validation for postal codes
-    3. Add a 'state_province' field that's required for US and Canada but optional otherwise
-    4. Make 'country' use a two-letter country code format
-    """
-)
-
-# Result: A more detailed address model with proper validation
 ```
 
 ## Best Practices
@@ -186,11 +176,10 @@ print(refined_model.model_json_schema())
 
 # Test with valid and invalid data
 try:
-    invalid_user = refined_model(
-        name="John Doe",
-        email="invalid-email",  # Missing '@'
-        birth_date="1990-01-01",
-        phone_number="123-456-7890"
+    invalid_contract = refined_model(
+        parties=[{"name": "Test"}], # Missing role
+        effective_date="2025-01-01",
+        governing_law="State of Delaware"
     )
 except ValueError as e:
     print(f"Validation works: {e}")
@@ -202,16 +191,15 @@ For complex refinements, providing context helps the model understand your
 intent:
 
 ```python
-medical_record = extractor.refine_data_model(
-    model=PatientRecord,
+refined_invoice = extractor.refine_data_model(
+    model=Invoice,
     instructions="""
-    Context: We're updating our medical records system to comply with new regulations.
+    Context: We are updating our invoicing system for international clients.
 
     Changes needed:
-    1. Add a 'consent_given' boolean field that defaults to False
-    2. Make 'patient_id' follow the new format 'PAT-' followed by 8 digits
-    3. Add an 'emergency_contact' field with name and phone number
-    4. Ensure all dates use ISO format
+    1. Add a 'currency' field, which must be a 3-letter ISO code.
+    2. Add a 'vat_number' field, which is optional.
+    3. Ensure 'total_amount' is always a positive number.
     """
 )
 ```
@@ -223,10 +211,10 @@ medical_record = extractor.refine_data_model(
 You can specify a custom name for the refined model:
 
 ```python
-admin_user = extractor.refine_data_model(
-    model=User,
-    instructions="Add admin-specific fields like 'permissions' and 'access_level'",
-    model_name="AdminUser"
+SubContractorAgreement = extractor.refine_data_model(
+    model=Contract,
+    instructions="Add a 'primary_contractor' field.",
+    model_name="SubContractorAgreement"
 )
 ```
 
@@ -235,20 +223,19 @@ admin_user = extractor.refine_data_model(
 The refinement process can handle nested models:
 
 ```python
-class Address(BaseModel):
-    street: str
-    city: str
-    country: str
+class LineItem(BaseModel):
+    description: str
+    amount: float
 
-class Person(BaseModel):
-    name: str
-    address: Address
+class Invoice(BaseModel):
+    invoice_number: str
+    line_items: List[LineItem]
 
-enhanced_person = extractor.refine_data_model(
-    model=Person,
+enhanced_invoice = extractor.refine_data_model(
+    model=Invoice,
     instructions="""
-    1. Add 'email' and 'phone' fields to the Person model
-    2. Add 'postal_code' to the nested Address model
+    1. Add a 'quantity' integer field to the LineItem model.
+    2. Add a 'client_name' string field to the Invoice model.
     """
 )
 ```

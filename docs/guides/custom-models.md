@@ -5,6 +5,9 @@ use your own custom Pydantic models for extraction.
 
 ## Custom Model Processing Flow
 
+<details>
+<summary>View Custom Model Processing Flow Diagram</summary>
+
 ```mermaid
 graph LR
     A[Custom Model] --> B[Model Analysis]
@@ -38,44 +41,57 @@ graph LR
     E --> H
 ```
 
+</details>
+
 ## Using Custom Models
 
 ### Define Your Model
 
 ```python
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, date
 
-class Metric(BaseModel):
-    name: str = Field(description="Name of the metric")
-    value: float = Field(description="Value of the metric")
-    unit: Optional[str] = Field(default=None, description="Unit of measurement")
+class Party(BaseModel):
+    name: str = Field(description="Name of the party")
+    role: str = Field(description="Role of the party (e.g., Client, Consultant)")
 
-class Incident(BaseModel):
-    timestamp: str = Field(description="When the incident occurred")
-    system: str = Field(description="Affected system")
-    severity: str = Field(description="Severity level")
-    metrics: List[Metric] = Field(default_factory=list, description="Related metrics")
-    resolution: Optional[str] = Field(default=None, description="Resolution steps")
+class ConsultancyAgreement(BaseModel):
+    parties: List[Party] = Field(description="The parties to the agreement")
+    effective_date: date = Field(description="The effective date of the agreement")
+    governing_law: str = Field(description="The governing law of the agreement")
+
+class Invoice(BaseModel):
+    invoice_number: str = Field(description="The invoice number")
+    total_amount: float = Field(description="The total amount of the invoice")
+    issue_date: date = Field(description="The date the invoice was issued")
 ```
 
 ### Extract with Custom Model
 
 ```python
+# Extract from a legal document
 result = extractor.extract(
-    data=df,
-    query="extract incident information including timestamp, system, severity, metrics, and resolution",
-    model=Incident
+    data="scripts/example_input/free-consultancy-agreement.docx",
+    model=ConsultancyAgreement
 )
 
 # Access the extracted data
-for item in result.data:
-    print(f"Incident at {item.timestamp} on {item.system}")
-    print(f"Severity: {item.severity}")
-    for metric in item.metrics:
-        print(f"- {metric.name}: {metric.value} {metric.unit or ''}")
-    if item.resolution:
-        print(f"Resolution: {item.resolution}")
+for agreement in result.data:
+    print(f"Agreement effective date: {agreement.effective_date}")
+    for party in agreement.parties:
+        print(f"- Party: {party.name} ({party.role})")
+    print(f"Governing Law: {agreement.governing_law}")
+
+# Extract from an invoice
+result_invoice = extractor.extract(
+    data="scripts/example_input/S0305SampleInvoice.pdf",
+    model=Invoice
+)
+
+for invoice in result_invoice.data:
+    print(f"Invoice Number: {invoice.invoice_number}")
+    print(f"Total Amount: {invoice.total_amount}")
+    print(f"Issue Date: {invoice.issue_date}")
 ```
 
 ## Reusing Generated Models
@@ -83,16 +99,15 @@ for item in result.data:
 You can also reuse models generated from previous extractions:
 
 ```python
-# First extraction generates a model
+# First extraction generates a model for a contract
 result1 = extractor.extract(
-    data=df1,
-    query="extract incident dates and affected systems"
+    data="scripts/example_input/free-consultancy-agreement.docx",
+    query="extract parties and effective date"
 )
 
-# Reuse the model for another extraction
+# Reuse the model for another contract
 result2 = extractor.extract(
-    data=df2,
-    query="extract incident information",
+    data="another_contract.docx",
     model=result1.model
 )
 ```
@@ -102,20 +117,19 @@ result2 = extractor.extract(
 You can generate a model without performing extraction using `get_schema`:
 
 ```python
-# Generate a model based on a query and sample text
-IncidentModel = extractor.get_schema(
-    query="extract incident dates, affected systems, and resolution steps",
-    sample_text="System check on 2024-01-15 detected high CPU usage (92%) on server-01."
+# Generate a model based on a query and a sample from a legal document
+LegalClauseModel = extractor.get_schema(
+    query="extract the termination clause, including notice period and conditions",
+    data="scripts/example_input/free-consultancy-agreement.docx"
 )
 
 # Inspect the model
-print(IncidentModel.model_json_schema())
+print(LegalClauseModel.model_json_schema())
 
 # Use the model for extraction
 result = extractor.extract(
-    data=df,
-    query="extract incident information",
-    model=IncidentModel
+    data="scripts/example_input/free-consultancy-agreement.docx",
+    model=LegalClauseModel
 )
 ```
 
@@ -127,27 +141,28 @@ For more advanced model modifications, you can also use the
 [Model Refinement](model-refinement.md) feature to update your models using
 natural language instructions:
 
-````python
+```python
 # Generate a base model
-IncidentModel = extractor.get_schema(
-    query="extract incident dates and affected systems",
-    sample_text="Sample text here"
+ContractModel = extractor.get_schema(
+    query="extract parties and effective date",
+    data="scripts/example_input/free-consultancy-agreement.docx"
 )
 
 # Refine it with natural language
-EnhancedIncidentModel = extractor.refine_data_model(
-    model=IncidentModel,
+EnhancedContractModel = extractor.refine_data_model(
+    model=ContractModel,
     instructions="""
-    1. Add a 'severity' field with allowed values: 'low', 'medium', 'high'
-    2. Make incident_date a required field
-    3. Add validation for affected_systems to ensure it's a non-empty list
+    1. Add a 'governing_law' field of type string.
+    2. Add a 'termination_notice_days' field of type integer.
+    3. Make the 'parties' field a list of strings.
     """
+)
 
 # check token usage
-usage = EnhancedIncidentModel.usage
+usage = EnhancedContractModel.usage
 print(f"Total tokens used: {usage.total_tokens}")
 print(f"By step: {[(s.name, s.tokens) for s in usage.steps]}")
-)
+```
 
 ## Model Validation
 
@@ -156,18 +171,15 @@ Pydantic models provide built-in validation:
 ```python
 # Create an instance with validation
 try:
-    incident = Incident(
-        timestamp="2024-01-15 14:30",
-        system="server-01",
-        severity="high",
-        metrics=[
-            {"name": "CPU Usage", "value": 92, "unit": "%"}
-        ]
+    agreement = ConsultancyAgreement(
+        parties=[{"name": "Client Corp", "role": "Client"}, {"name": "Consultant LLC", "role": "Consultant"}],
+        effective_date="2025-01-01",
+        governing_law="State of Delaware"
     )
-    print("Valid incident:", incident)
+    print("Valid agreement:", agreement)
 except Exception as e:
     print("Validation error:", e)
-````
+```
 
 ## Best Practices
 

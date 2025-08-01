@@ -59,6 +59,9 @@ that provides superior extraction quality:
 
 #### Technical Pipeline
 
+<details>
+<summary>View Technical Pipeline Diagram</summary>
+
 ```mermaid
 graph LR
     A[Text/DOCX/etc] --> B[Docling Conversion]
@@ -70,25 +73,21 @@ graph LR
     G[Raw PDF] --> E
 ```
 
+</details>
+
 #### Default Usage
 
 ```python
-# Default behavior - any file format is converted to PDF for optimal processing
+# Process a DOCX contract by converting it to PDF for optimal extraction
 result = extractor.extract(
-    data="document.txt",        # Any supported format: TXT, DOCX, PDF, MD
-    query="extract key information"
-)
-
-# The file_path can be any unstructured document
-result = extractor.extract(
-    data="contract.docx",       # Converted via docling → markdown → PDF
-    query="extract contract terms and dates"
+    data="scripts/example_input/free-consultancy-agreement.docx", # Converted to PDF -> multimodal
+    query="extract the parties, effective date, and payment terms"
 )
 
 # PDFs are processed directly with multimodal support
 result = extractor.extract(
-    data="report.pdf",          # Direct multimodal processing
-    query="extract financial metrics"
+    data="scripts/example_input/S0305SampleInvoice.pdf",          # Direct multimodal processing
+    query="extract the invoice number, total amount, and line items"
 )
 ```
 
@@ -269,6 +268,9 @@ document types:
 
 ### Text Files → PDF Pipeline
 
+<details>
+<summary>View Text Files to PDF Pipeline Diagram</summary>
+
 ```mermaid
 graph LR
     A[Text File] --> B[Read Content]
@@ -277,6 +279,8 @@ graph LR
     D --> E[WeasyPrint PDF Generation]
     E --> F[Instructor Multimodal Processing]
 ```
+
+</details>
 
 **Supported Extensions**: `.txt`, `.md`, `.py`, `.html`, `.xml`, `.log`, `.rst`
 
@@ -289,6 +293,9 @@ graph LR
 
 ### DOCX Files → PDF Pipeline
 
+<details>
+<summary>View DOCX Files to PDF Pipeline Diagram</summary>
+
 ```mermaid
 graph LR
     A[DOCX File] --> B[Docling Conversion]
@@ -297,6 +304,8 @@ graph LR
     D --> E[WeasyPrint PDF Creation]
     E --> F[Instructor Multimodal Processing]
 ```
+
+</details>
 
 **Supported Extensions**: `.docx`, `.doc`
 
@@ -308,11 +317,16 @@ graph LR
 
 ### PDF Files → Direct Processing
 
+<details>
+<summary>View PDF Files to Direct Processing Diagram</summary>
+
 ```mermaid
 graph LR
     A[PDF File] --> B[Instructor Multimodal Processing]
     B --> C[Structured Output]
 ```
+
+</details>
 
 **Supported Extensions**: `.pdf`
 
@@ -324,6 +338,9 @@ graph LR
 
 When PDF conversion fails or is disabled:
 
+<details>
+<summary>View Fallback Text Processing Diagram</summary>
+
 ```mermaid
 graph LR
     A[Any File] --> B[Text Extraction]
@@ -331,6 +348,8 @@ graph LR
     C --> D[Text-based Processing]
     D --> E[Structured Output]
 ```
+
+</details>
 
 1. **Text Extraction**: Format-specific text extraction
 2. **Smart Chunking**: Overlap-based chunking with context preservation

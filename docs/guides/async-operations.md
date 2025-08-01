@@ -10,8 +10,8 @@ import asyncio
 
 async def extract_data():
     result = await extractor.extract_async(
-        data="document.pdf",
-        query="extract key information"
+        data="scripts/example_input/free-consultancy-agreement.docx",
+        query="extract the main parties and the effective date"
     )
     return result
 
@@ -31,9 +31,12 @@ For each synchronous method, there is an async counterpart:
 
 ## Parallel Processing
 
-Process multiple files in parallel:
+Process multiple documents in parallel:
 
 ### Async Processing Flow
+
+<details>
+<summary>View Async Processing Flow Diagram</summary>
 
 ```mermaid
 graph TB
@@ -65,46 +68,50 @@ graph TB
     end
 ```
 
+</details>
+
 ```python
 import asyncio
 
-async def process_files(files):
+async def process_documents(docs):
     tasks = []
-    for file in files:
+    for doc_path, query in docs.items():
         task = extractor.extract_async(
-            data=file,
-            query="extract key information"
+            data=doc_path,
+            query=query
         )
         tasks.append(task)
 
     results = await asyncio.gather(*tasks)
     return results
 
-files = ["file1.pdf", "file2.pdf", "file3.pdf"]
-results = asyncio.run(process_files(files))
+documents = {
+    "scripts/example_input/free-consultancy-agreement.docx": "extract parties and governing law",
+    "scripts/example_input/S0305SampleInvoice.pdf": "extract invoice number and total amount"
+}
+results = asyncio.run(process_documents(documents))
 ```
 
 ## Combining with Other Async Operations
 
 ```python
 import asyncio
-import aiohttp
+import aiofiles
 
-async def fetch_and_extract():
-    # Fetch data
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://example.com/data.json") as response:
-            data = await response.text()
+async def read_and_extract(file_path, query):
+    # Asynchronously read a file
+    async with aiofiles.open(file_path, mode='r') as f:
+        content = await f.read()
 
-    # Extract information
+    # Extract information from the content
     result = await extractor.extract_async(
-        data=data,
-        query="extract key information"
+        data=content,
+        query=query
     )
 
     return result
 
-result = asyncio.run(fetch_and_extract())
+result = asyncio.run(read_and_extract("path/to/your/document.txt", "extract key details"))
 ```
 
 ## Async Multiple Queries
@@ -114,13 +121,13 @@ import asyncio
 
 async def process_multiple_queries():
     queries = [
-        "extract incident dates and times",
-        "extract system components affected",
-        "extract resolution steps"
+        "extract all clauses related to payment",
+        "extract termination conditions",
+        "summarize the scope of services"
     ]
 
     results = await extractor.extract_queries_async(
-        data="document.pdf",
+        data="scripts/example_input/free-consultancy-agreement.docx",
         queries=queries
     )
 

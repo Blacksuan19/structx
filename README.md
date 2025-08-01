@@ -92,7 +92,7 @@ from structx import Extractor
 
 # Initialize extractor
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     max_retries=3,      # Automatically retry on transient errors
     min_wait=1,         # Start with 1 second wait
@@ -113,22 +113,16 @@ print(result.data[0].model_dump_json(indent=2))
 ### 📄 Document Processing with Multimodal Support
 
 ```python
-# Process PDF documents directly with vision capabilities
+# Process a PDF invoice directly with vision capabilities
 result = extractor.extract(
-    data="financial_report.pdf",      # Direct multimodal processing
-    query="extract revenue figures, profit margins, and key financial metrics"
+    data="scripts/example_input/S0305SampleInvoice.pdf",      # Direct multimodal processing
+    query="extract the invoice number, total amount, and line items"
 )
 
-# Convert DOCX to PDF and process with multimodal support
+# Convert a DOCX contract and process with multimodal support
 result = extractor.extract(
-    data="contract.docx",             # Auto-converted via docling → PDF → multimodal
-    query="extract parties, dates, payment terms, and key obligations"
-)
-
-# Process any text file with enhanced PDF conversion
-result = extractor.extract(
-    data="meeting_notes.txt",         # Converted to styled PDF → multimodal
-    query="extract action items, deadlines, and responsible parties"
+    data="scripts/example_input/free-consultancy-agreement.docx", # Auto-converted to PDF -> multimodal
+    query="extract parties, effective date, and payment terms"
 )
 ```
 

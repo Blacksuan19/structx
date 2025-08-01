@@ -40,7 +40,7 @@ from structx import Extractor
 
 # Using litellm (supports multiple providers)
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",  # or any other model supported by litellm
+    model="gpt-4o",  # or any other model supported by litellm
     api_key="your-api-key"
 )
 
@@ -63,46 +63,17 @@ extractor = Extractor(
 ### Extract Structured Data
 
 ```python
-# From a DataFrame
-import pandas as pd
-
-df = pd.DataFrame({
-    "description": [
-        "System check on 2024-01-15 detected high CPU usage (92%) on server-01.",
-        "Database backup failure occurred on 2024-01-20 03:00."
-    ]
-})
-
-result = extractor.extract(
-    data=df,
-    query="extract incident dates and affected systems"
-)
-
 # From a file (automatically detects format and uses optimal processing)
+# Process a PDF invoice
 result = extractor.extract(
-    data="logs.csv",           # Structured data: direct processing
-    query="extract incident dates and affected systems"
+    data="scripts/example_input/S0305SampleInvoice.pdf",         # Unstructured: multimodal PDF processing
+    query="extract invoice number, total amount, and line items"
 )
 
+# Process a DOCX contract
 result = extractor.extract(
-    data="report.pdf",         # Unstructured: multimodal PDF processing
-    query="extract key findings and recommendations"
-)
-
-result = extractor.extract(
-    data="notes.docx",         # Unstructured: converted to PDF then multimodal
-    query="extract action items and deadlines"
-)
-
-# From raw text (converted to PDF for better extraction)
-text = """
-System check on 2024-01-15 detected high CPU usage (92%) on server-01.
-Database backup failure occurred on 2024-01-20 03:00.
-"""
-
-result = extractor.extract(
-    data=text,
-    query="extract incident dates and affected systems"
+    data="scripts/example_input/free-consultancy-agreement.docx", # Unstructured: converted to PDF then multimodal
+    query="extract the parties, effective date, and payment terms"
 )
 ```
 
@@ -116,8 +87,7 @@ print(f"Success rate: {result.success_rate:.1f}%")
 
 # Access as list of model instances
 for item in result.data:
-    print(f"Date: {item.incident_date}")
-    print(f"System: {item.affected_system}")
+    print(item.model_dump_json(indent=2))
 
 # Or convert to DataFrame
 import pandas as pd
@@ -149,7 +119,7 @@ for step in usage.steps:
 ```python
 # With a YAML file
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     config="config.yaml"
 )
@@ -167,14 +137,14 @@ config = {
 }
 
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     config=config
 )
 
 # With retry settings
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     max_retries=5,      # Maximum retry attempts
     min_wait=2,         # Minimum seconds between retries

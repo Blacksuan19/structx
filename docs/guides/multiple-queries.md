@@ -6,6 +6,9 @@ efficiently.
 
 ## Processing Flow
 
+<details>
+<summary>View Multiple Queries Processing Flow Diagram</summary>
+
 ```mermaid
 graph TD
     A[Input Data] --> B[Multiple Queries]
@@ -39,33 +42,35 @@ graph TD
     G1 --> J
 ```
 
+</details>
+
 ## Basic Usage
 
 ```python
-# Define multiple queries
+# Define multiple queries for a legal document
 queries = [
-    "extract incident dates and times",
-    "extract system components affected",
-    "extract resolution steps"
+    "extract the parties involved, including their names and roles",
+    "extract all important dates, such as effective date and termination date",
+    "extract the payment terms, including amounts and schedules"
 ]
 
-# Process all queries on the same data
+# Process all queries on the same document
 results = extractor.extract_queries(
-    data="incident_report.txt",
+    data="scripts/example_input/free-consultancy-agreement.docx",
     queries=queries
 )
 
 # Access results by query
 for query, result in results.items():
-    print(f"\nResults for query: {query}")
+    print(f"\nResults for query: '{query}'")
     print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")
 
     # Access the data
     for item in result.data:
-        print(item.model_dump_json())
+        print(item.model_dump_json(indent=2))
 
     # Access the model
-    print(f"Model: {result.model.__name__}")
+    print(f"Model used: {result.model.__name__}")
 ```
 
 ## Return Format Options
@@ -75,17 +80,9 @@ Just like with single queries, you can control the return format:
 ```python
 # Return as DataFrames
 results = extractor.extract_queries(
-    data=df,
-    queries=queries,
+    data="scripts/example_input/S0305SampleInvoice.pdf",
+    queries=["extract invoice number and total", "extract line items"],
     return_df=True
-)
-
-# With expanded nested structures
-results = extractor.extract_queries(
-    data=df,
-    queries=queries,
-    return_df=True,
-    expand_nested=True
 )
 ```
 
@@ -97,8 +94,12 @@ For better performance, you can use the async version:
 import asyncio
 
 async def process_queries():
+    queries = [
+        "extract client and consultant details",
+        "summarize the scope of services"
+    ]
     results = await extractor.extract_queries_async(
-        data="large_document.pdf",
+        data="scripts/example_input/free-consultancy-agreement.docx",
         queries=queries
     )
     return results
@@ -110,40 +111,43 @@ results = asyncio.run(process_queries())
 
 Using `extract_queries` has several advantages over making separate calls:
 
-1. **Efficiency**: The data is loaded only once
-2. **Consistency**: All queries use the same data preprocessing
-3. **Organization**: Results are organized by query
-4. **Performance**: Better resource utilization
+1. **Efficiency**: The document is loaded and preprocessed only once.
+2. **Consistency**: All queries operate on the exact same version of the
+   document.
+3. **Organization**: Results are neatly organized by the query that produced
+   them.
+4. **Performance**: Better resource utilization, especially with async
+   operations.
 
 ## Use Cases
 
-### Different Aspects of the Same Data
+### Different Aspects of a Legal Document
 
 ```python
 queries = [
-    "extract temporal information (dates, times, durations)",
-    "extract technical details (systems, components, metrics)",
-    "extract impact information (severity, affected users, business impact)"
+    "extract all clauses related to intellectual property",
+    "extract confidentiality obligations for both parties",
+    "extract liability and indemnification clauses"
 ]
 ```
 
-### Different Levels of Detail
+### Different Levels of Detail from an Invoice
 
 ```python
 queries = [
-    "extract high-level summary of incidents",
-    "extract detailed technical information about each incident",
-    "extract specific metrics and measurements"
+    "extract high-level summary: invoice number, total amount, due date",
+    "extract detailed line items with descriptions, quantities, and prices",
+    "extract payment instructions and bank details"
 ]
 ```
 
-### Different Entity Types
+### Different Entity Types from a Contract
 
 ```python
 queries = [
-    "extract information about people mentioned",
-    "extract information about systems mentioned",
-    "extract information about locations mentioned"
+    "extract information about all parties (names, addresses, roles)",
+    "extract all defined terms and their definitions",
+    "extract all monetary values and their context"
 ]
 ```
 

@@ -37,8 +37,8 @@ def print_token_usage(usage: UsageSummary):
     """Print token usage information."""
     print("\n### Token Usage:")
     if usage:
-        print(f"Total tokens used: {usage.total_tokens}")
-        print("Tokens by step:")
+        print(f"Total tokens used: {usage.total_tokens}\n")
+        print("Tokens by step:\n")
         for step in usage.steps:
             print(f"- {step.name}: {step.tokens} tokens\n")
 
@@ -193,12 +193,8 @@ def main():
     print("\n### Token Usage for Schema Generation Process:")
 
     usage: UsageSummary = DataModel.usage.get_usage_summary()
-    print(f"Total tokens used: {usage.total_tokens}")
 
-    print("\nBreakdown by step:")
-    for step in usage.steps:
-        print(f"- {step.name}: {step.tokens} tokens\n")
-
+    print_token_usage(usage)
     print("\n<details>")
     print("<summary>Generated Schema</summary>\n")
     print_json(DataModel.model_json_schema())

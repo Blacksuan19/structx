@@ -24,16 +24,20 @@
 
 ## Overview
 
-`structx` is a powerful Python library that extracts structured data from text
-using Large Language Models (LLMs). It dynamically generates type-safe data
-models and provides consistent, structured extraction with support for complex
-nested data structures.
+`structx` is a powerful Python library for extracting structured data from
+complex documents like legal agreements, financial reports, and invoices using
+Large Language Models (LLMs). It excels at parsing unstructured and
+semi-structured formats by leveraging a multimodal approach, ensuring high
+accuracy and context preservation.
 
-Whether you're analyzing incident reports, processing documents, or extracting
-metrics from unstructured text, `structx` provides a simple, consistent
-interface with powerful capabilities.
+Whether you're digitizing receipts, analyzing contracts, or extracting key
+information from any document, `structx` provides a simple, consistent interface
+with powerful capabilities.
 
 ### How structx Works
+
+<details>
+<summary>View Diagram of How structx Works</summary>
 
 ```mermaid
 graph TB
@@ -64,6 +68,8 @@ graph TB
 
     E --> N
 ```
+
+</details>
 
 ## Key Features
 
@@ -120,22 +126,33 @@ from structx import Extractor
 
 # Initialize extractor
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key"
 )
 
-# Extract structured data
+# Extract from a legal agreement
 result = extractor.extract(
-    data="incident_report.txt",
-    query="extract incident dates, affected systems, and resolution steps"
+    data="scripts/example_input/free-consultancy-agreement.docx",
+    query="extract the parties, effective date, and payment terms"
 )
 
 # Access the extracted data
-print(f"Extracted {result.success_count} items")
 for item in result.data:
-    print(f"Date: {item.incident_date}")
-    print(f"System: {item.affected_system}")
-    print(f"Resolution: {item.resolution_steps}")
+    print(f"Parties: {item.parties}")
+    print(f"Effective Date: {item.effective_date}")
+    print(f"Payment Terms: {item.payment_terms}")
+
+# Extract from a PDF invoice
+result = extractor.extract(
+    data="scripts/example_input/S0305SampleInvoice.pdf",
+    query="extract the invoice number, total amount, and line items"
+)
+
+# Access the extracted data
+for item in result.data:
+    print(f"Invoice Number: {item.invoice_number}")
+    print(f"Total Amount: {item.total_amount}")
+    print(f"Line Items: {item.line_items}")
 ```
 
 ## License

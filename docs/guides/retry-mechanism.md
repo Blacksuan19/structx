@@ -9,7 +9,7 @@ The retry mechanism is enabled by default with sensible defaults:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key"
     # Default retry settings:
     # max_retries=3, min_wait=1, max_wait=10
@@ -22,7 +22,7 @@ You can customize the retry behavior when initializing the extractor:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     max_retries=5,      # Maximum number of retry attempts
     min_wait=2,         # Minimum seconds to wait between retries

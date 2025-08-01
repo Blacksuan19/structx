@@ -25,7 +25,7 @@ Raised when there's an issue with the configuration:
 ```python
 try:
     extractor = Extractor.from_litellm(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         api_key="your-api-key",
         config="invalid_config.yaml"
     )
@@ -97,7 +97,7 @@ if result.failure_count > 0:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     max_retries=5,      # Maximum number of retry attempts
     min_wait=2,         # Minimum seconds to wait between retries

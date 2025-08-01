@@ -16,6 +16,9 @@ When you use `structx` to extract data, the following happens:
 
 ### Standard Extraction Flow
 
+<details>
+<summary>View Standard Extraction Flow Diagram</summary>
+
 ```mermaid
 graph LR
     A[Raw Query] --> B[Query Refinement]
@@ -37,6 +40,8 @@ graph LR
     C --> C1
 ```
 
+</details>
+
 ### Simplified Workflow with Provided Model
 
 When you provide a data model, the workflow is optimized:
@@ -53,6 +58,9 @@ mapping model fields to available data columns and ensuring proper data type
 handling.
 
 ### Custom Model Flow
+
+<details>
+<summary>View Custom Model Flow Diagram</summary>
 
 ```mermaid
 graph LR
@@ -74,19 +82,21 @@ graph LR
     C --> C1
 ```
 
-```python
-from pydantic import BaseModel
+</details>
 
-class Incident(BaseModel):
-    date: str
-    system: str
-    severity: str
+```python
+from pydantic import BaseModel, Field
+from typing import List
+
+class Invoice(BaseModel):
+    invoice_number: str = Field(..., description="The invoice number")
+    total_amount: float = Field(..., description="The total amount of the invoice")
+    line_items: List[str] = Field(..., description="A list of line items from the invoice")
 
 # Extract using the provided model
 result = extractor.extract(
-    data=df,
-    query="extract incident details",
-    model=Incident
+    data="scripts/example_input/S0305SampleInvoice.pdf",
+    model=Invoice
 )
 ```
 
@@ -96,74 +106,37 @@ The extraction query is a natural language description of what you want to
 extract. Be as specific as possible:
 
 ```python
-# Simple query
-query = "extract incident dates and affected systems"
+# Simple query for a legal document
+query = "extract the parties, effective date, and governing law"
 
-# More specific query
+# More specific query for an invoice
 query = """
-extract incident information including:
-- date and time of occurrence
-- affected system components
-- severity level (high, medium, low)
-- resolution steps taken
+extract the following details from the invoice:
+- invoice number
+- total amount due
+- list of all line items with their descriptions and costs
+- payment due date
 """
 ```
 
 ## Input Data Types
 
-`structx` supports various input data types:
-
-### DataFrames
-
-```python
-import pandas as pd
-
-df = pd.DataFrame({
-    "description": [
-        "System check on 2024-01-15 detected high CPU usage (92%) on server-01.",
-        "Database backup failure occurred on 2024-01-20 03:00."
-    ]
-})
-
-result = extractor.extract(
-    data=df,
-    query="extract incident dates and affected systems"
-)
-```
+`structx` supports various input data types, but for legal and financial
+documents, you'll primarily use file paths.
 
 ### Files
 
 ```python
-# CSV files
+# PDF invoice
 result = extractor.extract(
-    data="logs.csv",
-    query="extract incident dates and affected systems"
+    data="scripts/example_input/S0305SampleInvoice.pdf",
+    query="extract invoice number, total amount, and line items"
 )
 
-# Excel files
+# DOCX contract
 result = extractor.extract(
-    data="reports.xlsx",
-    query="extract incident dates and affected systems"
-)
-
-# JSON files
-result = extractor.extract(
-    data="data.json",
-    query="extract incident dates and affected systems"
-)
-```
-
-### Raw Text
-
-```python
-text = """
-System check on 2024-01-15 detected high CPU usage (92%) on server-01.
-Database backup failure occurred on 2024-01-20 03:00.
-"""
-
-result = extractor.extract(
-    data=text,
-    query="extract incident dates and affected systems"
+    data="scripts/example_input/free-consultancy-agreement.docx",
+    query="extract the parties, effective date, and payment terms"
 )
 ```
 
@@ -173,23 +146,22 @@ result = extractor.extract(
 
 ```python
 result = extractor.extract(
-    data=df,
-    query="extract incident dates and affected systems",
-    return_df=False  # Default
+    data="scripts/example_input/S0305SampleInvoice.pdf",
+    query="extract invoice number and total amount",
 )
 
 # Access as list of model instances
 for item in result.data:
-    print(f"Date: {item.incident_date}")
-    print(f"System: {item.affected_system}")
+    print(f"Invoice Number: {item.invoice_number}")
+    print(f"Total Amount: {item.total_amount}")
 ```
 
 ### DataFrame
 
 ```python
 result = extractor.extract(
-    data=df,
-    query="extract incident dates and affected systems",
+    data="scripts/example_input/S0305SampleInvoice.pdf",
+    query="extract invoice number and total amount",
     return_df=True
 )
 

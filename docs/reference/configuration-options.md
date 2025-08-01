@@ -24,7 +24,7 @@ extraction:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     config="config.yaml"
 )
@@ -48,7 +48,7 @@ config = {
 }
 
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     config=config
 )
@@ -74,7 +74,7 @@ config = ExtractionConfig(
 )
 
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     config=config
 )
@@ -110,7 +110,7 @@ You can configure the retry behavior for extraction:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     max_retries=5,      # Maximum number of retry attempts
     min_wait=2,         # Minimum seconds to wait between retries
@@ -132,7 +132,7 @@ You can configure the processing behavior:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key",
     max_threads=20,     # Maximum number of concurrent threads
     batch_size=50       # Size of processing batches
