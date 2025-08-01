@@ -347,23 +347,45 @@ class Extractor:
         )
 
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
-    def get_schema(self, query: str, sample_text: str) -> Type[BaseModel]:
+    def get_schema(
+        self,
+        query: str,
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        **kwargs: Any,
+    ) -> Type[BaseModel]:
         """
         Get extraction model without performing extraction.
 
         Args:
             query: Natural language query
-            sample_text: Sample text for context
+            data: Input data (file path, DataFrame, list of dicts, or raw text)
+            **kwargs: Additional options for file reading
 
         Returns:
             Pydantic model for extraction with `.usage` attribute for token tracking
         """
+        if isinstance(data, str) and not Path(data).exists():
+            sample_text = data
+            columns = ["text"]
+        else:
+            df = self.data_processor.prepare_data(data, **kwargs)
+            is_file_based = "pdf_path" in df.columns or "source" in df.columns
+            columns = df.columns.tolist()
+
+            if is_file_based:
+                sample_text = self.content_analyzer.extract_content_sample_for_schema(
+                    df
+                )
+                content_context = self.content_analyzer.detect_content_type_and_context(
+                    df
+                )
+                sample_text = f"Content type: {content_context}\n\n{sample_text}"
+            else:
+                # For traditional tabular data, create a representative sample
+                sample_text = "\n".join(df.head().to_string(index=False).splitlines())
+
         # Refine query
         refined_query = self.llm_core.refine_query(query)
-
-        # Create a simple list of column names from the sample text
-        # Since we're not working with a DataFrame here, we'll assume a single column
-        columns = ["text"]
 
         # Generate guide
         guide = self.llm_core.generate_extraction_guide(refined_query, columns)
@@ -374,7 +396,9 @@ class Extractor:
         )
 
         # Create model
-        extraction_model = self.model_operations.create_model_from_schema(schema_request)
+        extraction_model = self.model_operations.create_model_from_schema(
+            schema_request
+        )
 
         # Create a deep copy of usage for the model
         model_usage = copy.deepcopy(self.llm_core.get_usage())
@@ -387,18 +411,26 @@ class Extractor:
 
         return extraction_model
 
-    async def get_schema_async(self, query: str, sample_text: str) -> Type[BaseModel]:
+    async def get_schema_async(
+        self,
+        query: str,
+        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        **kwargs: Any,
+    ) -> Type[BaseModel]:
         """
         Asynchronous version of `get_schema`.
 
         Args:
             query: Natural language query
-            sample_text: Sample text for context
+            data: Input data (file path, DataFrame, list of dicts, or raw text)
+            **kwargs: Additional options for file reading
 
         Returns:
             Dynamically generated Pydantic model class
         """
-        return await self.data_processor.run_async(self.get_schema, query, sample_text)
+        return await self.data_processor.run_async(
+            self.get_schema, query, data, **kwargs
+        )
 
     def refine_data_model(
         self,
