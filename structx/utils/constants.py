@@ -13,6 +13,7 @@ TYPE_ALIASES = {
     "datetime": "datetime",  # Add this for consistency
     "date": "date",  # Add this for completeness
     "time": "time",  # Add this for completeness
+    "decimal": "float",  # Assuming decimal is represented as float
 }
 
 SAFE_TYPES = {
