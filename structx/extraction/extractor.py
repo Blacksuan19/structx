@@ -1,6 +1,7 @@
 """
 Refactored main extractor class - now acts as an orchestrator with better organization.
 """
+
 import copy
 import threading
 from pathlib import Path
@@ -76,7 +77,7 @@ class Extractor:
             min_wait=min_wait,
             max_wait=max_wait,
         )
-        
+
         # Initialize specialized processors
         self.model_operations = ModelOperations(self.llm_core)
         self.extraction_engine = ExtractionEngine(self.llm_core)
@@ -95,7 +96,9 @@ class Extractor:
         logger.info(f"Refined Query: {refined_query.refined_query}")
 
         # Generate guide
-        guide = self.llm_core.generate_extraction_guide(refined_query, df.columns.tolist())
+        guide = self.llm_core.generate_extraction_guide(
+            refined_query, df.columns.tolist()
+        )
         logger.info(f"Target Columns: {guide.target_columns}")
 
         if not generate_model:
@@ -119,7 +122,9 @@ class Extractor:
         schema_request = self.model_operations.generate_extraction_schema(
             sample_text, refined_query, guide
         )
-        extraction_model = self.model_operations.create_model_from_schema(schema_request)
+        extraction_model = self.model_operations.create_model_from_schema(
+            schema_request
+        )
 
         return refined_query, guide, extraction_model
 
@@ -154,7 +159,9 @@ class Extractor:
                     )
 
                     if return_df:
-                        self.result_manager.update_dataframe(result_df, items, row_idx, expand_nested)
+                        self.result_manager.update_dataframe(
+                            result_df, items, row_idx, expand_nested
+                        )
                     else:
                         result_list.extend(items)
 
@@ -520,11 +527,3 @@ class Extractor:
             min_wait=min_wait,
             max_wait=max_wait,
         )
-
-
-# Add async versions of extraction methods
-from structx.utils.helpers import async_wrapper
-
-Extractor.extract_async = async_wrapper(Extractor.extract)
-Extractor.extract_queries_async = async_wrapper(Extractor.extract_queries)
-Extractor.get_schema_async = async_wrapper(Extractor.get_schema)
