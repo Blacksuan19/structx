@@ -6,8 +6,6 @@ from io import StringIO
 from pathlib import Path
 from typing import Dict, List
 
-import pandas as pd
-
 from structx import Extractor
 from structx.core.models import ExtractionResult
 from structx.utils.usage import UsageSummary
@@ -52,7 +50,7 @@ def print_extraction_results(results: ExtractionResult):
         f"\nExtracted {results.success_count} items with {results.success_rate:.1f}% success rate"
     )
 
-    print_token_usage(results.get_token_usage())
+    print_token_usage(results.usage.get_usage_summary())
 
     # Display results - either as markdown table or JSON
     if hasattr(results.data, "to_markdown"):
@@ -63,7 +61,7 @@ def print_extraction_results(results: ExtractionResult):
 
 def run_extraction_example(
     extractor: Extractor,
-    df: pd.DataFrame,
+    data_path: Path,
     title: str,
     description: str,
     query: str,
@@ -73,16 +71,17 @@ def run_extraction_example(
     print_section_header(title, description)
     print_code_block(code_lines)
 
-    results = extractor.extract(df, query)
+    results = extractor.extract(data_path, query)
     print_extraction_results(results)
 
     # For complex examples that benefit from showing the model schema
     if (
         title != "Example 3: Complex Nested Extraction"
     ):  # Only show for simpler examples
-        print("\n### Generated Model:")
-        print(f"\nModel name: `{results.model.__name__}`")
+        print("\n<details>")
+        print(f"<summary>Generated Model: `{results.model.__name__}`</summary>\n")
         print_json(results.model.model_json_schema())
+        print("\n</details>")
 
     return results
 
@@ -95,7 +94,7 @@ def main():
     # Start generating the README content
     print("# Examples")
     print(
-        "\nThis document contains examples of using the structx library for structured data extraction."
+        "\nThis document contains examples of using the structx library for structured data extraction from unstructured documents."
     )
     print(f"\n*Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
 
@@ -104,11 +103,11 @@ def main():
     print_code_block(
         [
             "from structx import Extractor",
-            "import pandas as pd",
+            "from pathlib import Path",
             "import os",
             "\n# Initialize the extractor",
             "extractor = Extractor.from_litellm(",
-            '    model="gpt-4o-mini",',
+            '    model="gpt-4o",',
             '    api_key="your-api-key"',
             ")",
         ]
@@ -116,144 +115,94 @@ def main():
 
     # Sample data section
     print_section_header(
-        "Sample Data",
-        "The following examples use this synthetic dataset of technical system logs:",
+        "Sample Documents",
+        "The following examples use a legal document (consultancy agreement) and a receipt (invoice).",
     )
 
-    # Synthetic sample data - technical system logs
-    sample_data = """
-Log ID,Description
-001,"System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30. Investigation revealed memory leak in application A. Patch applied on 2024-01-16 08:00, confirmed resolution at 09:15."
-002,"Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space. Emergency cleanup performed at 04:30. Backup reattempted successfully at 05:45. Added monitoring alert for storage capacity."
-003,"Network connectivity drops reported on 2024-02-01 between 10:00-10:45. Affected: 3 application servers. Initial diagnosis at 10:15 identified router misconfiguration. Applied fix at 10:30, confirmed full restoration at 10:45."
-004,"Two distinct performance issues on 2024-02-05: cache invalidation errors at 09:00 and slow query responses at 14:00. Cache system restarted at 09:30. Query optimization implemented at 15:00. Both issues resolved by EOD."
-005,"Configuration update on 2024-02-10 09:00 caused unexpected API behavior. Detected through monitoring at 09:15. Immediate rollback initiated at 09:20. Root cause analysis completed at 11:00. New update scheduled with additional testing."
-"""
-
-    # Create DataFrame from sample data
-    df = pd.read_csv(StringIO(sample_data))
-
-    # Display sample data as markdown table
-    print(df.to_markdown(index=False))
-    print_code_block(
-        ["# Create DataFrame from CSV data", "df = pd.read_csv(StringIO(sample_data))"]
+    consultancy_agreement_path = Path(
+        "scripts/example_input/free-consultancy-agreement.docx"
     )
+    invoice_path = Path("scripts/example_input/S0305SampleInvoice.pdf")
+
+    print(f"1. Consultancy Agreement: `{consultancy_agreement_path}`")
+    print(f"2. Invoice PDF: `{invoice_path}`")
 
     # Initialize extractor
     extractor = Extractor.from_litellm(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         api_base=os.getenv("OPENAI_BASE_URL"),
-        drop_params=True,
     )
 
-    # Example 1: Extract incident timing
-    q1 = "extract the main incident date and time, and any additional timestamps with their significance"
+    # Example 1: Extract Key Terms from a Legal Document
+    q1 = "summarize the main terms and conditions of this consultancy agreement, focusing on the key obligations, deliverables, and payment terms."
     run_extraction_example(
         extractor=extractor,
-        df=df,
-        title="Example 1: Extracting Incident Timing",
-        description="In this example, we extract the main incident date and time, along with any additional timestamps and their significance.",
+        data_path=consultancy_agreement_path,
+        title="Example 1: Extracting Key Terms from a Legal Agreement",
+        description="This example demonstrates extracting key information from a DOCX file containing a consultancy agreement.",
         query=q1,
         code_lines=[
-            "# Extract incident timing",
-            'query = "extract the main incident date and time, and any additional timestamps with their significance"',
-            "result = extractor.extract(df, query)",
+            "# Define the path to the document",
+            f'agreement_path = Path("{consultancy_agreement_path}")',
+            "\n# Define the extraction query",
+            f'query = "{q1}"',
+            "result = extractor.extract(agreement_path, query)",
             "\n# Access the extraction results",
             'print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")',
             "print(result.data)",
         ],
     )
 
-    # Example 2: Extract technical details
-    q2 = """
-    extract incident information including:
-    - system component affected
-    - issue type
-    - severity
-    - resolution steps
-    """
+    # Example 2: Extract Details from an Invoice PDF
+    q2 = "this is an invoice for professional services rendered, extract the professional name, service description, hourly rate and total amount."
     run_extraction_example(
         extractor=extractor,
-        df=df,
-        title="Example 2: Extracting Technical Details",
-        description="This example extracts more complex information about each incident including system components, issue types, severity, and resolution steps.",
+        data_path=invoice_path,
+        title="Example 2: Extracting Details from an Invoice PDF",
+        description="This example showcases extracting structured data from a PDF invoice, including line items.",
         query=q2,
         code_lines=[
-            "# Extract technical details",
-            'query = """',
-            "extract incident information including:",
-            "- system component affected",
-            "- issue type",
-            "- severity",
-            "- resolution steps",
-            '"""',
-            "result = extractor.extract(df, query)",
+            "# Define the path to the PDF",
+            f'invoice_path = Path("{invoice_path}")',
+            "\n# Define the extraction query",
+            f'query = "{q2}"',
+            "result = extractor.extract(invoice_path, query)",
         ],
     )
 
-    # Example 3: Complex nested extraction
-    q3 = """
-    extract structured information where:
-    - each incident has a system component and timestamp
-    - actions have timing and outcome
-    - metrics include before and after values if available
-    """
-    results3 = run_extraction_example(
-        extractor=extractor,
-        df=df,
-        title="Example 3: Complex Nested Extraction",
-        description="This example demonstrates extracting complex nested structures with relationships between different elements.",
-        query=q3,
-        code_lines=[
-            "# Extract complex nested structures",
-            'query = """',
-            "extract structured information where:",
-            "- each incident has a system component and timestamp",
-            "- actions have timing and outcome",
-            "- metrics include before and after values if available",
-            '"""',
-            "result = extractor.extract(df, query)",
-        ],
-    )
-
-    # Example 4: Preview schema
+    # Example 3: Schema Generation for Legal Clauses
     print_section_header(
-        "Example 4: Preview Generated Schema",
-        "This example shows how to generate and inspect a schema without performing extraction.",
+        "Example 3: Preview Generated Schema for Legal Clauses",
+        "This example shows how to generate and inspect a schema for extracting specific clauses from a legal document without performing a full extraction.",
     )
 
-    q4 = "extract system component, issue details, and resolution steps"
+    q3 = "extract the confidentiality clause, including the definition of confidential information and the duration of the obligation."
     print_code_block(
         [
-            "# Generate schema without extraction",
-            'query = "extract system component, issue details, and resolution steps"',
-            'sample_text = df["Description"].iloc[0]',
-            "DataModel = extractor.get_schema(query=query, sample_text=sample_text)",
+            "# Generate schema for a specific legal clause",
+            f'query = "{q3}"',
+            f'agreement_path = Path("{consultancy_agreement_path}")',
+            "DataModel = extractor.get_schema(query=query, data=agreement_path)",
             "\n# Print schema",
             "print(DataModel.model_json_schema())",
-            "\n# Create an instance manually",
-            "instance = DataModel(",
-            '    system_component="API Server",',
-            '    issue_details="High latency in requests",',
-            '    resolution_steps="Scaled up server resources and optimized database queries"',
-            ")",
-            "print(instance.model_dump_json())",
         ]
     )
 
-    DataModel = extractor.get_schema(query=q4, sample_text=df["Description"].iloc[0])
+    DataModel = extractor.get_schema(query=q3, data=consultancy_agreement_path)
 
     print("\n### Token Usage for Schema Generation Process:")
-    if hasattr(DataModel, "usage") and DataModel.usage:
-        usage: UsageSummary = DataModel.usage.get_usage_summary()
-        print(f"Total tokens used: {usage.total_tokens}")
 
-        print("\nBreakdown by step:")
-        for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens\n")
+    usage: UsageSummary = DataModel.usage.get_usage_summary()
+    print(f"Total tokens used: {usage.total_tokens}")
 
-    print("\n### Generated Schema:")
+    print("\nBreakdown by step:")
+    for step in usage.steps:
+        print(f"- {step.name}: {step.tokens} tokens\n")
+
+    print("\n<details>")
+    print("<summary>Generated Schema</summary>\n")
     print_json(DataModel.model_json_schema())
+    print("\n</details>")
 
     # Restore stdout
     sys.stdout = sys.__stdout__
