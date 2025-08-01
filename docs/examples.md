@@ -1,47 +1,40 @@
 # Examples
 
-This document contains examples of using the structx library for structured data extraction.
+This document contains examples of using the structx library for structured data extraction from unstructured documents.
 
-*Generated on: 2025-04-05 14:35:43*
+*Generated on: 2025-07-31 20:16:34*
 
 ## Setup
 
 ```python
 from structx import Extractor
-import pandas as pd
+from pathlib import Path
 import os
 
 # Initialize the extractor
 extractor = Extractor.from_litellm(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     api_key="your-api-key"
 )
 ```
 
-## Sample Data
+## Sample Documents
 
-The following examples use this synthetic dataset of technical system logs:
-|   Log ID | Description                                                                                                                                                                                                                                 |
-|---------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|        1 | System check on 2024-01-15 detected high CPU usage (92%) on server-01. Alert triggered at 14:30. Investigation revealed memory leak in application A. Patch applied on 2024-01-16 08:00, confirmed resolution at 09:15.                     |
-|        2 | Database backup failure occurred on 2024-01-20 03:00. Root cause: insufficient storage space. Emergency cleanup performed at 04:30. Backup reattempted successfully at 05:45. Added monitoring alert for storage capacity.                  |
-|        3 | Network connectivity drops reported on 2024-02-01 between 10:00-10:45. Affected: 3 application servers. Initial diagnosis at 10:15 identified router misconfiguration. Applied fix at 10:30, confirmed full restoration at 10:45.           |
-|        4 | Two distinct performance issues on 2024-02-05: cache invalidation errors at 09:00 and slow query responses at 14:00. Cache system restarted at 09:30. Query optimization implemented at 15:00. Both issues resolved by EOD.                 |
-|        5 | Configuration update on 2024-02-10 09:00 caused unexpected API behavior. Detected through monitoring at 09:15. Immediate rollback initiated at 09:20. Root cause analysis completed at 11:00. New update scheduled with additional testing. |
+The following examples use a legal document (consultancy agreement) and a receipt (invoice).
+1. Consultancy Agreement: `scripts/example_input/free-consultancy-agreement.docx`
+2. Invoice PDF: `scripts/example_input/S0305SampleInvoice.pdf`
 
-```python
-# Create DataFrame from CSV data
-df = pd.read_csv(StringIO(sample_data))
-```
+## Example 1: Extracting Key Terms from a Legal Agreement
 
-## Example 1: Extracting Incident Timing
-
-In this example, we extract the main incident date and time, along with any additional timestamps and their significance.
+This example demonstrates extracting key information from a DOCX file containing a consultancy agreement.
 
 ```python
-# Extract incident timing
-query = "extract the main incident date and time, and any additional timestamps with their significance"
-result = extractor.extract(df, query)
+# Define the path to the document
+agreement_path = Path("scripts/example_input/free-consultancy-agreement.docx")
+
+# Define the extraction query
+query = "summarize the main terms and conditions of this consultancy agreement, focusing on the key obligations, deliverables, and payment terms."
+result = extractor.extract(agreement_path, query)
 
 # Access the extraction results
 print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")
@@ -50,118 +43,77 @@ print(result.data)
 
 ### Results:
 
-Extracted 5 items with 100.0% success rate
+Extracted 1 items with 100.0% success rate
 
 ### Token Usage:
-Total tokens used: 4867
+Total tokens used: 10098
 Tokens by step:
-- analysis: 197 tokens
+- refinement: 309 tokens
 
-- refinement: 303 tokens
+- schema_generation: 1177 tokens
 
-- schema_generation: 559 tokens
+- guide: 446 tokens
 
-- guide: 336 tokens
-
-- extraction: 3472 tokens
+- extraction: 8166 tokens
 
 
 ```json
 [
   {
-    "main_incident_datetime": "2024-01-20 03:00:00",
-    "additional_timestamps": [
+    "legal_terms_and_conditions": [
       {
-        "timestamp": "2024-01-20 04:30:00",
-        "significance": "Emergency cleanup performed due to insufficient storage space."
+        "term": "The Consultant shall provide the Services with reasonable skill and care."
       },
       {
-        "timestamp": "2024-01-20 05:45:00",
-        "significance": "Backup reattempted successfully after cleanup."
+        "term": "The Client must provide written feedback concerning the Consultant's proposals."
+      },
+      {
+        "term": "The Consultant warrants that the Deliverables will conform with the requirements and be free from material defects."
       }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-01-15 14:30:00",
-    "additional_timestamps": [
+    ],
+    "obligations_of_parties": [
       {
-        "timestamp": "2024-01-16 08:00:00",
-        "significance": "Patch applied to resolve the memory leak."
+        "party": "Consultant",
+        "obligation": "Provide the Services to the Client in accordance with the Agreement."
       },
       {
-        "timestamp": "2024-01-16 09:15:00",
-        "significance": "Resolution confirmed after patch application."
+        "party": "Consultant",
+        "obligation": "Deliver the Deliverables to the Client."
+      },
+      {
+        "party": "Client",
+        "obligation": "Provide written feedback to the Consultant concerning proposals and materials."
       }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-02-05 09:00:00",
-    "additional_timestamps": [
+    ],
+    "deliverables": [
       {
-        "timestamp": "2024-02-05 09:30:00",
-        "significance": "Cache system restarted"
-      },
-      {
-        "timestamp": "2024-02-05 14:00:00",
-        "significance": "Slow query responses observed"
-      },
-      {
-        "timestamp": "2024-02-05 15:00:00",
-        "significance": "Query optimization implemented"
+        "deliverable": "Deliverables specified in Part 2 of Schedule 1",
+        "due_date": "As per the timetable set out in Part 3 of Schedule 1"
       }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-02-01 10:00:00",
-    "additional_timestamps": [
+    ],
+    "payment_terms": [
       {
-        "timestamp": "2024-02-01 10:15:00",
-        "significance": "Initial diagnosis identified router misconfiguration."
-      },
-      {
-        "timestamp": "2024-02-01 10:30:00",
-        "significance": "Applied fix to the router."
-      },
-      {
-        "timestamp": "2024-02-01 10:45:00",
-        "significance": "Confirmed full restoration of network connectivity."
-      }
-    ]
-  },
-  {
-    "main_incident_datetime": "2024-02-10 09:00:00",
-    "additional_timestamps": [
-      {
-        "timestamp": "2024-02-10 09:15:00",
-        "significance": "Detected unexpected API behavior through monitoring."
-      },
-      {
-        "timestamp": "2024-02-10 09:20:00",
-        "significance": "Immediate rollback initiated."
-      },
-      {
-        "timestamp": "2024-02-10 11:00:00",
-        "significance": "Root cause analysis completed."
+        "payment_schedule": "Invoices issued from time to time during the Term or on invoicing dates set out in Part 5 of Schedule 1",
+        "payment_condition": "Client must pay within 30 days following the issue of an invoice."
       }
     ]
   }
 ]
 ```
 
-### Generated Model:
+<details>
+<summary>Generated Model: `ConsultancyAgreementTerms`</summary>
 
-Model name: `IncidentTimestampExtraction`
 
 ```json
 {
   "$defs": {
-    "IncidentTimestampExtractionadditional_timestampsItem": {
-      "description": "A collection of additional timestamps related to the incident, each with its significance.",
+    "ConsultancyAgreementTermsdeliverablesItem": {
+      "description": "Organized deliverables in a sequential manner to reflect the order of completion.",
       "properties": {
-        "timestamp": {
+        "deliverable": {
           "anyOf": [
             {
-              "format": "date-time",
               "type": "string"
             },
             {
@@ -169,10 +121,10 @@ Model name: `IncidentTimestampExtraction`
             }
           ],
           "default": null,
-          "description": "The specific date and time of the additional event.",
-          "title": "Timestamp"
+          "description": "Description of the deliverable.",
+          "title": "Deliverable"
         },
-        "significance": {
+        "due_date": {
           "anyOf": [
             {
               "type": "string"
@@ -182,20 +134,305 @@ Model name: `IncidentTimestampExtraction`
             }
           ],
           "default": null,
-          "description": "The context or significance of the additional timestamp.",
-          "title": "Significance"
+          "description": "The due date for the deliverable.",
+          "title": "Due Date"
         }
       },
-      "title": "IncidentTimestampExtractionadditional_timestampsItem",
+      "title": "ConsultancyAgreementTermsdeliverablesItem",
+      "type": "object"
+    },
+    "ConsultancyAgreementTermslegal_terms_and_conditionsItem": {
+      "description": "Grouped related legal terms and conditions for clarity.",
+      "properties": {
+        "term": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A specific legal term or condition.",
+          "title": "Term"
+        }
+      },
+      "title": "ConsultancyAgreementTermslegal_terms_and_conditionsItem",
+      "type": "object"
+    },
+    "ConsultancyAgreementTermsobligations_of_partiesItem": {
+      "description": "Clearly outlined obligations of the parties involved, easy to reference.",
+      "properties": {
+        "party": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The party responsible for the obligation, either 'Consultant' or 'Client'.",
+          "title": "Party"
+        },
+        "obligation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Description of the obligation.",
+          "title": "Obligation"
+        }
+      },
+      "title": "ConsultancyAgreementTermsobligations_of_partiesItem",
+      "type": "object"
+    },
+    "ConsultancyAgreementTermspayment_termsItem": {
+      "description": "Organized payment terms to reflect the schedule and conditions of payments.",
+      "properties": {
+        "payment_schedule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The schedule of payments.",
+          "title": "Payment Schedule"
+        },
+        "payment_condition": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Conditions under which payments are made.",
+          "title": "Payment Condition"
+        }
+      },
+      "title": "ConsultancyAgreementTermspayment_termsItem",
       "type": "object"
     }
   },
-  "description": "Schema for extracting incident timestamps and their significance from reports.",
+  "description": "Extract and summarize the main terms and conditions of a consultancy agreement, focusing on key obligations, deliverables, and payment terms.",
   "properties": {
-    "main_incident_datetime": {
+    "legal_terms_and_conditions": {
       "anyOf": [
         {
-          "format": "date-time",
+          "items": {
+            "$ref": "#/$defs/ConsultancyAgreementTermslegal_terms_and_conditionsItem"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Grouped related legal terms and conditions for clarity.",
+      "title": "Legal Terms And Conditions"
+    },
+    "obligations_of_parties": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ConsultancyAgreementTermsobligations_of_partiesItem"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Clearly outlined obligations of the parties involved, easy to reference.",
+      "title": "Obligations Of Parties"
+    },
+    "deliverables": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ConsultancyAgreementTermsdeliverablesItem"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Organized deliverables in a sequential manner to reflect the order of completion.",
+      "title": "Deliverables"
+    },
+    "payment_terms": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ConsultancyAgreementTermspayment_termsItem"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Organized payment terms to reflect the schedule and conditions of payments.",
+      "title": "Payment Terms"
+    }
+  },
+  "title": "ConsultancyAgreementTerms",
+  "type": "object"
+}
+```
+
+</details>
+
+## Example 2: Extracting Details from an Invoice PDF
+
+This example showcases extracting structured data from a PDF invoice, including line items.
+
+```python
+# Define the path to the PDF
+invoice_path = Path("scripts/example_input/S0305SampleInvoice.pdf")
+
+# Define the extraction query
+query = "this is an invoice for professional services rendered, extract the professional name, service description, hourly rate and total amount."
+result = extractor.extract(invoice_path, query)
+```
+
+### Results:
+
+Extracted 1 items with 100.0% success rate
+
+### Token Usage:
+Total tokens used: 5932
+Tokens by step:
+- refinement: 1180 tokens
+
+- schema_generation: 2744 tokens
+
+- guide: 518 tokens
+
+- extraction: 1490 tokens
+
+
+```json
+[
+  {
+    "Professional Name": "FIRM NAME",
+    "Services": [
+      {
+        "Service Description": "Telephone conference with defense attorney regarding scheduling of Ms. Client\u2019s deposition",
+        "Hourly Rate": 175.0,
+        "Amount": 17.5
+      },
+      {
+        "Service Description": "Meeting with Ms. Client to review file and prepare for her deposition",
+        "Hourly Rate": 175.0,
+        "Amount": 262.5
+      },
+      {
+        "Service Description": "Attend the deposition of Ms. Client",
+        "Hourly Rate": 175.0,
+        "Amount": 700.0
+      },
+      {
+        "Service Description": "Review and summarize deposition of Ms. Client",
+        "Hourly Rate": 75.0,
+        "Amount": 112.5
+      },
+      {
+        "Service Description": "Prepare Motion for Summary Judgment, Memorandum in Support of Motion for Summary Judgment, and Affidavit of Ms. Client",
+        "Hourly Rate": 175.0,
+        "Amount": 525.0
+      },
+      {
+        "Service Description": "Court run to Civil District Court to file Motion for Summary Judgment; obtain hearing date from division; walk through service to Sheriff",
+        "Hourly Rate": 75.0,
+        "Amount": 75.0
+      }
+    ],
+    "Total Amount": 1692.5
+  }
+]
+```
+
+<details>
+<summary>Generated Model: `InvoiceExtractionModel`</summary>
+
+
+```json
+{
+  "$defs": {
+    "InvoiceExtractionModelServicesItem": {
+      "description": "A list of services provided, including descriptions, hourly rates, and amounts.",
+      "properties": {
+        "Service Description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A detailed text description of the services provided.",
+          "title": "Service Description"
+        },
+        "Hourly Rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The rate charged per hour for the services.",
+          "format": "Must be formatted to two decimal places.",
+          "title": "Hourly Rate"
+        },
+        "Amount": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The total amount charged for the specific service rendered.",
+          "format": "Must be formatted to two decimal places.",
+          "title": "Amount"
+        }
+      },
+      "title": "InvoiceExtractionModelServicesItem",
+      "type": "object"
+    }
+  },
+  "description": "Extracts detailed information from invoices for professional services rendered, organizing data in a structured format.",
+  "properties": {
+    "Professional Name": {
+      "anyOf": [
+        {
           "type": "string"
         },
         {
@@ -203,14 +440,14 @@ Model name: `IncidentTimestampExtraction`
         }
       ],
       "default": null,
-      "description": "The main date and time of the incident, clearly identified.",
-      "title": "Main Incident Datetime"
+      "description": "The name of the individual or entity providing the service.",
+      "title": "Professional Name"
     },
-    "additional_timestamps": {
+    "Services": {
       "anyOf": [
         {
           "items": {
-            "$ref": "#/$defs/IncidentTimestampExtractionadditional_timestampsItem"
+            "$ref": "#/$defs/InvoiceExtractionModelServicesItem"
           },
           "type": "array"
         },
@@ -219,522 +456,69 @@ Model name: `IncidentTimestampExtraction`
         }
       ],
       "default": null,
-      "description": "A collection of additional timestamps related to the incident, each with its significance.",
-      "title": "Additional Timestamps"
-    }
-  },
-  "title": "IncidentTimestampExtraction",
-  "type": "object"
-}
-```
-
-## Example 2: Extracting Technical Details
-
-This example extracts more complex information about each incident including system components, issue types, severity, and resolution steps.
-
-```python
-# Extract technical details
-query = """
-extract incident information including:
-- system component affected
-- issue type
-- severity
-- resolution steps
-"""
-result = extractor.extract(df, query)
-```
-
-### Results:
-
-Extracted 5 items with 100.0% success rate
-
-### Token Usage:
-Total tokens used: 16260
-Tokens by step:
-- analysis: 209 tokens
-
-- refinement: 346 tokens
-
-- schema_generation: 644 tokens
-
-- guide: 355 tokens
-
-- extraction: 14706 tokens
-
-
-```json
-[
-  {
-    "incidents": [
-      {
-        "system_component_affected": "Database",
-        "issue_type": "Backup Failure",
-        "severity": "high",
-        "resolution_steps": [
-          {
-            "step": "Emergency cleanup performed"
-          },
-          {
-            "step": "Backup reattempted successfully"
-          },
-          {
-            "step": "Added monitoring alert for storage capacity"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component_affected": "API",
-        "issue_type": "Unexpected behavior",
-        "severity": "high",
-        "resolution_steps": [
-          {
-            "step": "Rollback initiated"
-          },
-          {
-            "step": "Root cause analysis completed"
-          },
-          {
-            "step": "New update scheduled with additional testing"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component_affected": "server-01",
-        "issue_type": "high CPU usage",
-        "severity": "high",
-        "resolution_steps": [
-          {
-            "step": "Investigated high CPU usage"
-          },
-          {
-            "step": "Identified memory leak in application A"
-          },
-          {
-            "step": "Applied patch"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component_affected": "3 application servers",
-        "issue_type": "Network connectivity drops",
-        "severity": "high",
-        "resolution_steps": [
-          {
-            "step": "Initial diagnosis at 10:15 identified router misconfiguration"
-          },
-          {
-            "step": "Applied fix at 10:30"
-          },
-          {
-            "step": "Confirmed full restoration at 10:45"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component_affected": "Cache System",
-        "issue_type": "Cache Invalidation Error",
-        "severity": "high",
-        "resolution_steps": [
-          {
-            "step": "Cache system restarted at 09:30"
-          },
-          {
-            "step": "Issue resolved by EOD"
-          }
-        ]
-      },
-      {
-        "system_component_affected": "Database",
-        "issue_type": "Slow Query Response",
-        "severity": "medium",
-        "resolution_steps": [
-          {
-            "step": "Query optimization implemented at 15:00"
-          },
-          {
-            "step": "Issue resolved by EOD"
-          }
-        ]
-      }
-    ]
-  }
-]
-```
-
-### Generated Model:
-
-Model name: `IncidentReport`
-
-```json
-{
-  "$defs": {
-    "IncidentReportincidentsItem": {
-      "description": "List of incidents reported.",
-      "properties": {
-        "system_component_affected": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The system component that was affected by the incident.",
-          "title": "System Component Affected"
-        },
-        "issue_type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The type of issue encountered.",
-          "title": "Issue Type"
-        },
-        "severity": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The severity level of the incident (e.g., low, medium, high).",
-          "title": "Severity"
-        },
-        "resolution_steps": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/incidentsItemresolution_stepsItem"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Steps taken to resolve the incident.",
-          "title": "Resolution Steps"
-        }
-      },
-      "title": "IncidentReportincidentsItem",
-      "type": "object"
+      "description": "A list of services provided, including descriptions, hourly rates, and amounts.",
+      "title": "Services"
     },
-    "incidentsItemresolution_stepsItem": {
-      "description": "Steps taken to resolve the incident.",
-      "properties": {
-        "step": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "A specific step taken to resolve the incident.",
-          "title": "Step"
-        }
-      },
-      "title": "incidentsItemresolution_stepsItem",
-      "type": "object"
-    }
-  },
-  "description": "Schema for extracting structured incident information including system components, issue types, severity, and resolution steps.",
-  "properties": {
-    "incidents": {
+    "Total Amount": {
       "anyOf": [
         {
-          "items": {
-            "$ref": "#/$defs/IncidentReportincidentsItem"
-          },
-          "type": "array"
+          "type": "number"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "List of incidents reported.",
-      "title": "Incidents"
+      "description": "The total amount charged for all services rendered in the invoice.",
+      "format": "Must be formatted to two decimal places.",
+      "title": "Total Amount"
     }
   },
-  "title": "IncidentReport",
+  "title": "InvoiceExtractionModel",
   "type": "object"
 }
 ```
 
-## Example 3: Complex Nested Extraction
+</details>
 
-This example demonstrates extracting complex nested structures with relationships between different elements.
+## Example 3: Preview Generated Schema for Legal Clauses
 
-```python
-# Extract complex nested structures
-query = """
-extract structured information where:
-- each incident has a system component and timestamp
-- actions have timing and outcome
-- metrics include before and after values if available
-"""
-result = extractor.extract(df, query)
-```
-
-### Results:
-
-Extracted 6 items with 100.0% success rate
-
-### Token Usage:
-Total tokens used: 5873
-Tokens by step:
-- analysis: 213 tokens
-
-- refinement: 345 tokens
-
-- schema_generation: 679 tokens
-
-- guide: 340 tokens
-
-- extraction: 4296 tokens
-
-
-```json
-[
-  {
-    "incidents": [
-      {
-        "system_component": "Database",
-        "timestamp": "2024-01-20 03:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-01-20 04:30:00",
-        "outcome": "Emergency cleanup performed"
-      },
-      {
-        "timing": "2024-01-20 05:45:00",
-        "outcome": "Backup reattempted successfully"
-      },
-      {
-        "timing": "2024-01-20 05:45:00",
-        "outcome": "Added monitoring alert for storage capacity"
-      }
-    ],
-    "metrics": [
-      {
-        "before_value": 0.0,
-        "after_value": 1.0
-      },
-      {
-        "before_value": 0.0,
-        "after_value": 1.0
-      },
-      {
-        "before_value": 0.0,
-        "after_value": 1.0
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "server-01",
-        "timestamp": "2024-01-15 14:30:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-01-16 08:00:00",
-        "outcome": "Patch applied"
-      },
-      {
-        "timing": "2024-01-16 09:15:00",
-        "outcome": "Confirmed resolution"
-      }
-    ],
-    "metrics": [
-      {
-        "before_value": 92.0,
-        "after_value": null
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "cache",
-        "timestamp": "2024-02-05 09:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-02-05 09:30:00",
-        "outcome": "Cache system restarted"
-      }
-    ],
-    "metrics": [
-      {
-        "before_value": null,
-        "after_value": null
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "query",
-        "timestamp": "2024-02-05 14:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-02-05 15:00:00",
-        "outcome": "Query optimization implemented"
-      }
-    ],
-    "metrics": [
-      {
-        "before_value": null,
-        "after_value": null
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "API",
-        "timestamp": "2024-02-10 09:15:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-02-10 09:20:00",
-        "outcome": "Rollback initiated"
-      },
-      {
-        "timing": "2024-02-10 11:00:00",
-        "outcome": "Root cause analysis completed"
-      }
-    ],
-    "metrics": [
-      {
-        "before_value": 1.0,
-        "after_value": 0.0
-      }
-    ]
-  },
-  {
-    "incidents": [
-      {
-        "system_component": "application servers",
-        "timestamp": "2024-02-01 10:00:00"
-      }
-    ],
-    "actions": [
-      {
-        "timing": "2024-02-01 10:15:00",
-        "outcome": "initial diagnosis identified router misconfiguration"
-      },
-      {
-        "timing": "2024-02-01 10:30:00",
-        "outcome": "applied fix"
-      },
-      {
-        "timing": "2024-02-01 10:45:00",
-        "outcome": "confirmed full restoration"
-      }
-    ],
-    "metrics": [
-      {
-        "before_value": null,
-        "after_value": null
-      },
-      {
-        "before_value": null,
-        "after_value": null
-      },
-      {
-        "before_value": null,
-        "after_value": null
-      }
-    ]
-  }
-]
-```
-
-## Example 4: Preview Generated Schema
-
-This example shows how to generate and inspect a schema without performing extraction.
+This example shows how to generate and inspect a schema for extracting specific clauses from a legal document without performing a full extraction.
 
 ```python
-# Generate schema without extraction
-query = "extract system component, issue details, and resolution steps"
-sample_text = df["Description"].iloc[0]
-DataModel = extractor.get_schema(query=query, sample_text=sample_text)
+# Generate schema for a specific legal clause
+query = "extract the confidentiality clause, including the definition of confidential information and the duration of the obligation."
+agreement_path = Path("scripts/example_input/free-consultancy-agreement.docx")
+DataModel = extractor.get_schema(query=query, data=agreement_path)
 
 # Print schema
 print(DataModel.model_json_schema())
-
-# Create an instance manually
-instance = DataModel(
-    system_component="API Server",
-    issue_details="High latency in requests",
-    resolution_steps="Scaled up server resources and optimized database queries"
-)
-print(instance.model_dump_json())
 ```
 
 ### Token Usage for Schema Generation Process:
-Total tokens used: 3209
+Total tokens used: 1724
 
 Breakdown by step:
-- analysis: 0 tokens
+- refinement: 305 tokens
 
-- refinement: 326 tokens
+- schema_generation: 976 tokens
 
-- schema_generation: 748 tokens
-
-- guide: 2135 tokens
+- guide: 443 tokens
 
 - extraction: 0 tokens
 
 
-### Generated Schema:
+<details>
+<summary>Generated Schema</summary>
+
 
 ```json
 {
   "$defs": {
-    "SystemComponentIssueResolutionissue": {
-      "description": "Details about the issue related to the system component.",
+    "ConfidentialityClauseExtractionConfidentialityClause": {
+      "description": "The confidentiality clause containing specific details about confidentiality obligations.",
       "properties": {
-        "description": {
+        "DefinitionOfConfidentialInformation": {
           "anyOf": [
             {
               "type": "string"
@@ -744,10 +528,10 @@ Breakdown by step:
             }
           ],
           "default": null,
-          "description": "Description of the issue.",
-          "title": "Description"
+          "description": "The definition of what constitutes 'Confidential Information' within the document.",
+          "title": "Definitionofconfidentialinformation"
         },
-        "severity_level": {
+        "DurationOfObligation": {
           "anyOf": [
             {
               "type": "string"
@@ -757,159 +541,32 @@ Breakdown by step:
             }
           ],
           "default": null,
-          "description": "Severity level of the issue.",
-          "title": "Severity Level"
-        },
-        "timestamp": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Timestamp of when the issue was detected, in ISO 8601 format.",
-          "title": "Timestamp"
+          "description": "The duration for which the confidentiality obligation is in effect.",
+          "title": "Durationofobligation"
         }
       },
-      "title": "SystemComponentIssueResolutionissue",
-      "type": "object"
-    },
-    "SystemComponentIssueResolutionresolution": {
-      "description": "Details about the resolution of the issue.",
-      "properties": {
-        "action_taken": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Action taken to resolve the issue.",
-          "title": "Action Taken"
-        },
-        "responsible_personnel": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Personnel responsible for the resolution.",
-          "title": "Responsible Personnel"
-        },
-        "time_taken": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Time taken for resolution, in ISO 8601 duration format.",
-          "title": "Time Taken"
-        }
-      },
-      "title": "SystemComponentIssueResolutionresolution",
-      "type": "object"
-    },
-    "SystemComponentIssueResolutionsystem_component": {
-      "description": "Details about the system component.",
-      "properties": {
-        "name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Name of the system component.",
-          "title": "Name"
-        },
-        "type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Type of the system component.",
-          "title": "Type"
-        },
-        "specifications": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Specifications of the system component.",
-          "title": "Specifications"
-        }
-      },
-      "title": "SystemComponentIssueResolutionsystem_component",
+      "title": "ConfidentialityClauseExtractionConfidentialityClause",
       "type": "object"
     }
   },
-  "description": "Schema for extracting details about system components, issues, and resolution steps.",
+  "description": "Extracts the confidentiality clause from legal documents, including the definition of 'Confidential Information' and the duration of the confidentiality obligation.",
   "properties": {
-    "system_component": {
+    "ConfidentialityClause": {
       "anyOf": [
         {
-          "$ref": "#/$defs/SystemComponentIssueResolutionsystem_component"
+          "$ref": "#/$defs/ConfidentialityClauseExtractionConfidentialityClause"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "Details about the system component."
-    },
-    "issue": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/SystemComponentIssueResolutionissue"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Details about the issue related to the system component."
-    },
-    "resolution": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/SystemComponentIssueResolutionresolution"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Details about the resolution of the issue."
+      "description": "The confidentiality clause containing specific details about confidentiality obligations."
     }
   },
-  "title": "SystemComponentIssueResolution",
+  "title": "ConfidentialityClauseExtraction",
   "type": "object"
 }
 ```
+
+</details>
