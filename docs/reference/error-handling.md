@@ -55,7 +55,7 @@ Raised when there's an issue generating the extraction model:
 try:
     model = extractor.get_schema(
         query="extract key information",
-        sample_text="Sample text"
+        data="document.pdf"
     )
 except ModelGenerationError as e:
     print(f"Model generation error: {e}")

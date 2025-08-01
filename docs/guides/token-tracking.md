@@ -5,6 +5,9 @@ extraction process, helping you monitor costs and optimize your queries.
 
 ## Token Tracking Flow
 
+<details>
+<summary>View Token Tracking Flow</summary>
+
 ```mermaid
 graph TD
     A[Extraction Request] --> B[Query Refinement]
@@ -41,6 +44,8 @@ graph TD
     F3 --> O
     O --> P
 ```
+
+</details>
 
 ## Basic Usage
 

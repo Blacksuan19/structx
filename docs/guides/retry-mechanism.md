@@ -43,6 +43,9 @@ gives the service time to recover.
 
 ### Retry Flow
 
+<details>
+<summary>View Retry Flow Diagram</summary>
+
 ```mermaid
 graph TD
     A[LLM Request] --> B{Success?}
@@ -78,6 +81,8 @@ graph TD
 
     D --> N
 ```
+
+</details>
 
 ## Retry-Eligible Errors
 

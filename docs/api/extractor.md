@@ -4,6 +4,9 @@ The `Extractor` class is the main interface for structured data extraction.
 
 ## Architecture Overview
 
+<details>
+<summary>View Architecture Diagram</summary>
+
 ```mermaid
 graph TB
     subgraph "User Interface"
@@ -70,6 +73,8 @@ graph TB
     P --> R
     P --> S
 ```
+
+</details>
 
 ::: structx.Extractor
     options:
