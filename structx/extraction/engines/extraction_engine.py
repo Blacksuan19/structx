@@ -168,7 +168,8 @@ class ExtractionEngine:
                     "content": content,
                 },
             ],
-            **self.llm_core.config.extraction,
+            step=ExtractionStep.EXTRACTION,
+            config=self.llm_core.config.extraction,
         )
         logger.info(f"Completed extraction for PDF: {pdf_path}")
         return result.items
