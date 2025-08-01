@@ -32,7 +32,7 @@ class QueryRefinement(BaseModel):
     data_characteristics: Optional[List[str]] = Field(
         description="Characteristics of data to extract"
     )
-    structural_requirements: Optional[Dict[str, str]] = Field(
+    structural_requirements: Optional[Dict[str, Any]] = Field(
         description="Requirements for data structure"
     )
 
