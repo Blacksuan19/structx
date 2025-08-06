@@ -457,7 +457,7 @@ class Extractor:
 
         Args:
             model: Existing Pydantic model to refine
-            instructions: Natural language instructions for refinement
+            refinement_instructions: Natural language instructions for refinement
             model_name: Optional name for the refined model (defaults to original name with 'Refined' prefix)
 
         Returns:

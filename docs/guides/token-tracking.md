@@ -147,7 +147,7 @@ class User(BaseModel):
 
 enhanced_user = extractor.refine_data_model(
     model=User,
-    instructions="Add email and address fields, with validation for email format"
+    refinement_instructions="Add email and address fields, with validation for email format"
 )
 
 # Access token usage information

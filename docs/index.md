@@ -119,6 +119,19 @@ For all document formats:
 pip install structx-llm[docs]
 ```
 
+## API Requirements
+
+**Important**: All extractor methods use **keyword-only arguments**. You must
+specify parameter names explicitly:
+
+```python
+# ✅ Correct
+result = extractor.extract(data="document.pdf", query="extract data")
+
+# ❌ Incorrect
+result = extractor.extract("document.pdf", "extract data")  # Will raise TypeError
+```
+
 ## Quick Example
 
 ```python

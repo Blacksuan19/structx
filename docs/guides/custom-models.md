@@ -151,7 +151,7 @@ ContractModel = extractor.get_schema(
 # Refine it with natural language
 EnhancedContractModel = extractor.refine_data_model(
     model=ContractModel,
-    instructions="""
+    refinement_instructions="""
     1. Add a 'governing_law' field of type string.
     2. Add a 'termination_notice_days' field of type integer.
     3. Make the 'parties' field a list of strings.

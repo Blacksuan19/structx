@@ -25,7 +25,7 @@ class Contract(BaseModel):
 # Refine the model
 refined_model = extractor.refine_data_model(
     model=Contract,
-    instructions="""
+    refinement_instructions="""
     1. Change 'parties' to a list of objects, each with 'name' and 'role' fields.
     2. Add a 'governing_law' string field.
     3. Add a 'termination_notice_days' integer field with a default of 30.
@@ -102,7 +102,7 @@ class Invoice(BaseModel):
 
 enhanced_invoice = extractor.refine_data_model(
     model=Invoice,
-    instructions="Add a 'due_date' of type date and a 'line_items' field that is a list of strings."
+    refinement_instructions="Add a 'due_date' of type date and a 'line_items' field that is a list of strings."
 )
 ```
 
@@ -115,7 +115,7 @@ class LegalClause(BaseModel):
 
 validated_clause = extractor.refine_data_model(
     model=LegalClause,
-    instructions="""
+    refinement_instructions="""
     1. Add a 'clause_id' that must start with 'CL-'.
     2. Ensure 'clause_title' is not empty.
     3. Add a 'tags' field which is a list of strings.
@@ -134,7 +134,7 @@ class Party(BaseModel):
 
 simplified_party = extractor.refine_data_model(
     model=Party,
-    instructions="Remove the 'address' and 'contact_person' fields."
+    refinement_instructions="Remove the 'address' and 'contact_person' fields."
 )
 ```
 
@@ -147,7 +147,7 @@ class Financials(BaseModel):
 
 detailed_financials = extractor.refine_data_model(
     model=Financials,
-    instructions="""
+    refinement_instructions="""
     1. Split 'expenses' into 'operating_expenses' and 'capital_expenditures'.
     2. Add a 'profit' field that should be calculated as revenue - (operating_expenses + capital_expenditures).
     3. Add a 'currency' field that defaults to 'USD'.
@@ -193,7 +193,7 @@ intent:
 ```python
 refined_invoice = extractor.refine_data_model(
     model=Invoice,
-    instructions="""
+    refinement_instructions="""
     Context: We are updating our invoicing system for international clients.
 
     Changes needed:
@@ -213,7 +213,7 @@ You can specify a custom name for the refined model:
 ```python
 SubContractorAgreement = extractor.refine_data_model(
     model=Contract,
-    instructions="Add a 'primary_contractor' field.",
+    refinement_instructions="Add a 'primary_contractor' field.",
     model_name="SubContractorAgreement"
 )
 ```
@@ -233,7 +233,7 @@ class Invoice(BaseModel):
 
 enhanced_invoice = extractor.refine_data_model(
     model=Invoice,
-    instructions="""
+    refinement_instructions="""
     1. Add a 'quantity' integer field to the LineItem model.
     2. Add a 'client_name' string field to the Invoice model.
     """

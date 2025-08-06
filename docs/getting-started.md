@@ -60,6 +60,27 @@ extractor = Extractor(
 )
 ```
 
+## API Requirements
+
+**Important**: All extractor methods require **keyword arguments**. You cannot
+use positional arguments.
+
+```python
+# ✅ Correct - using keyword arguments
+result = extractor.extract(data="file.pdf", query="extract information")
+
+# ❌ Incorrect - using positional arguments
+result = extractor.extract("file.pdf", "extract information")  # This will fail
+```
+
+This applies to all methods:
+
+- `extract(*, data, query, ...)`
+- `extract_async(*, data, query, ...)`
+- `extract_queries(*, data, queries, ...)`
+- `get_schema(*, data, query, ...)`
+- `refine_data_model(*, model, refinement_instructions, ...)`
+
 ### Extract Structured Data
 
 ```python

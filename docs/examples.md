@@ -1,8 +1,9 @@
 # Examples
 
-This document contains examples of using the structx library for structured data extraction from unstructured documents.
+This document contains examples of using the structx library for structured data
+extraction from unstructured documents.
 
-*Generated on: 2025-07-31 22:22:37*
+_Generated on: 2025-07-31 22:22:37_
 
 ## Setup
 
@@ -20,13 +21,17 @@ extractor = Extractor.from_litellm(
 
 ## Sample Documents
 
-The following examples use a legal document (consultancy agreement) and a receipt (invoice).
-1. Consultancy Agreement: `scripts/example_input/free-consultancy-agreement.docx`
+The following examples use a legal document (consultancy agreement) and a
+receipt (invoice).
+
+1. Consultancy Agreement:
+   `scripts/example_input/free-consultancy-agreement.docx`
 2. Invoice PDF: `scripts/example_input/S0305SampleInvoice.pdf`
 
 ## Example 1: Extracting Key Terms from a Legal Agreement
 
-This example demonstrates extracting key information from a DOCX file containing a consultancy agreement.
+This example demonstrates extracting key information from a DOCX file containing
+a consultancy agreement.
 
 ```python
 # Define the path to the document
@@ -34,7 +39,7 @@ agreement_path = Path("scripts/example_input/free-consultancy-agreement.docx")
 
 # Define the extraction query
 query = "summarize the main terms and conditions of this consultancy agreement, focusing on the key obligations, deliverables, and payment terms."
-result = extractor.extract(agreement_path, query)
+result = extractor.extract(data=agreement_path, query=query)
 
 # Access the extraction results
 print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")
@@ -46,6 +51,7 @@ print(result.data)
 Extracted 1 items with 100.0% success rate
 
 ### Token Usage:
+
 Total tokens used: 18638
 
 Tokens by step:
@@ -57,7 +63,6 @@ Tokens by step:
 - guide: 454 tokens
 
 - extraction: 16673 tokens
-
 
 ```json
 [
@@ -87,7 +92,6 @@ Tokens by step:
 
 <details>
 <summary>Generated Model: `ConsultancyAgreementTerms`</summary>
-
 
 ```json
 {
@@ -312,7 +316,8 @@ Tokens by step:
 
 ## Example 2: Extracting Details from an Invoice PDF
 
-This example showcases extracting structured data from a PDF invoice, including line items.
+This example showcases extracting structured data from a PDF invoice, including
+line items.
 
 ```python
 # Define the path to the PDF
@@ -320,7 +325,7 @@ invoice_path = Path("scripts/example_input/S0305SampleInvoice.pdf")
 
 # Define the extraction query
 query = "this is an invoice for professional services rendered, extract the professional name, service description, hourly rate and total amount."
-result = extractor.extract(invoice_path, query)
+result = extractor.extract(data=invoice_path, query=query)
 ```
 
 ### Results:
@@ -328,6 +333,7 @@ result = extractor.extract(invoice_path, query)
 Extracted 6 items with 100.0% success rate
 
 ### Token Usage:
+
 Total tokens used: 3323
 
 Tokens by step:
@@ -339,7 +345,6 @@ Tokens by step:
 - guide: 519 tokens
 
 - extraction: 1423 tokens
-
 
 ```json
 [
@@ -384,7 +389,6 @@ Tokens by step:
 
 <details>
 <summary>Generated Model: `InvoiceExtractionModel`</summary>
-
 
 ```json
 {
@@ -452,7 +456,8 @@ Tokens by step:
 
 ## Example 3: Preview Generated Schema for Legal Clauses
 
-This example shows how to generate and inspect a schema for extracting specific clauses from a legal document without performing a full extraction.
+This example shows how to generate and inspect a schema for extracting specific
+clauses from a legal document without performing a full extraction.
 
 ```python
 # Generate schema for a specific legal clause
@@ -467,6 +472,7 @@ print(DataModel.model_json_schema())
 ### Token Usage for Schema Generation Process:
 
 ### Token Usage:
+
 Total tokens used: 3031
 
 Tokens by step:
@@ -479,10 +485,8 @@ Tokens by step:
 
 - extraction: 0 tokens
 
-
 <details>
 <summary>Generated Schema</summary>
-
 
 ```json
 {

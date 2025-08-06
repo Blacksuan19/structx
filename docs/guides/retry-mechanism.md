@@ -109,7 +109,7 @@ logger.remove()
 logger.add(sys.stderr, level="DEBUG")
 
 # Now extraction calls will show retry attempts in the logs
-result = extractor.extract(data, query)
+result = extractor.extract(data=data, query=query)
 ```
 
 ## Retry with Async Operations
