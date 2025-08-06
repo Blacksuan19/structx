@@ -55,7 +55,7 @@ class ExtractionConfig:
     DEFAULT_CONFIG = {
         "analysis": {"temperature": 0.2, "top_p": 0.1, "max_tokens": 2000},
         "refinement": {"temperature": 0.1, "top_p": 0.05, "max_tokens": 2000},
-        "extraction": {"temperature": 0.0, "top_p": 0.1, "max_tokens": 2000},
+        "extraction": {"temperature": 0.0, "top_p": 0.1, "max_tokens": 8192},
     }
 
     def __init__(
