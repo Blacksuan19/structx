@@ -4,7 +4,7 @@ Advanced structured data extraction from any document using LLMs with multimodal
 support.
 
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg?style=for-the-badge)](https://structx.blacksuan19.dev "Documentation")
-[![PyPI](https://img.shields.io/badge/PyPi-0.4.5-blue?style=for-the-badge)](https://pypi.org/project/structx-llm "Package")
+[![PyPI](https://img.shields.io/badge/PyPi-0.4.6-blue?style=for-the-badge)](https://pypi.org/project/structx-llm "Package")
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
 `structx` is a powerful Python library for extracting structured data from any
