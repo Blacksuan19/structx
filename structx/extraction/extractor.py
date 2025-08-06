@@ -510,6 +510,9 @@ class Extractor:
         if api_key:
             litellm.api_key = api_key
 
+        # drop unnecessary parameters
+        litellm.drop_params = True
+
         # Set additional litellm configs
         for key, value in litellm_kwargs.items():
             setattr(litellm, key, value)
