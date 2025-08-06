@@ -242,6 +242,7 @@ class Extractor:
     @handle_errors(error_message="Extraction failed", error_type=ExtractionError)
     def extract(
         self,
+        *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         query: str,
         model: Optional[Type[BaseModel]] = None,
@@ -268,6 +269,7 @@ class Extractor:
 
     async def extract_async(
         self,
+        *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         query: str,
         return_df: bool = False,
@@ -294,6 +296,7 @@ class Extractor:
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract_queries(
         self,
+        *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         queries: List[str],
         return_df: bool = True,
@@ -330,6 +333,7 @@ class Extractor:
 
     async def extract_queries_async(
         self,
+        *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         queries: List[str],
         return_df: bool = False,
@@ -356,8 +360,9 @@ class Extractor:
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
     def get_schema(
         self,
-        query: str,
+        *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        query: str,
         **kwargs: Any,
     ) -> Type[BaseModel]:
         """
@@ -420,8 +425,9 @@ class Extractor:
 
     async def get_schema_async(
         self,
-        query: str,
+        *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        query: str,
         **kwargs: Any,
     ) -> Type[BaseModel]:
         """
@@ -441,8 +447,9 @@ class Extractor:
 
     def refine_data_model(
         self,
+        *,
         model: Type[BaseModel],
-        instructions: str,
+        refinement_instructions: str,
         model_name: Optional[str] = None,
     ) -> Type[BaseModel]:
         """
@@ -461,7 +468,7 @@ class Extractor:
             model_name = f"Refined{model.__name__}"
 
         refined_model = self.model_operations.refine_existing_model(
-            model, instructions, model_name
+            model, refinement_instructions, model_name
         )
 
         # Create a deep copy of usage for the model
@@ -478,6 +485,7 @@ class Extractor:
     @classmethod
     def from_litellm(
         cls,
+        *,
         model: str,
         api_key: Optional[str] = None,
         config: Optional[Union[Dict, str]] = None,
