@@ -11,7 +11,7 @@ from structx.core.models import (
 )
 from structx.extraction.extractor import Extractor
 
-__version__ = "0.4.6"
+__version__ = "0.4.9"
 
 # Deprecation warning for PyPI package rename
 import warnings
