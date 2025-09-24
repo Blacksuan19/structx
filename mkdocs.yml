@@ -5,6 +5,7 @@ site_author: Blacksuan19
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     primary: indigo
     accent: indigo
@@ -12,6 +13,7 @@ theme:
     repo: fontawesome/brands/github
     logo: material/text-box-search-outline
   features:
+    - announce.dismiss
     - navigation.instant
     - navigation.tracking
     - navigation.expand
@@ -94,6 +96,9 @@ plugins:
             docstring_section_style: "table"
   - social
   - mermaid2
+
+extra_css:
+  - assets/stylesheets/extra.css
 
 extra:
   social:

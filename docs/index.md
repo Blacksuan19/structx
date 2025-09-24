@@ -34,6 +34,20 @@ Whether you're digitizing receipts, analyzing contracts, or extracting key
 information from any document, `structx` provides a simple, consistent interface
 with powerful capabilities.
 
+!!! info "Package rename notice (PyPI)" The PyPI distribution has been renamed
+from `structx-llm` to `structx` (September 2025).
+
+    - Imports are unchanged: `import structx`
+    - Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+    - To upgrade:
+
+      ```bash
+      pip uninstall -y structx-llm
+      pip install -U structx
+      ```
+
+    If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
+
 ### How structx Works
 
 <details>
@@ -98,25 +112,25 @@ graph TB
 ## Installation
 
 ```bash
-pip install structx-llm
+pip install structx
 ```
 
 For PDF support:
 
 ```bash
-pip install structx-llm[pdf]
+pip install structx[pdf]
 ```
 
 For DOCX support:
 
 ```bash
-pip install structx-llm[docx]
+pip install structx[docx]
 ```
 
 For all document formats:
 
 ```bash
-pip install structx-llm[docs]
+pip install structx[docs]
 ```
 
 ## API Requirements

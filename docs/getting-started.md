@@ -5,21 +5,35 @@ extraction.
 
 ## Installation
 
+!!! info "Package rename notice (PyPI)"
+    The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
+
+    - Imports are unchanged: `import structx`
+    - Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+    - To upgrade:
+
+        ```bash
+        pip uninstall -y structx-llm
+        pip install -U structx
+        ```
+
+    If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
+
 Install the core package:
 
 ```bash
-pip install structx-llm
+pip install structx
 ```
 
 For complete document processing capabilities (recommended):
 
 ```bash
 # Install with full document support including PDF conversion
-pip install structx-llm[docs]
+pip install structx[docs]
 
 # Individual format support
-pip install structx-llm[pdf]   # PDF processing and conversion
-pip install structx-llm[docx]  # Advanced DOCX support
+pip install structx[pdf]   # PDF processing and conversion
+pip install structx[docx]  # Advanced DOCX support
 ```
 
 ### What You Get

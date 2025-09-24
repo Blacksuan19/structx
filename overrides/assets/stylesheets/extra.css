@@ -1,0 +1,10 @@
+.md-banner {
+  /* Harmonize background to primary surface tone */
+  background: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+}
+
+.md-banner a {
+  color: var(--md-accent-bg-color);
+  text-decoration: underline;
+}

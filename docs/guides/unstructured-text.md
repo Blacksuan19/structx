@@ -8,10 +8,24 @@ extraction quality.
 
 ## Installation Options
 
+!!! info "Package rename notice (PyPI)"
+    The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
+
+    - Imports are unchanged: `import structx`
+    - Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+    - To upgrade:
+
+        ```bash
+        pip uninstall -y structx-llm
+        pip install -U structx
+        ```
+
+    If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
+
 ### Basic Installation
 
 ```bash
-pip install structx-llm
+pip install structx
 ```
 
 ### With Enhanced Document Processing (Recommended)
@@ -21,11 +35,11 @@ and document processing support:
 
 ```bash
 # Complete document processing support (recommended)
-pip install structx-llm[docs]
+pip install structx[docs]
 
 # Individual components
-pip install structx-llm[pdf]     # PDF conversion and processing
-pip install structx-llm[docx]    # DOCX support via docling
+pip install structx[pdf]     # PDF conversion and processing
+pip install structx[docx]    # DOCX support via docling
 ```
 
 ### Required Dependencies for Multimodal Processing
@@ -361,8 +375,8 @@ graph LR
 
 1. **Use Default Settings**: The multimodal PDF approach provides superior
    extraction quality compared to text-based methods
-2. **Install Complete Dependencies**: Use `pip install structx-llm[docs]` for
-   full functionality
+2. **Install Complete Dependencies**: Use `pip install structx[docs]` for full
+   functionality
 3. **Craft Specific Queries**: Take advantage of preserved document context and
    layout information
 4. **Trust the Pipeline**: The conversion process is optimized for extraction
@@ -530,7 +544,7 @@ result = extractor.extract(
 
    ```bash
    # Install complete document processing support
-   pip install structx-llm[docs]
+    pip install structx[docs]
 
    # Or install specific components
    pip install weasyprint markdown docling PyPDF2

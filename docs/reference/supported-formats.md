@@ -22,8 +22,8 @@ These formats use the advanced multimodal PDF processing pipeline:
 | Format | Extension                               | Processing Method                     | Dependencies          |
 | ------ | --------------------------------------- | ------------------------------------- | --------------------- |
 | PDF    | .pdf                                    | Direct multimodal processing          | Built-in (instructor) |
-| Word   | .docx, .doc                             | Docling → Markdown → PDF → Multimodal | `structx-llm[docs]`   |
-| Text   | .txt, .md, .py, .html, .xml, .log, .rst | Markdown → PDF → Multimodal           | `structx-llm[docs]`   |
+| Word   | .docx, .doc                             | Docling → Markdown → PDF → Multimodal | `structx[docs]`       |
+| Text   | .txt, .md, .py, .html, .xml, .log, .rst | Markdown → PDF → Multimodal           | `structx[docs]`       |
 
 ### Advanced Processing Features
 

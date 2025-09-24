@@ -4,13 +4,32 @@ Advanced structured data extraction from any document using LLMs with multimodal
 support.
 
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg?style=for-the-badge)](https://structx.blacksuan19.dev "Documentation")
-[![PyPI](https://img.shields.io/badge/PyPi-0.4.6-blue?style=for-the-badge)](https://pypi.org/project/structx-llm "Package")
+[![PyPI](https://img.shields.io/badge/PyPi-0.4.6-blue?style=for-the-badge)](https://pypi.org/project/structx "Package")
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
 `structx` is a powerful Python library for extracting structured data from any
 document or text using Large Language Models (LLMs). It features an innovative
 multimodal PDF processing pipeline that converts any document to PDF and uses
 instructor's vision capabilities for superior extraction quality.
+
+## 🔔 Package rename notice (PyPI)
+
+The PyPI distribution has been renamed from `structx-llm` to `structx`
+(September 2025).
+
+- Imports are unchanged: continue using `import structx`
+- Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+- Please update your environments and requirement files to use the new name
+
+Upgrade commands:
+
+```bash
+pip uninstall -y structx-llm
+pip install -U structx
+```
+
+If you previously pinned `structx-llm` in requirements or lock files, replace it
+with `structx`.
 
 ## ✨ Key Features
 
@@ -48,7 +67,7 @@ instructor's vision capabilities for superior extraction quality.
 
 ```bash
 # Core package with basic extraction capabilities
-pip install structx-llm
+pip install structx
 ```
 
 ### 📄 Enhanced Document Processing (Recommended)
@@ -58,11 +77,11 @@ PDF processing:
 
 ```bash
 # Complete document processing support
-pip install structx-llm[docs]
+pip install structx[docs]
 
 # Individual components
-pip install structx-llm[pdf]   # PDF processing with multimodal support
-pip install structx-llm[docx]  # Advanced DOCX conversion via docling
+pip install structx[pdf]   # PDF processing with multimodal support
+pip install structx[docx]  # Advanced DOCX conversion via docling
 ```
 
 ### 🔧 What Each Extra Provides
