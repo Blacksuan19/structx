@@ -106,3 +106,7 @@ push = true
 "pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
 "structx/__init__.py" = ['__version__ = "{version}"']
 "README.md" = ["PyPi-{version}"]
+
+[tool.setuptools.packages.find]
+# Only package the library code under structx; exclude MkDocs overrides and others
+include = ["structx*"]
