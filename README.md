@@ -1,4 +1,20 @@
-# structx
+# structx-llm (DEPRECATED)
+
+**This package is deprecated and has been renamed to
+[`structx`](https://pypi.org/project/structx).**
+
+All future releases and support are under the new name. Installing `structx-llm`
+will automatically install `structx` as a dependency.
+
+**Migration:**
+
+- Update your requirements to use `structx` instead of `structx-llm`
+- For extras, use `structx[docs]`, `structx[pdf]`, `structx[docx]`
+
+```bash
+pip uninstall -y structx-llm
+pip install -U structx
+```
 
 Advanced structured data extraction from any document using LLMs with multimodal
 support.
