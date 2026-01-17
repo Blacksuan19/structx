@@ -1,6 +1,6 @@
 site_name: structx
 site_description: Structured data extraction from text using LLMs
-site_url: https://structx.blacksuan19.dev
+site_url: https://structx.aolabs.dev
 site_author: Blacksuan19
 
 theme:

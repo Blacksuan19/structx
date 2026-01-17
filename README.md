@@ -3,7 +3,7 @@
 Advanced structured data extraction from any document using LLMs with multimodal
 support.
 
-[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg?style=for-the-badge)](https://structx.blacksuan19.dev "Documentation")
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg?style=for-the-badge)](https://structx.aolabs.dev "Documentation")
 [![PyPI](https://img.shields.io/badge/PyPi-0.4.10-blue?style=for-the-badge)](https://pypi.org/project/structx "Package")
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
@@ -173,20 +173,20 @@ traditional text-based extraction:
 ## 📚 Documentation
 
 For comprehensive documentation, examples, and guides, visit our
-[documentation site](https://structx.blacksuan19.dev).
+[documentation site](https://structx.aolabs.dev).
 
-- [Getting Started](https://structx.blacksuan19.dev/getting-started)
-- [Basic Extraction](https://structx.blacksuan19.dev/guides/basic-extraction)
-- [Unstructured Text Processing](https://structx.blacksuan19.dev/guides/unstructured-text)
-- [Async Operations](https://structx.blacksuan19.dev/guides/async-operations)
-- [Multiple Queries](https://structx.blacksuan19.dev/guides/multiple-queries)
-- [Custom Models](https://structx.blacksuan19.dev/guides/custom-models)
-- [Token Usage Tracking](https://structx.blacksuan19.dev/guides/token-tracking)
-- [API Reference](https://structx.blacksuan19.dev/api/extractor)
+- [Getting Started](https://structx.aolabs.dev/getting-started)
+- [Basic Extraction](https://structx.aolabs.dev/guides/basic-extraction)
+- [Unstructured Text Processing](https://structx.aolabs.dev/guides/unstructured-text)
+- [Async Operations](https://structx.aolabs.dev/guides/async-operations)
+- [Multiple Queries](https://structx.aolabs.dev/guides/multiple-queries)
+- [Custom Models](https://structx.aolabs.dev/guides/custom-models)
+- [Token Usage Tracking](https://structx.aolabs.dev/guides/token-tracking)
+- [API Reference](https://structx.aolabs.dev/api/extractor)
 
 ## Examples
 
-Check out our [example gallery](https://structx.blacksuan19.dev/examples) for
+Check out our [example gallery](https://structx.aolabs.dev/examples) for
 real-world use cases,
 
 ## 📁 Supported File Formats
@@ -217,7 +217,7 @@ real-world use cases,
 ## Contributing
 
 Contributions are welcome! Please read our
-[Contributing Guidelines](https://structx.blacksuan19.dev/contributing) for
+[Contributing Guidelines](https://structx.aolabs.dev/contributing) for
 details.
 
 ## License
