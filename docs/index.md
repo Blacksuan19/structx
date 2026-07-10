@@ -13,12 +13,11 @@
 
 - :material-file-document-multiple: **Advanced Document Processing**
 
-  Unified PDF conversion pipeline for optimal extraction from any document
-  format
+  Optional PDF and document pipeline for multimodal extraction
 
 - :material-lightning-bolt: **Multimodal Capabilities**
 
-  Native instructor multimodal support with automatic PDF conversion
+  Native instructor multimodal support with PDF passthrough and document conversion
 
 </div>
 
@@ -38,7 +37,7 @@ with powerful capabilities.
     The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
 
     - Imports are unchanged: `import structx`
-    - Document processing is included in the core `structx` package
+    - Document processing lives in the optional `docs` extra
     - To upgrade:
 
         ```bash
@@ -47,6 +46,7 @@ with powerful capabilities.
         ```
 
     If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
+    For document/PDF processing, install `structx[docs]`.
 
 ### How structx Works
 
@@ -94,15 +94,15 @@ graph TB
 - 📊 **Complex Data Structures**: Support for nested and hierarchical data
 - 🔄 **Natural Language Refinement**: Improve models with conversational
   instructions
-- � **Multimodal Document Processing**: Advanced PDF conversion pipeline for any
-  document format
+- � **Multimodal Document Processing**: Optional PDF/document pipeline through
+  `structx[docs]`
 - 🖼️ **Vision-Enabled Extraction**: Native instructor multimodal support for
   PDFs
 - 🚀 **High-Performance Processing**: Multi-threaded and async operations
 - ⚡ **Smart Format Detection**: Automatic processing mode selection
 - 🔧 **Flexible Configuration**: Configurable extraction using OmegaConf
-- 📁 **Universal File Support**: CSV, Excel, JSON, Parquet, PDF, DOCX, TXT, and
-  more
+- 📁 **Flexible File Support**: CSV, Excel, JSON, and Parquet in the base
+  install; PDF, DOCX, TXT, and more via `structx[docs]`
 - 🏗️ **Type Safety**: Type-safe data models using Pydantic
 - 🎮 **Simple Interface**: Easy-to-use API with powerful capabilities
 - 🔌 **Multiple LLM Providers**: Support through litellm integration
@@ -113,6 +113,12 @@ graph TB
 
 ```bash
 pip install structx
+```
+
+For document and multimodal PDF support:
+
+```bash
+pip install "structx[docs]"
 ```
 
 ## API Requirements

@@ -124,6 +124,11 @@ extract the following details from the invoice:
 `structx` supports various input data types, but for legal and financial
 documents, you'll primarily use file paths.
 
+!!! note "Document dependencies"
+    Install `structx[docs]` before using PDF or document file inputs. The base
+    install supports structured files and text/table inputs without Docling,
+    WeasyPrint, or PyTorch.
+
 ### Files
 
 ```python

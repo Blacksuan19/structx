@@ -1,10 +1,9 @@
 # Unstructured Text
 
-`structx` supports extracting structured data from various unstructured text
-sources, including PDF documents, text files, and raw text. The library uses a
-unified approach that converts all unstructured documents to PDF and leverages
-instructor's multimodal PDF support for optimal context preservation and
-extraction quality.
+`structx` supports extracting structured data from unstructured text sources,
+PDF documents, and supported document files. The base install stays light for
+structured and text/table extraction; install `structx[docs]` to enable the
+multimodal document pipeline.
 
 ## Installation Options
 
@@ -12,7 +11,7 @@ extraction quality.
     The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
 
     - Imports are unchanged: `import structx`
-    - Document processing is included in the core `structx` package
+    - Document processing lives in the optional `docs` extra
     - To upgrade:
 
         ```bash
@@ -21,6 +20,7 @@ extraction quality.
         ```
 
     If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
+    For PDF and document processing, install `structx[docs]`.
 
 ### Basic Installation
 
@@ -28,32 +28,35 @@ extraction quality.
 pip install structx
 ```
 
-### Required Dependencies for Multimodal Processing
+### Document Processing Installation
 
-The default multimodal PDF processing approach includes these packages:
+```bash
+pip install "structx[docs]"
+```
 
-- **docling**: For document parsing and HTML export
+The optional document pipeline includes these packages:
+
+- **docling-slim**: For non-PDF document parsing and HTML export
 - **weasyprint**: For PDF generation from Docling HTML
+- **torch / torchvision**: Required by Docling's local model pipeline
 
-These are installed with `structx`.
+With uv on Linux, the project resolves CPU-only PyTorch wheels.
 
 ## Processing Approach
 
-### Unified PDF Processing (Default)
+### Multimodal PDF Processing
 
-`structx` uses an innovative unified approach for all unstructured documents
-that provides superior extraction quality:
+`structx[docs]` uses multimodal extraction for document-like inputs:
 
 #### How It Works
 
-1. **Smart Conversion**: All unstructured documents (TXT, DOCX, etc.) are
-   intelligently converted to PDF format
-2. **Multimodal Processing**: Uses instructor's native multimodal PDF support
+1. **PDF Passthrough**: Existing PDFs are sent directly to multimodal extraction
+2. **Smart Conversion**: Supported non-PDF documents (TXT, DOCX, etc.) are
+   converted to PDF format
+3. **Multimodal Processing**: Uses instructor's native multimodal PDF support
    for extraction
-3. **Context Preservation**: Eliminates chunking issues and preserves full
+4. **Context Preservation**: Eliminates chunking issues and preserves full
    document layout and context
-4. **Automatic Fallback**: Falls back to simple text processing if PDF
-   conversion fails
 
 #### Technical Pipeline
 
@@ -63,8 +66,8 @@ that provides superior extraction quality:
 ```mermaid
 graph LR
     A[Text/DOCX/etc] --> B[Docling Conversion]
-    B --> C[Markdown Format]
-    C --> D[Styled PDF Generation]
+    B --> C[Docling HTML Export]
+    C --> D[WeasyPrint PDF Generation]
     D --> E[Instructor Multimodal]
     E --> F[Structured Output]
 
@@ -82,7 +85,7 @@ result = extractor.extract(
     query="extract the parties, effective date, and payment terms"
 )
 
-# PDFs use the same Docling -> HTML -> PDF pipeline
+# PDFs are passed directly to multimodal extraction
 result = extractor.extract(
     data="scripts/example_input/S0305SampleInvoice.pdf",
     query="extract the invoice number, total amount, and line items"
@@ -93,8 +96,8 @@ result = extractor.extract(
 
 ### Text Files (.txt, .md, .log, .py, .html, .xml, .rst)
 
-Text files are parsed with Docling, rendered to PDFs, and processed with
-multimodal support:
+Text files require `structx[docs]`; they are parsed with Docling, rendered to
+PDFs, and processed with multimodal support:
 
 ```python
 # Extract from a markdown file
@@ -118,7 +121,8 @@ result = extractor.extract(
 
 ### PDF Documents (.pdf)
 
-PDF documents use the same Docling -> HTML -> PDF multimodal pipeline:
+PDF documents require `structx[docs]`; they are passed directly to multimodal
+extraction:
 
 ```python
 # Extract from PDF
@@ -136,7 +140,8 @@ result = extractor.extract(
 
 ### Word Documents (.docx, .doc)
 
-DOCX files use the Docling → HTML → PDF conversion pipeline:
+DOCX files require `structx[docs]` and use the Docling → HTML → PDF conversion
+pipeline:
 
 ```python
 # Extract from DOCX (Docling → HTML → PDF → multimodal)
@@ -216,13 +221,15 @@ result = extractor.extract(
 | JSON    | .json                 | Direct pandas processing     | Structured data, no conversion |
 | Parquet | .parquet              | Direct pandas processing     | Structured data, no conversion |
 | Feather | .feather              | Direct pandas processing     | Structured data, no conversion |
-| Text    | .txt, .md, .log, etc. | Docling → HTML → PDF → Multimodal | Unified document pipeline      |
-| PDF     | .pdf                  | Docling → HTML → PDF → Multimodal | Unified document pipeline      |
-| Word    | .docx, .doc           | Docling → HTML → PDF → Multimodal | Unified document pipeline      |
+| Text    | .txt, .md, .log, etc. | Docling → HTML → PDF → Multimodal | Requires `structx[docs]`      |
+| PDF     | .pdf                  | PDF → Multimodal                  | Requires `structx[docs]`      |
+| Word    | .docx, .doc           | Docling → HTML → PDF → Multimodal | Requires `structx[docs]`      |
+| PowerPoint | .pptx, .ppt        | Docling → HTML → PDF → Multimodal | Requires `structx[docs]`      |
 
 ## Conversion Pipeline Details
 
-The library uses one conversion pipeline for document-like inputs:
+The document pipeline passes PDFs through directly and converts supported
+non-PDF document-like inputs:
 
 ### Document Files → PDF Pipeline
 
@@ -231,17 +238,18 @@ The library uses one conversion pipeline for document-like inputs:
 
 ```mermaid
 graph LR
-    A[Document File] --> B[Docling Conversion]
-    B --> C[Docling HTML Export]
+    A[PDF File] --> E[Instructor Multimodal Processing]
+    B[Non-PDF Document File] --> C[Docling Conversion]
     C --> D[WeasyPrint PDF Generation]
-    D --> E[Instructor Multimodal Processing]
+    D --> E
 ```
 
 </details>
 
-1. **Docling Conversion**: Document structure analysis and normalized HTML export
-2. **PDF Generation**: WeasyPrint renders the HTML into a temporary PDF
-3. **Multimodal Processing**: Instructor's vision-enabled extraction reads the PDF
+1. **PDF Passthrough**: Existing PDFs are sent directly to multimodal extraction
+2. **Docling Conversion**: Non-PDF document structure analysis and normalized HTML export
+3. **PDF Generation**: WeasyPrint renders the HTML into a temporary PDF
+4. **Multimodal Processing**: Instructor's vision-enabled extraction reads the PDF
 
 ## Best Practices
 
@@ -249,8 +257,8 @@ graph LR
 
 1. **Use Default Settings**: The multimodal PDF approach provides superior
    extraction quality compared to text-based methods
-2. **Install structx normally**: `pip install structx` includes the document
-   pipeline
+2. **Install the document extra**: `pip install "structx[docs]"` enables the
+   document pipeline
 3. **Craft Specific Queries**: Take advantage of preserved document context and
    layout information
 4. **Trust the Pipeline**: The conversion process is optimized for extraction
@@ -260,8 +268,9 @@ graph LR
 
 #### Document Files
 
-- **Unified Parsing**: PDFs, text files, Word documents, and other document-like
-  inputs are parsed by Docling
+- **PDF Passthrough**: PDFs go directly to multimodal extraction
+- **Document Parsing**: Text files, Word documents, and other supported
+  non-PDF document-like inputs are parsed by Docling
 - **Structure Preservation**: Tables, headings, and formatting are normalized
   through Docling HTML
 - **Full Context**: Multimodal processing handles converted PDFs without chunking
@@ -399,7 +408,7 @@ result = extractor.extract(
 2. **Missing Dependencies**
 
    ```bash
-   pip install structx
+   pip install "structx[docs]"
    ```
 
 3. **Memory Issues with Large Documents**
@@ -415,7 +424,7 @@ result = extractor.extract(
 4. **DOCX Processing Issues**
 
    ```python
-   # DOCX files use the same Docling conversion path as other documents.
+   # DOCX files use the same Docling conversion path as other non-PDF documents.
    df = extractor.extract(data="document.docx", query="test")
    ```
 

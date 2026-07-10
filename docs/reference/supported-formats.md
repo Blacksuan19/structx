@@ -1,7 +1,7 @@
 # Supported Formats
 
-`structx` supports a comprehensive variety of file formats for data extraction,
-with advanced unstructured document processing capabilities.
+`structx` supports structured file formats in the base install and optional
+multimodal document processing through the `docs` extra.
 
 ## Structured Data Formats
 
@@ -17,7 +17,7 @@ These formats are processed directly as structured data without conversion:
 
 ## Unstructured Document Formats
 
-These formats use the advanced multimodal PDF processing pipeline:
+Install `structx[docs]` to use the multimodal document pipeline:
 
 | Format | Extension                               | Processing Method                  | Dependencies |
 | ------ | --------------------------------------- | ---------------------------------- | ------------ |
@@ -29,7 +29,8 @@ These formats use the advanced multimodal PDF processing pipeline:
 ### Advanced Processing Features
 
 - **Multimodal PDF Processing**: Native instructor vision support for PDFs
-- **Intelligent Conversion**: Automatic document-to-PDF conversion with styling
+- **PDF Passthrough**: Existing PDFs are sent directly to multimodal extraction
+- **Intelligent Conversion**: Automatic document-to-PDF conversion with styling for supported non-PDF formats
 - **Structure Preservation**: Maintains tables, formatting, and layout
 - **Context Awareness**: Full document context without chunking limitations
 
@@ -61,7 +62,7 @@ result = extractor.extract(
 ### Unstructured Documents (Multimodal Processing)
 
 ```python
-# PDF documents - normalized through the Docling pipeline
+# PDF documents - passed directly to multimodal extraction
 result = extractor.extract(
     data="contract.pdf",
     query="extract parties, dates, and payment terms"

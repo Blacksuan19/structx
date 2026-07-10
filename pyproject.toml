@@ -37,7 +37,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "docling",
     "instructor",
     "litellm",
     "loguru",
@@ -48,23 +47,23 @@ dependencies = [
     "tabulate>=0.9.0", # required for pandas .to_markdown()
     "tenacity",
     "tqdm",
-    "weasyprint",
 ]
 
 [project.optional-dependencies]
-dev = ["black", "bumpver", "pip-tools", "wheel"]
+dev = ["black", "bumpver", "pip-tools", "pytest", "wheel"]
 
-# Backward-compatible aliases. Document processing is part of the core install.
-pdf = []
-text = []
-docx = []
-documents = []
-docs = []
-docling = []
-advanced = []
+# Optional document processing support. Kept out of the base install because
+# Docling's local model pipeline requires PyTorch.
+# The format-pdf extra is still needed because DocumentConverter imports its
+# PDF backend dependencies even when existing PDFs are passed through directly.
+docs = [
+    "docling-slim[convert-core,format-docx,format-html,format-latex,format-markdown,format-opendocument,format-pdf,format-pptx,format-web,models-local]",
+    "torch",
+    "torchvision",
+    "weasyprint",
+]
 
-# Documentation site tooling. This is separate from the legacy [docs] document
-# processing extra above.
+# Documentation site tooling.
 mkdocs = [
     "mkdocs",
     "mkdocs-material",
@@ -72,6 +71,19 @@ mkdocs = [
     "mkdocs-git-revision-date-localized-plugin",
     "mkdocs-material[imaging]",
     "mkdocs-mermaid2-plugin",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
 ]
 
 [tool.bumpver]
@@ -91,3 +103,12 @@ push = true
 [tool.setuptools.packages.find]
 # Only package the library code under structx; exclude MkDocs overrides and others
 include = ["structx*"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:This field is deprecated.*:DeprecationWarning:docling\\.pipeline\\.standard_pdf_pipeline",
+    "ignore:torch\\.ao\\.quantization is deprecated.*:DeprecationWarning:torch\\.ao\\.quantization\\.quantize",
+    "ignore:torch\\.quantize_per_tensor.*:UserWarning:torch\\.ao\\.nn\\.quantized\\.dynamic\\.modules\\.rnn",
+]
+pythonpath = ["."]
+testpaths = ["tests"]

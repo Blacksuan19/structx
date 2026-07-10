@@ -7,10 +7,10 @@ support.
 [![PyPI](https://img.shields.io/badge/PyPi-0.4.11-blue?style=for-the-badge)](https://pypi.org/project/structx "Package")
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
-`structx` is a powerful Python library for extracting structured data from any
-document or text using Large Language Models (LLMs). It features an innovative
-multimodal PDF processing pipeline that converts any document to PDF and uses
-instructor's vision capabilities for superior extraction quality.
+`structx` is a powerful Python library for extracting structured data from text,
+tables, and documents using Large Language Models (LLMs). With the optional
+`docs` extra, it provides a multimodal PDF pipeline that passes PDFs directly to
+vision-capable models and converts other document formats to PDF first.
 
 ## 🔔 Package rename notice (PyPI)
 
@@ -18,7 +18,7 @@ The PyPI distribution has been renamed from `structx-llm` to `structx`
 (September 2025).
 
 - Imports are unchanged: continue using `import structx`
-- Document processing is included in the core `structx` package
+- Document processing now lives in the optional `docs` extra
 - Please update your environments and requirement files to use the new name
 
 Upgrade commands:
@@ -29,20 +29,20 @@ pip install -U structx
 ```
 
 If you previously pinned `structx-llm` in requirements or lock files, replace it
-with `structx`.
+with `structx`. For document/PDF processing, install `structx[docs]`.
 
 ## ✨ Key Features
 
 ### 🎯 **Advanced Document Processing**
 
-- **� Multimodal PDF Pipeline**: Converts any document (TXT, DOCX, etc.) to PDF
-  for optimal extraction
+- **� Multimodal PDF Pipeline**: Passes PDFs directly to vision-capable models
+  and converts supported non-PDF documents to PDF
 - **🖼️ Vision-Enabled Extraction**: Native instructor multimodal support for
   PDFs and images
 - **🔄 Smart Format Detection**: Automatic processing mode selection for best
   results
-- **📊 Universal File Support**: CSV, Excel, JSON, Parquet, PDF, DOCX, TXT,
-  Markdown, and more
+- **📊 Flexible File Support**: CSV, Excel, JSON, Parquet in the base install,
+  with PDF, DOCX, TXT, Markdown, and more via `structx[docs]`
 
 ### 🚀 **Intelligent Data Extraction**
 
@@ -69,12 +69,18 @@ with `structx`.
 pip install structx
 ```
 
+For document and multimodal PDF support:
+
+```bash
+pip install "structx[docs]"
+```
+
 ### 🔧 What The Package Provides
 
-- Docling document parsing
-- WeasyPrint PDF rendering
-- Instructor multimodal vision support
 - Structured readers for CSV, Excel, JSON, Parquet, and Feather
+- Instructor multimodal vision support
+- Optional Docling document parsing with CPU-only PyTorch resolution for uv on Linux
+- Optional WeasyPrint PDF rendering for non-PDF document formats
 
 ## Quick Start
 
@@ -105,8 +111,11 @@ print(result.data[0].model_dump_json(indent=2))
 
 ### 📄 Document Processing with Multimodal Support
 
+Install `structx[docs]` before using non-PDF document formats. Existing PDFs can
+be passed directly through the multimodal path.
+
 ```python
-# Process a PDF invoice through the document multimodal pipeline
+# Process a PDF invoice through the multimodal pipeline
 result = extractor.extract(
     data="scripts/example_input/S0305SampleInvoice.pdf",
     query="extract the invoice number, total amount, and line items"
@@ -139,8 +148,8 @@ traditional text-based extraction:
   complex layouts
 - **🔄 No Chunking Issues**: Eliminates problems with information split across
   chunks
-- **📊 Universal Format**: Any document type becomes processable through PDF
-  conversion
+- **📊 Universal Format**: Existing PDFs are passed through directly; supported
+  non-PDF documents become processable through PDF conversion
 - **🖼️ Visual Understanding**: Handles documents with visual elements,
   formatting, and structure
 
@@ -177,15 +186,16 @@ real-world use cases,
 
 | Format   | Extensions                                    | Processing Method                     | Quality    |
 | -------- | --------------------------------------------- | ------------------------------------- | ---------- |
-| **PDF**  | `.pdf`                                        | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐⭐ |
+| **PDF**  | `.pdf`                                        | PDF → Multimodal                      | ⭐⭐⭐⭐⭐ |
 | **Word** | `.docx`, `.doc`                               | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐⭐ |
 | **PowerPoint** | `.pptx`, `.ppt`                       | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐   |
 | **Text** | `.txt`, `.md`, `.py`, `.log`, `.xml`, `.html` | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐   |
 
 ### 🔄 Processing Pipeline
 
-- **Docling parsing**: Reads document-like inputs into a structured document model
-- **WeasyPrint rendering**: Converts Docling HTML to a temporary PDF
+- **PDF passthrough**: Existing PDFs are sent directly to multimodal extraction
+- **Docling parsing**: Reads non-PDF document-like inputs into a structured document model
+- **WeasyPrint rendering**: Converts Docling HTML to a temporary PDF for non-PDF inputs
 - **Multimodal extraction**: Sends the rendered PDF to instructor's multimodal API
 
 ## Contributing

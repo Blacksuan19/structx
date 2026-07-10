@@ -9,7 +9,7 @@ extraction.
     The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
 
     - Imports are unchanged: `import structx`
-    - Document processing is included in the core `structx` package
+    - Document processing lives in the optional `docs` extra
     - To upgrade:
 
         ```bash
@@ -18,6 +18,7 @@ extraction.
         ```
 
     If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
+    For document/PDF processing, install `structx[docs]`.
 
 Install the package:
 
@@ -25,14 +26,21 @@ Install the package:
 pip install structx
 ```
 
+For document and multimodal PDF support:
+
+```bash
+pip install "structx[docs]"
+```
+
 ### What You Get
 
 - **Structured Data**: CSV, JSON, Excel, Parquet, and Feather through pandas
-- **Documents**: Advanced unstructured document processing with multimodal PDF
-  support
-  - Automatic document-to-PDF conversion
+- **Documents**: Optional unstructured document processing with multimodal PDF
+  support through `structx[docs]`
+  - Direct PDF passthrough
+  - Document-to-PDF conversion for supported non-PDF formats
   - Instructor's multimodal vision capabilities
-  - Enhanced extraction quality for all document types
+  - Enhanced extraction quality for supported document types
 
 ## Basic Usage
 
@@ -100,6 +108,11 @@ result = extractor.extract(
     query="extract the parties, effective date, and payment terms"
 )
 ```
+
+!!! note "Document dependencies"
+    Install `structx[docs]` before using PDF or document file inputs. The base
+    install supports structured files and text/table inputs without Docling,
+    WeasyPrint, or PyTorch.
 
 ### Access Results
 
