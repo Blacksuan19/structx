@@ -12,8 +12,8 @@ class FileReader:
     Handles reading different file formats.
 
     Structured files are read as pandas DataFrames. Document-like files are parsed
-    with Docling, rendered to PDF with WeasyPrint, and then passed to instructor's
-    multimodal PDF support.
+    with the optional Docling extra, rendered to PDF with WeasyPrint, and then
+    passed to instructor's multimodal PDF support.
     """
 
     STRUCTURED_EXTENSIONS: Dict[
@@ -27,10 +27,12 @@ class FileReader:
         ".feather": pd.read_feather,
     }
 
+    PDF_EXTENSIONS: List[str] = [".pdf"]
+
     DOCLING_EXTENSIONS: List[str] = [
-        ".pdf",
         ".doc",
         ".docx",
+        ".ppt",
         ".pptx",
         ".odt",
         ".ods",
@@ -91,6 +93,17 @@ class FileReader:
                 read_func = FileReader.STRUCTURED_EXTENSIONS[file_extension]
                 return read_func(file_path, **file_options)
 
+            # Existing PDFs can be sent directly to multimodal models.
+            if file_extension in FileReader.PDF_EXTENSIONS:
+                return pd.DataFrame(
+                    {
+                        "pdf_path": [str(file_path)],
+                        "source": [str(file_path)],
+                        "multimodal": [True],
+                        "file_type": ["pdf"],
+                    }
+                )
+
             # Convert document-like files to PDF for multimodal processing.
             if file_extension in FileReader.DOCLING_EXTENSIONS:
                 pdf_path = FileReader._convert_to_pdf(file_path)
@@ -109,6 +122,23 @@ class FileReader:
             raise FileError(f"Error reading file {file_path}: {str(e)}")
 
     @staticmethod
+    def _create_document_converter():
+        """Create a Docling converter configured for multimodal PDF rendering."""
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.document_converter import DocumentConverter, ImageFormatOption
+
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = False
+        pipeline_options.do_table_structure = False
+
+        return DocumentConverter(
+            format_options={
+                InputFormat.IMAGE: ImageFormatOption(pipeline_options=pipeline_options),
+            }
+        )
+
+    @staticmethod
     def _convert_to_pdf(file_path: Path) -> str:
         """
         Convert a supported document to PDF using Docling -> HTML -> WeasyPrint.
@@ -116,10 +146,9 @@ class FileReader:
         Returns the path to the generated PDF file for use with instructor's multimodal support.
         """
         try:
-            from docling.document_converter import DocumentConverter
             import weasyprint
 
-            converter = DocumentConverter()
+            converter = FileReader._create_document_converter()
             result = converter.convert(str(file_path))
             html_content = result.document.export_to_html()
 
@@ -136,8 +165,8 @@ class FileReader:
 
         except ImportError as e:
             raise FileError(
-                "Document conversion requires docling and weasyprint. "
-                "Install structx with: pip install structx"
+                "Document conversion requires optional document dependencies. "
+                "Install them with: pip install 'structx[docs]'"
             ) from e
 
         except Exception as e:
@@ -146,15 +175,17 @@ class FileReader:
     @staticmethod
     def extract_text_sample(file_path: Union[str, Path], max_chars: int = 2000) -> str:
         """Extract a text sample from a document using Docling."""
-        try:
-            from docling.document_converter import DocumentConverter
+        file_path = Path(file_path)
+        if file_path.suffix.lower() in FileReader.PDF_EXTENSIONS:
+            return ""
 
-            result = DocumentConverter().convert(str(file_path))
+        try:
+            result = FileReader._create_document_converter().convert(str(file_path))
             return result.document.export_to_text()[:max_chars]
         except ImportError as e:
             raise FileError(
-                "Text sampling requires docling. "
-                "Install structx with: pip install structx"
+                "Text sampling requires optional document dependencies. "
+                "Install them with: pip install 'structx[docs]'"
             ) from e
         except Exception as e:
             raise FileError(f"Error extracting sample from {file_path}: {str(e)}")
@@ -166,7 +197,10 @@ class FileReader:
 
         if file_extension in FileReader.STRUCTURED_EXTENSIONS:
             return "structured"
-        elif file_extension in FileReader.DOCLING_EXTENSIONS:
+        elif (
+            file_extension in FileReader.PDF_EXTENSIONS
+            or file_extension in FileReader.DOCLING_EXTENSIONS
+        ):
             return "document"
         else:
             return "unknown"
