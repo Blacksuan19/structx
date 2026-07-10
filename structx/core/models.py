@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Generic, List, Optional, Type, Union
 
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from structx.utils.types import T
 from structx.utils.usage import ExtractorUsage, UsageSummary
@@ -10,6 +10,8 @@ from structx.utils.usage import ExtractorUsage, UsageSummary
 
 class ModelField(BaseModel):
     """Definition of a field in the extraction model"""
+
+    model_config = ConfigDict(validate_assignment=True)
 
     name: str = Field(description="Name of the field")
     type: str = Field(description="Type of the field")
@@ -20,9 +22,6 @@ class ModelField(BaseModel):
     nested_fields: Optional[List["ModelField"]] = Field(
         default=None, description="Fields for nested models"
     )
-
-    class Config:
-        validate_assignment = True
 
 
 class QueryRefinement(BaseModel):
@@ -40,6 +39,8 @@ class QueryRefinement(BaseModel):
 class ExtractionGuide(BaseModel):
     """Guide for structured extraction"""
 
+    model_config = ConfigDict(extra="allow")
+
     target_columns: List[str] = Field(description="Columns to analyze")
 
     structural_patterns: Optional[Dict[str, str]] = Field(
@@ -51,9 +52,6 @@ class ExtractionGuide(BaseModel):
     organization_principles: Optional[List[str]] = Field(
         description="Principles for data organization"
     )
-
-    class Config:
-        extra = "allow"  # Allow extra fields to be flexible with LLM responses
 
 
 class ExtractionRequest(BaseModel):

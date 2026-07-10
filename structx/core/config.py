@@ -2,13 +2,15 @@ from pathlib import Path
 from typing import Annotated, Any, Dict, Optional, Union
 
 from omegaconf import OmegaConf
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from structx.utils.types import DictStrAny
 
 
 class StepConfig(BaseModel):
     """Configuration for an individual extraction step"""
+
+    model_config = ConfigDict(validate_assignment=True)
 
     temperature: Optional[
         Annotated[
@@ -44,9 +46,6 @@ class StepConfig(BaseModel):
 
         # Merge with defaults, preferring current values
         return {**defaults, **current}
-
-    class Config:
-        validate_assignment = True
 
 
 class ExtractionConfig:
