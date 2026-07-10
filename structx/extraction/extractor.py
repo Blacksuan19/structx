@@ -273,6 +273,7 @@ class Extractor:
         *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         query: str,
+        model: Optional[Type[BaseModel]] = None,
         return_df: bool = False,
         expand_nested: bool = False,
         **kwargs: Any,
@@ -283,6 +284,7 @@ class Extractor:
         Args:
             data: Input data (file path, DataFrame, list of dicts, or raw text)
             query: Natural language query
+            model: Optional pre-generated Pydantic model class
             return_df: Whether to return DataFrame
             expand_nested: Whether to flatten nested structures
             **kwargs: Additional options for file reading
@@ -291,7 +293,13 @@ class Extractor:
             ExtractionResult containing extracted data, failed rows, and the model
         """
         return await self.data_processor.run_async(
-            self.extract, data, query, None, return_df, expand_nested, **kwargs
+            self.extract,
+            data=data,
+            query=query,
+            model=model,
+            return_df=return_df,
+            expand_nested=expand_nested,
+            **kwargs,
         )
 
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
@@ -355,7 +363,12 @@ class Extractor:
             Dictionary mapping queries to ExtractionResult objects
         """
         return await self.data_processor.run_async(
-            self.extract_queries, data, queries, return_df, expand_nested, **kwargs
+            self.extract_queries,
+            data=data,
+            queries=queries,
+            return_df=return_df,
+            expand_nested=expand_nested,
+            **kwargs,
         )
 
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
@@ -443,7 +456,10 @@ class Extractor:
             Dynamically generated Pydantic model class
         """
         return await self.data_processor.run_async(
-            self.get_schema, query, data, **kwargs
+            self.get_schema,
+            data=data,
+            query=query,
+            **kwargs,
         )
 
     def refine_data_model(
