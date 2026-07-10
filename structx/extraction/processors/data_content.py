@@ -94,12 +94,12 @@ class ContentAnalyzer:
             try:
                 # Check if this is a file-based row
                 if "pdf_path" in row and pd.notna(row["pdf_path"]):
-                    # For PDF files, extract text sample using pypdf
+                    # For PDF files, extract text sample using PyPDF2
                     try:
-                        import pypdf
+                        import PyPDF2
 
                         with open(row["pdf_path"], "rb") as file:
-                            reader = pypdf.PdfReader(file)
+                            reader = PyPDF2.PdfReader(file)
                             text = ""
                             # Extract from first few pages
                             for page_num in range(min(3, len(reader.pages))):
