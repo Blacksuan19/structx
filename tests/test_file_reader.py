@@ -128,6 +128,7 @@ def test_get_file_type_classifies_structured_document_and_unknown(
     assert FileReader.get_file_type("data.csv") == "structured"
     assert FileReader.get_file_type(sample_docx_path) == "document"
     assert FileReader.get_file_type(sample_pdf_path) == "document"
+    assert FileReader.get_file_type("slides.ppt") == "document"
     assert FileReader.get_file_type("archive.zip") == "unknown"
 
 

@@ -179,6 +179,7 @@ real-world use cases,
 | -------- | --------------------------------------------- | ------------------------------------- | ---------- |
 | **PDF**  | `.pdf`                                        | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐⭐ |
 | **Word** | `.docx`, `.doc`                               | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐⭐ |
+| **PowerPoint** | `.pptx`, `.ppt`                       | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐   |
 | **Text** | `.txt`, `.md`, `.py`, `.log`, `.xml`, `.html` | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐   |
 
 ### 🔄 Processing Pipeline
