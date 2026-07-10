@@ -13,7 +13,7 @@ from structx.core.models import ExtractionGuide, ExtractionRequest, QueryRefinem
 from structx.extraction.core.llm_core import LLMCore
 from structx.extraction.core.model_utils import ModelUtils
 from structx.extraction.generator import ModelGenerator
-from structx.extraction.processors.data_content import ContentAnalyzer
+from structx.extraction.processors.content_analyzer import ContentAnalyzer
 from structx.utils.helpers import (
     convert_pydantic_v1_to_v2,
     handle_errors,

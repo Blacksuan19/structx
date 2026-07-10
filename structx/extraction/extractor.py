@@ -17,7 +17,8 @@ from structx.core.exceptions import ConfigurationError, ExtractionError
 from structx.core.models import ExtractionResult
 from structx.extraction.core.llm_core import LLMCore
 from structx.extraction.engines.extraction_engine import ExtractionEngine
-from structx.extraction.processors.data_content import ContentAnalyzer, DataProcessor
+from structx.extraction.processors.content_analyzer import ContentAnalyzer
+from structx.extraction.processors.data_processor import DataProcessor
 from structx.extraction.processors.model_operations import ModelOperations
 from structx.extraction.result_manager import ResultManager
 from structx.utils.helpers import handle_errors
