@@ -12,7 +12,7 @@ extraction quality.
     The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
 
     - Imports are unchanged: `import structx`
-    - Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+    - Document processing is included in the core `structx` package
     - To upgrade:
 
         ```bash
@@ -28,30 +28,14 @@ extraction quality.
 pip install structx
 ```
 
-### With Enhanced Document Processing (Recommended)
-
-For the best experience with unstructured documents, install with PDF conversion
-and document processing support:
-
-```bash
-# Complete document processing support (recommended)
-pip install structx[docs]
-
-# Individual components
-pip install structx[pdf]     # PDF conversion and processing
-pip install structx[docx]    # DOCX support via docling
-```
-
 ### Required Dependencies for Multimodal Processing
 
-The default multimodal PDF processing approach requires these packages:
+The default multimodal PDF processing approach includes these packages:
 
-- **weasyprint**: For PDF generation from HTML/markdown
-- **markdown**: For markdown processing
-- **docling** (optional): For advanced DOCX conversion
-- **PyPDF2** (fallback): For simple PDF text extraction
+- **docling**: For document parsing and HTML export
+- **weasyprint**: For PDF generation from Docling HTML
 
-These are automatically installed with the `[docs]` extra.
+These are installed with `structx`.
 
 ## Processing Approach
 
@@ -92,15 +76,15 @@ graph LR
 #### Default Usage
 
 ```python
-# Process a DOCX contract by converting it to PDF for optimal extraction
+# Process a DOCX contract through the document multimodal pipeline
 result = extractor.extract(
-    data="scripts/example_input/free-consultancy-agreement.docx", # Converted to PDF -> multimodal
+    data="scripts/example_input/free-consultancy-agreement.docx",
     query="extract the parties, effective date, and payment terms"
 )
 
-# PDFs are processed directly with multimodal support
+# PDFs use the same Docling -> HTML -> PDF pipeline
 result = extractor.extract(
-    data="scripts/example_input/S0305SampleInvoice.pdf",          # Direct multimodal processing
+    data="scripts/example_input/S0305SampleInvoice.pdf",
     query="extract the invoice number, total amount, and line items"
 )
 ```
@@ -109,23 +93,23 @@ result = extractor.extract(
 
 ### Text Files (.txt, .md, .log, .py, .html, .xml, .rst)
 
-Text files are converted to professionally styled PDFs and processed with
+Text files are parsed with Docling, rendered to PDFs, and processed with
 multimodal support:
 
 ```python
-# Extract from a markdown file (converted to styled PDF)
+# Extract from a markdown file
 result = extractor.extract(
     data="README.md",
     query="extract installation instructions and requirements"
 )
 
-# Extract from log files (converted to PDF with monospace formatting)
+# Extract from log files
 result = extractor.extract(
     data="system.log",
     query="extract error events and timestamps"
 )
 
-# Extract from code files (converted to PDF with syntax highlighting)
+# Extract from code files
 result = extractor.extract(
     data="script.py",
     query="extract function names and their purposes"
@@ -134,10 +118,10 @@ result = extractor.extract(
 
 ### PDF Documents (.pdf)
 
-PDF documents are processed directly with instructor's multimodal support:
+PDF documents use the same Docling -> HTML -> PDF multimodal pipeline:
 
 ```python
-# Extract from PDF (direct multimodal processing - no conversion needed)
+# Extract from PDF
 result = extractor.extract(
     data="contract.pdf",
     query="extract parties, dates, and payment terms"
@@ -152,10 +136,10 @@ result = extractor.extract(
 
 ### Word Documents (.docx, .doc)
 
-DOCX files use the advanced docling → markdown → PDF conversion pipeline:
+DOCX files use the Docling → HTML → PDF conversion pipeline:
 
 ```python
-# Extract from DOCX (docling → markdown → styled PDF → multimodal)
+# Extract from DOCX (Docling → HTML → PDF → multimodal)
 result = extractor.extract(
     data="project_proposal.docx",
     query="extract project timeline, budget, and deliverables"
@@ -198,47 +182,12 @@ The default approach provides the best results for most use cases:
 result = extractor.extract(
     data="document.docx",
     query="extract key information"
-    # mode="multimodal_pdf" is default
-    # use_multimodal=True is default
-)
-```
-
-### Alternative Processing Modes
-
-For specific requirements or troubleshooting, alternative modes are available:
-
-#### Simple Text Processing
-
-Process files as plain text with basic chunking (fallback mode, not
-recommended):
-
-```python
-result = extractor.extract(
-    data="document.txt",
-    query="extract key information",
-    mode="simple_text",           # Override default
-    chunk_size=1500,             # Custom chunk size
-    chunk_overlap=300            # Custom overlap
-)
-```
-
-#### Simple PDF Processing
-
-Basic PDF text extraction without multimodal features:
-
-```python
-result = extractor.extract(
-    data="document.pdf",
-    query="extract key information",
-    mode="simple_pdf",           # Basic PDF text extraction
-    chunk_size=2000,
-    chunk_overlap=200
 )
 ```
 
 ### File Reading Options
 
-You can pass additional options for file processing:
+You can pass additional pandas options for structured files:
 
 ```python
 result = extractor.extract(
@@ -256,11 +205,7 @@ result = extractor.extract(
 
 | Parameter        | Type | Default          | Description                                                    |
 | ---------------- | ---- | ---------------- | -------------------------------------------------------------- |
-| `mode`           | str  | "multimodal_pdf" | Processing mode: "multimodal_pdf", "simple_text", "simple_pdf" |
-| `use_multimodal` | bool | True             | Enable multimodal processing (legacy parameter)                |
-| `chunk_size`     | int  | 1000             | Text chunk size (only for fallback simple modes)               |
-| `chunk_overlap`  | int  | 200              | Overlap between chunks (only for fallback simple modes)        |
-| `file_options`   | dict | {}               | Additional file reading options (encoding, separators, etc.)   |
+| `file_options`   | dict | {}               | Additional pandas options for structured file readers          |
 
 ## Supported File Formats
 
@@ -271,103 +216,32 @@ result = extractor.extract(
 | JSON    | .json                 | Direct pandas processing     | Structured data, no conversion |
 | Parquet | .parquet              | Direct pandas processing     | Structured data, no conversion |
 | Feather | .feather              | Direct pandas processing     | Structured data, no conversion |
-| Text    | .txt, .md, .log, etc. | Convert to PDF → Multimodal  | Unified PDF processing         |
-| PDF     | .pdf                  | Direct multimodal processing | Native instructor support      |
-| Word    | .docx, .doc           | Convert to PDF → Multimodal  | Via docling → markdown → PDF   |
+| Text    | .txt, .md, .log, etc. | Docling → HTML → PDF → Multimodal | Unified document pipeline      |
+| PDF     | .pdf                  | Docling → HTML → PDF → Multimodal | Unified document pipeline      |
+| Word    | .docx, .doc           | Docling → HTML → PDF → Multimodal | Unified document pipeline      |
 
 ## Conversion Pipeline Details
 
-The library uses sophisticated conversion pipelines optimized for different
-document types:
+The library uses one conversion pipeline for document-like inputs:
 
-### Text Files → PDF Pipeline
+### Document Files → PDF Pipeline
 
 <details>
-<summary>View Text Files to PDF Pipeline Diagram</summary>
+<summary>View Document to PDF Pipeline Diagram</summary>
 
 ```mermaid
 graph LR
-    A[Text File] --> B[Read Content]
-    B --> C[Apply Markdown Processing]
-    C --> D[Generate HTML with CSS]
-    D --> E[WeasyPrint PDF Generation]
-    E --> F[Instructor Multimodal Processing]
+    A[Document File] --> B[Docling Conversion]
+    B --> C[Docling HTML Export]
+    C --> D[WeasyPrint PDF Generation]
+    D --> E[Instructor Multimodal Processing]
 ```
 
 </details>
 
-**Supported Extensions**: `.txt`, `.md`, `.py`, `.html`, `.xml`, `.log`, `.rst`
-
-1. **Content Reading**: Direct file reading with UTF-8 encoding
-2. **Markdown Processing**: Enhanced markdown conversion with syntax
-   highlighting
-3. **Styled PDF Generation**: Professional PDF with appropriate fonts and
-   formatting
-4. **Multimodal Processing**: Instructor's vision-enabled extraction
-
-### DOCX Files → PDF Pipeline
-
-<details>
-<summary>View DOCX Files to PDF Pipeline Diagram</summary>
-
-```mermaid
-graph LR
-    A[DOCX File] --> B[Docling Conversion]
-    B --> C[Structured Markdown]
-    C --> D[Enhanced HTML Generation]
-    D --> E[WeasyPrint PDF Creation]
-    E --> F[Instructor Multimodal Processing]
-```
-
-</details>
-
-**Supported Extensions**: `.docx`, `.doc`
-
-1. **Docling Conversion**: Advanced document structure analysis
-2. **Markdown Export**: Preserves tables, formatting, and structure
-3. **Enhanced HTML**: Professional styling with proper typography
-4. **PDF Generation**: High-quality PDF with maintained layout
-5. **Multimodal Processing**: Full context extraction
-
-### PDF Files → Direct Processing
-
-<details>
-<summary>View PDF Files to Direct Processing Diagram</summary>
-
-```mermaid
-graph LR
-    A[PDF File] --> B[Instructor Multimodal Processing]
-    B --> C[Structured Output]
-```
-
-</details>
-
-**Supported Extensions**: `.pdf`
-
-- **Direct Processing**: No conversion required
-- **Native Support**: Full instructor multimodal capabilities
-- **Optimal Performance**: No preprocessing overhead
-
-### Fallback Text Processing
-
-When PDF conversion fails or is disabled:
-
-<details>
-<summary>View Fallback Text Processing Diagram</summary>
-
-```mermaid
-graph LR
-    A[Any File] --> B[Text Extraction]
-    B --> C[Chunking Strategy]
-    C --> D[Text-based Processing]
-    D --> E[Structured Output]
-```
-
-</details>
-
-1. **Text Extraction**: Format-specific text extraction
-2. **Smart Chunking**: Overlap-based chunking with context preservation
-3. **Text Processing**: Traditional text-based extraction
+1. **Docling Conversion**: Document structure analysis and normalized HTML export
+2. **PDF Generation**: WeasyPrint renders the HTML into a temporary PDF
+3. **Multimodal Processing**: Instructor's vision-enabled extraction reads the PDF
 
 ## Best Practices
 
@@ -375,8 +249,8 @@ graph LR
 
 1. **Use Default Settings**: The multimodal PDF approach provides superior
    extraction quality compared to text-based methods
-2. **Install Complete Dependencies**: Use `pip install structx[docs]` for full
-   functionality
+2. **Install structx normally**: `pip install structx` includes the document
+   pipeline
 3. **Craft Specific Queries**: Take advantage of preserved document context and
    layout information
 4. **Trust the Pipeline**: The conversion process is optimized for extraction
@@ -384,40 +258,24 @@ graph LR
 
 ### Document-Specific Recommendations
 
-#### PDF Documents
+#### Document Files
 
-- **Direct Processing**: PDFs get the best results as no conversion is needed
-- **Complex Layouts**: Tables, charts, and multi-column layouts are handled
-  natively
-- **Large Files**: Multimodal processing handles large PDFs without chunking
+- **Unified Parsing**: PDFs, text files, Word documents, and other document-like
+  inputs are parsed by Docling
+- **Structure Preservation**: Tables, headings, and formatting are normalized
+  through Docling HTML
+- **Full Context**: Multimodal processing handles converted PDFs without chunking
   issues
-
-#### Text Files
-
-- **Markdown Advantage**: Markdown files get enhanced formatting in the PDF
-  conversion
-- **Code Files**: Syntax highlighting is preserved in the converted PDF
-- **Log Files**: Monospace formatting aids in structured data extraction
-
-#### DOCX Files
-
-- **Structure Preservation**: Tables, headings, and formatting are maintained
-  through docling
-- **Complex Documents**: Multi-section documents with varied formatting work
-  well
-- **Template Documents**: Forms and structured documents extract reliably
 
 ### Advanced Optimization Techniques
 
 #### Memory Management
 
 ```python
-# For very large documents, consider processing in smaller sections
-# or using simple modes if memory is constrained
+# For very large documents, consider processing smaller source files.
 result = extractor.extract(
     data="huge_document.pdf",
     query="extract specific section data",
-    # Consider simple_pdf mode for memory-constrained environments
 )
 ```
 
@@ -531,47 +389,34 @@ result = extractor.extract(
 1. **PDF Conversion Failures**
 
    ```python
-   # If conversion fails, the library automatically falls back to simple text
-   # You can also force simple text mode:
+   # Install complete document processing support and rerun conversion.
    result = extractor.extract(
        data="problematic_document.docx",
        query="extract information",
-       mode="simple_text"  # Skip PDF conversion
    )
    ```
 
 2. **Missing Dependencies**
 
    ```bash
-   # Install complete document processing support
-    pip install structx[docs]
-
-   # Or install specific components
-   pip install weasyprint markdown docling PyPDF2
+   pip install structx
    ```
 
 3. **Memory Issues with Large Documents**
 
    ```python
-   # Use simple processing for very large files
+   # Split very large source documents before extraction.
    result = extractor.extract(
        data="large_document.pdf",
        query="extract key information",
-       mode="simple_pdf",     # Reduce memory usage
-       chunk_size=1500,       # Smaller chunks
-       chunk_overlap=150      # Reduced overlap
    )
    ```
 
 4. **DOCX Processing Issues**
 
    ```python
-   # If docling conversion fails, fallback is automatic
-   # You can check what processing method was used:
-
-   # Check the DataFrame structure after reading
+   # DOCX files use the same Docling conversion path as other documents.
    df = extractor.extract(data="document.docx", query="test")
-   print(df.columns)  # Will show processing method used
    ```
 
 #### Debug Mode

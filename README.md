@@ -18,7 +18,7 @@ The PyPI distribution has been renamed from `structx-llm` to `structx`
 (September 2025).
 
 - Imports are unchanged: continue using `import structx`
-- Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+- Document processing is included in the core `structx` package
 - Please update your environments and requirement files to use the new name
 
 Upgrade commands:
@@ -66,41 +66,15 @@ with `structx`.
 ## Installation
 
 ```bash
-# Core package with basic extraction capabilities
 pip install structx
 ```
 
-### 📄 Enhanced Document Processing (Recommended)
+### 🔧 What The Package Provides
 
-For the best experience with all document types including advanced multimodal
-PDF processing:
-
-```bash
-# Complete document processing support
-pip install structx[docs]
-
-# Individual components
-pip install structx[pdf]   # PDF processing with multimodal support
-pip install structx[docx]  # Advanced DOCX conversion via docling
-```
-
-### 🔧 What Each Extra Provides
-
-- **`[docs]`**: Complete multimodal document processing pipeline
-  - PDF conversion from any document type
-  - Instructor multimodal vision support
-  - Advanced DOCX processing via docling
-  - Enhanced extraction quality
-- **`[pdf]`**: PDF-specific processing
-
-  - Multimodal PDF support via instructor
-  - PDF generation capabilities
-  - Basic PDF text extraction fallback
-
-- **`[docx]`**: Advanced DOCX support
-  - Document conversion via docling
-  - Structure preservation
-  - Markdown-based processing pipeline
+- Docling document parsing
+- WeasyPrint PDF rendering
+- Instructor multimodal vision support
+- Structured readers for CSV, Excel, JSON, Parquet, and Feather
 
 ## Quick Start
 
@@ -132,15 +106,15 @@ print(result.data[0].model_dump_json(indent=2))
 ### 📄 Document Processing with Multimodal Support
 
 ```python
-# Process a PDF invoice directly with vision capabilities
+# Process a PDF invoice through the document multimodal pipeline
 result = extractor.extract(
-    data="scripts/example_input/S0305SampleInvoice.pdf",      # Direct multimodal processing
+    data="scripts/example_input/S0305SampleInvoice.pdf",
     query="extract the invoice number, total amount, and line items"
 )
 
 # Convert a DOCX contract and process with multimodal support
 result = extractor.extract(
-    data="scripts/example_input/free-consultancy-agreement.docx", # Auto-converted to PDF -> multimodal
+    data="scripts/example_input/free-consultancy-agreement.docx",
     query="extract parties, effective date, and payment terms"
 )
 ```
@@ -203,16 +177,15 @@ real-world use cases,
 
 | Format   | Extensions                                    | Processing Method                     | Quality    |
 | -------- | --------------------------------------------- | ------------------------------------- | ---------- |
-| **PDF**  | `.pdf`                                        | Direct multimodal processing          | ⭐⭐⭐⭐⭐ |
-| **Word** | `.docx`, `.doc`                               | Docling → Markdown → PDF → Multimodal | ⭐⭐⭐⭐⭐ |
-| **Text** | `.txt`, `.md`, `.py`, `.log`, `.xml`, `.html` | Styled PDF → Multimodal               | ⭐⭐⭐⭐   |
+| **PDF**  | `.pdf`                                        | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐⭐ |
+| **Word** | `.docx`, `.doc`                               | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐⭐ |
+| **Text** | `.txt`, `.md`, `.py`, `.log`, `.xml`, `.html` | Docling → HTML → PDF → Multimodal     | ⭐⭐⭐⭐   |
 
-### 🔄 Processing Modes
+### 🔄 Processing Pipeline
 
-- **Multimodal PDF** (default): Best quality, preserves layout and context
-- **Simple Text**: Fallback mode with chunking for memory-constrained
-  environments
-- **Simple PDF**: Basic PDF text extraction without vision capabilities
+- **Docling parsing**: Reads document-like inputs into a structured document model
+- **WeasyPrint rendering**: Converts Docling HTML to a temporary PDF
+- **Multimodal extraction**: Sends the rendered PDF to instructor's multimodal API
 
 ## Contributing
 

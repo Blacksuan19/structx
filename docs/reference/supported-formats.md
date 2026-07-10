@@ -19,11 +19,11 @@ These formats are processed directly as structured data without conversion:
 
 These formats use the advanced multimodal PDF processing pipeline:
 
-| Format | Extension                               | Processing Method                     | Dependencies          |
-| ------ | --------------------------------------- | ------------------------------------- | --------------------- |
-| PDF    | .pdf                                    | Direct multimodal processing          | Built-in (instructor) |
-| Word   | .docx, .doc                             | Docling → Markdown → PDF → Multimodal | `structx[docs]`       |
-| Text   | .txt, .md, .py, .html, .xml, .log, .rst | Markdown → PDF → Multimodal           | `structx[docs]`       |
+| Format | Extension                               | Processing Method                  | Dependencies |
+| ------ | --------------------------------------- | ---------------------------------- | ------------ |
+| PDF    | .pdf                                    | Docling → HTML → PDF → Multimodal  | `structx`    |
+| Word   | .docx, .doc                             | Docling → HTML → PDF → Multimodal  | `structx`    |
+| Text   | .txt, .md, .py, .html, .xml, .log, .rst | Docling → HTML → PDF → Multimodal  | `structx`    |
 
 ### Advanced Processing Features
 
@@ -31,7 +31,6 @@ These formats use the advanced multimodal PDF processing pipeline:
 - **Intelligent Conversion**: Automatic document-to-PDF conversion with styling
 - **Structure Preservation**: Maintains tables, formatting, and layout
 - **Context Awareness**: Full document context without chunking limitations
-- **Fallback Support**: Automatic fallback to text processing if needed
 
 ## Processing Examples
 
@@ -61,61 +60,34 @@ result = extractor.extract(
 ### Unstructured Documents (Multimodal Processing)
 
 ```python
-# PDF documents - direct multimodal processing
+# PDF documents - normalized through the Docling pipeline
 result = extractor.extract(
     data="contract.pdf",
     query="extract parties, dates, and payment terms"
 )
 
-# DOCX documents - converted via docling pipeline
+# DOCX documents - converted via the Docling pipeline
 result = extractor.extract(
     data="project_proposal.docx",
     query="extract deliverables, timeline, and budget"
 )
 
-# Text files - converted to styled PDF
+# Text files - converted via the Docling pipeline
 result = extractor.extract(
     data="meeting_notes.txt",
     query="extract action items and responsible parties"
 )
 
-# Markdown files - enhanced PDF conversion
+# Markdown files - converted via the Docling pipeline
 result = extractor.extract(
     data="README.md",
     query="extract installation steps and requirements"
 )
 
-# Code files - syntax highlighted PDF
+# Code files - converted via the Docling pipeline
 result = extractor.extract(
     data="main.py",
     query="extract function definitions and their purposes"
-)
-```
-
-### Processing Mode Options
-
-```python
-# Default: multimodal PDF processing (recommended)
-result = extractor.extract(
-    data="document.docx",
-    query="extract information"
-    # mode="multimodal_pdf" is default
-)
-
-# Alternative: simple text processing
-result = extractor.extract(
-    data="document.txt",
-    query="extract information",
-    mode="simple_text",
-    chunk_size=1500,
-    chunk_overlap=200
-)
-
-# Alternative: simple PDF processing
-result = extractor.extract(
-    data="document.pdf",
-    query="extract information",
-    mode="simple_pdf"
 )
 ```
 
@@ -199,18 +171,6 @@ result = extractor.extract(
         "sheet_name": "Sheet2",  # Specific sheet
         "skiprows": 3            # Skip header rows
     }
-)
-```
-
-### Document Processing Options
-
-```python
-result = extractor.extract(
-    data="document.pdf",
-    query="extract key information",
-    mode="multimodal_pdf",    # Default mode (recommended)
-    chunk_size=2000,          # Only used in fallback simple modes
-    chunk_overlap=200         # Only used in fallback simple modes
 )
 ```
 

@@ -38,7 +38,7 @@ with powerful capabilities.
     The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
 
     - Imports are unchanged: `import structx`
-    - Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+    - Document processing is included in the core `structx` package
     - To upgrade:
 
         ```bash
@@ -113,24 +113,6 @@ graph TB
 
 ```bash
 pip install structx
-```
-
-For PDF support:
-
-```bash
-pip install structx[pdf]
-```
-
-For DOCX support:
-
-```bash
-pip install structx[docx]
-```
-
-For all document formats:
-
-```bash
-pip install structx[docs]
 ```
 
 ## API Requirements

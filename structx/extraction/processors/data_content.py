@@ -91,61 +91,24 @@ class ContentAnalyzer:
             if idx >= 3:  # Limit to first 3 files for sampling
                 break
 
-            try:
-                # Check if this is a file-based row
-                if "pdf_path" in row and pd.notna(row["pdf_path"]):
-                    # For PDF files, extract text sample using PyPDF2
-                    try:
-                        import PyPDF2
-
-                        with open(row["pdf_path"], "rb") as file:
-                            reader = PyPDF2.PdfReader(file)
-                            text = ""
-                            # Extract from first few pages
-                            for page_num in range(min(3, len(reader.pages))):
-                                text += reader.pages[page_num].extract_text()
-                                if len(text) > max_chars:
-                                    break
-                            samples.append(text[:max_chars])
-                    except Exception as e:
-                        logger.warning(
-                            f"Could not extract PDF sample from {row['pdf_path']}: {e}"
-                        )
-                        # Fallback: use filename and basic info
-                        samples.append(f"PDF file: {Path(row['pdf_path']).name}")
-
-                elif "source" in row and pd.notna(row["source"]):
-                    # For other file types, try to read content
-                    source_path = Path(row["source"])
-                    if source_path.exists():
-                        try:
-                            if source_path.suffix.lower() in [".txt", ".md"]:
-                                with open(source_path, "r", encoding="utf-8") as f:
-                                    content = f.read()[:max_chars]
-                                    samples.append(content)
-                            else:
-                                # For other file types, use filename
-                                samples.append(f"File: {source_path.name}")
-                        except Exception as e:
-                            logger.warning(
-                                f"Could not read sample from {source_path}: {e}"
-                            )
-                            samples.append(f"File: {source_path.name}")
-                else:
-                    # This is likely traditional tabular data
-                    # Convert row data to string representation
-                    row_text = " | ".join(
-                        [f"{col}: {val}" for col, val in row.items() if pd.notna(val)]
+            # Check if this is a file-based row
+            if "source" in row and pd.notna(row["source"]):
+                source_path = Path(row["source"])
+                if source_path.exists():
+                    samples.append(
+                        FileReader.extract_text_sample(source_path, max_chars)
                     )
-                    samples.append(row_text[:max_chars])
-
-            except Exception as e:
-                logger.warning(f"Error extracting sample from row {idx}: {e}")
-                continue
-
-        if not samples:
-            # Fallback: return a generic sample based on available columns
-            return f"Data with columns: {', '.join(df.columns.tolist())}"
+            elif "pdf_path" in row and pd.notna(row["pdf_path"]):
+                samples.append(
+                    FileReader.extract_text_sample(row["pdf_path"], max_chars)
+                )
+            else:
+                # This is likely traditional tabular data
+                # Convert row data to string representation
+                row_text = " | ".join(
+                    [f"{col}: {val}" for col, val in row.items() if pd.notna(val)]
+                )
+                samples.append(row_text[:max_chars])
 
         return "\n\n---SAMPLE SEPARATOR---\n\n".join(samples)
 
@@ -255,7 +218,7 @@ class DataProcessor:
                 temp_file.write(data)
                 temp_path = temp_file.name
 
-            df = FileReader.read_file(temp_path, mode="multimodal_pdf", **kwargs)
+            df = FileReader.read_file(temp_path, **kwargs)
             df.loc[:, "source"] = temp_path  # Set source to temp file path
 
         else:

@@ -123,7 +123,7 @@ class ExtractionEngine:
         except ImportError:
             raise ImportError(
                 "instructor multimodal support is required for PDF processing. "
-                "Install it with: pip install instructor[multimodal]"
+                "Install structx with: pip install structx"
             )
 
         # For multimodal PDF, we need a single wrapper model, not a container with multiple items

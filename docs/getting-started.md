@@ -9,7 +9,7 @@ extraction.
     The PyPI distribution has been renamed from `structx-llm` to `structx` (September 2025).
 
     - Imports are unchanged: `import structx`
-    - Extras are unchanged: `structx[docs]`, `structx[pdf]`, `structx[docx]`
+    - Document processing is included in the core `structx` package
     - To upgrade:
 
         ```bash
@@ -19,28 +19,17 @@ extraction.
 
     If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
 
-Install the core package:
+Install the package:
 
 ```bash
 pip install structx
 ```
 
-For complete document processing capabilities (recommended):
-
-```bash
-# Install with full document support including PDF conversion
-pip install structx[docs]
-
-# Individual format support
-pip install structx[pdf]   # PDF processing and conversion
-pip install structx[docx]  # Advanced DOCX support
-```
-
 ### What You Get
 
-- **Core Package**: Basic structured data extraction from CSV, JSON, Excel
-- **[docs] Extra**: Advanced unstructured document processing with multimodal
-  PDF support
+- **Structured Data**: CSV, JSON, Excel, Parquet, and Feather through pandas
+- **Documents**: Advanced unstructured document processing with multimodal PDF
+  support
   - Automatic document-to-PDF conversion
   - Instructor's multimodal vision capabilities
   - Enhanced extraction quality for all document types

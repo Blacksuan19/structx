@@ -37,6 +37,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "docling",
     "instructor",
     "litellm",
     "loguru",
@@ -47,46 +48,26 @@ dependencies = [
     "tabulate>=0.9.0", # required for pandas .to_markdown()
     "tenacity",
     "tqdm",
+    "weasyprint",
 ]
 
 [project.optional-dependencies]
 dev = ["black", "bumpver", "pip-tools", "wheel"]
-pdf = [
-    "pypdf2",                 # PDF text extraction fallback
-    "instructor[multimodal]", # Multimodal PDF processing
-    "weasyprint",             # PDF generation from HTML/markdown
-    "markdown",               # Markdown processing for conversion
-]
-docx = [
-    "python-docx", # Basic DOCX support 
-    "docling",     # Advanced DOCX conversion via docling
-    "markdown",    # Markdown processing
-    "weasyprint",  # PDF generation
-]
-docs = [
-    "pypdf2",                 # PDF text extraction
-    "python-docx",            # DOCX support
-    "instructor[multimodal]", # Multimodal processing
-    "docling",                # Advanced document conversion
-    "weasyprint",             # PDF generation from HTML/markdown
-    "markdown",               # Markdown processing and extensions
-]
-# Legacy support - kept for backward compatibility
-unstructured = ["unstructured[all-docs]"]
-docling = ["docling", "markdown", "weasyprint"]
-advanced = [
-    "pypdf2",
-    "python-docx",
-    "instructor[multimodal]",
-    "docling",
-    "weasyprint",
-    "markdown",
-    "unstructured[all-docs]",
-]
+
+# Backward-compatible aliases. Document processing is part of the core install.
+pdf = []
+text = []
+docx = []
+documents = []
+docs = []
+docling = []
+advanced = []
+
+# Documentation site tooling. This is separate from the legacy [docs] document
+# processing extra above.
 mkdocs = [
     "mkdocs",
     "mkdocs-material",
-    "mkdocstrings[markdown]",
     "mkdocstrings[python]",
     "mkdocs-git-revision-date-localized-plugin",
     "mkdocs-material[imaging]",
