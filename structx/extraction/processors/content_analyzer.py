@@ -78,6 +78,9 @@ class ContentAnalyzer:
         Returns:
             String containing sample content for schema generation
         """
+        if "content_sample" in df.attrs:
+            return str(df.attrs["content_sample"] or "")[:max_chars]
+
         samples = []
 
         for idx, row in df.iterrows():

@@ -27,7 +27,9 @@ def test_detect_content_type_for_file_sources(sample_docx_path, tmp_path):
     assert "notes.txt" in context
 
 
-def test_extract_content_sample_for_schema_uses_file_reader(monkeypatch, sample_pdf_path):
+def test_extract_content_sample_for_schema_uses_file_reader(
+    monkeypatch, sample_pdf_path
+):
     def fake_extract_text_sample(path, max_chars=2000):
         assert path == sample_pdf_path
         assert max_chars == 7
@@ -36,7 +38,10 @@ def test_extract_content_sample_for_schema_uses_file_reader(monkeypatch, sample_
     monkeypatch.setattr(FileReader, "extract_text_sample", fake_extract_text_sample)
     df = pd.DataFrame({"source": [str(sample_pdf_path)]})
 
-    assert ContentAnalyzer.extract_content_sample_for_schema(df, max_chars=7) == "sample text"
+    assert (
+        ContentAnalyzer.extract_content_sample_for_schema(df, max_chars=7)
+        == "sample text"
+    )
 
 
 def test_extract_content_sample_for_schema_handles_tabular_rows():
@@ -45,6 +50,13 @@ def test_extract_content_sample_for_schema_handles_tabular_rows():
     sample = ContentAnalyzer.extract_content_sample_for_schema(df)
 
     assert sample == "id: 1 | message: hello"
+
+
+def test_extract_content_sample_for_schema_uses_cached_conversion():
+    df = pd.DataFrame({"source": ["document.docx"]})
+    df.attrs["content_sample"] = "already parsed"
+
+    assert ContentAnalyzer.extract_content_sample_for_schema(df) == "already parsed"
 
 
 def test_extract_content_sample_for_schema_limits_to_three_rows():

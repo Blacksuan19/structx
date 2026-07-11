@@ -28,6 +28,7 @@ def test_sample_docx_converts_to_real_pdf(sample_docx_path):
     assert df.loc[0, "source"] == str(sample_docx_path)
     assert bool(df.loc[0, "multimodal"]) is True
     assert df.loc[0, "file_type"] == "pdf"
+    assert "consultancy agreement" in df.attrs["content_sample"].lower()
     assert_pdf_output(pdf_path)
 
 

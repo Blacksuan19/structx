@@ -85,6 +85,10 @@ class FileReader:
             file_path = Path(file_path)
             if not file_path.exists():
                 raise FileError(f"File not found: {file_path}")
+            if not file_path.is_file():
+                raise FileError(f"Path is not a file: {file_path}")
+            if file_path.stat().st_size == 0:
+                raise FileError(f"File is empty: {file_path}")
 
             file_extension = file_path.suffix.lower()
 
@@ -95,6 +99,8 @@ class FileReader:
 
             # Existing PDFs can be sent directly to multimodal models.
             if file_extension in FileReader.PDF_EXTENSIONS:
+                if b"%PDF-" not in file_path.read_bytes()[:1024]:
+                    raise FileError(f"Invalid PDF file: {file_path}")
                 return pd.DataFrame(
                     {
                         "pdf_path": [str(file_path)],
@@ -106,8 +112,8 @@ class FileReader:
 
             # Convert document-like files to PDF for multimodal processing.
             if file_extension in FileReader.DOCLING_EXTENSIONS:
-                pdf_path = FileReader._convert_to_pdf(file_path)
-                return pd.DataFrame(
+                pdf_path, content_sample = FileReader._convert_document(file_path)
+                df = pd.DataFrame(
                     {
                         "pdf_path": [str(pdf_path)],
                         "source": [str(file_path)],
@@ -115,9 +121,13 @@ class FileReader:
                         "file_type": ["pdf"],
                     }
                 )
+                df.attrs["content_sample"] = content_sample
+                return df
 
             raise FileError(f"Unsupported file type: {file_extension}")
 
+        except FileError:
+            raise
         except Exception as e:
             raise FileError(f"Error reading file {file_path}: {str(e)}")
 
@@ -145,12 +155,18 @@ class FileReader:
 
         Returns the path to the generated PDF file for use with instructor's multimodal support.
         """
+        return FileReader._convert_document(file_path)[0]
+
+    @staticmethod
+    def _convert_document(file_path: Path) -> tuple[str, str]:
+        """Convert a document once and return its PDF path and text sample."""
         try:
             import weasyprint
 
-            converter = FileReader._create_document_converter()
-            result = converter.convert(str(file_path))
+            result = FileReader._create_document_converter().convert(str(file_path))
             html_content = result.document.export_to_html()
+            document_text = result.document.export_to_text()
+            content_sample = document_text[:2000]
 
             with tempfile.NamedTemporaryFile(
                 delete=False, suffix=".pdf", prefix=f"{file_path.stem}_"
@@ -161,7 +177,16 @@ class FileReader:
                 string=html_content,
                 base_url=str(file_path.parent),
             ).write_pdf(pdf_path)
-            return pdf_path
+            rendered_pdf = Path(pdf_path)
+            if (
+                not rendered_pdf.is_file()
+                or rendered_pdf.stat().st_size == 0
+                or not rendered_pdf.read_bytes().startswith(b"%PDF")
+            ):
+                raise FileError(
+                    f"Document conversion produced an invalid PDF: {file_path}"
+                )
+            return pdf_path, content_sample
 
         except ImportError as e:
             raise FileError(
@@ -169,6 +194,8 @@ class FileReader:
                 "Install them with: pip install 'structx[docs]'"
             ) from e
 
+        except FileError:
+            raise
         except Exception as e:
             raise FileError(f"Error converting {file_path} to PDF: {str(e)}")
 

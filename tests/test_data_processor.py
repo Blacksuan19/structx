@@ -1,7 +1,10 @@
 import asyncio
+from pathlib import Path
 
 import pandas as pd
+import pytest
 
+from structx.core.exceptions import ExtractionError
 from structx.extraction.processors.data_processor import DataProcessor
 from structx.utils.file_reader import FileReader
 
@@ -67,6 +70,25 @@ def test_prepare_data_writes_raw_text_to_temp_file(monkeypatch):
 
     assert captured["content"] == "raw incident text"
     assert result.loc[0, "source"] == captured["path"]
+
+
+@pytest.mark.parametrize("data", ["", "   ", [], pd.DataFrame()])
+def test_prepare_data_rejects_empty_input(data):
+    with pytest.raises(ExtractionError, match="Input .* is empty"):
+        DataProcessor().prepare_data(data)
+
+
+@pytest.mark.parametrize(
+    "missing_path",
+    [
+        "/tmp/structx-missing-document.docx",
+        "/tmp/structx-missing.unknown",
+        Path("/tmp/structx-missing.pdf"),
+    ],
+)
+def test_prepare_data_rejects_missing_file_paths(missing_path):
+    with pytest.raises(ExtractionError, match="File not found"):
+        DataProcessor().prepare_data(missing_path)
 
 
 def test_process_in_batches_passes_tabular_rows_as_markdown():

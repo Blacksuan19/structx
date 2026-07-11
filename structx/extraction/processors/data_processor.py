@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Union
 import pandas as pd
 from tqdm import tqdm
 
-from structx.core.exceptions import ExtractionError
+from structx.core.exceptions import ExtractionError, FileError
 from structx.utils.file_reader import FileReader
 from structx.utils.helpers import handle_errors
 
@@ -50,29 +50,68 @@ class DataProcessor:
             df = data
         elif isinstance(data, list) and all(isinstance(item, dict) for item in data):
             df = pd.DataFrame(data)
-        elif isinstance(data, (str, Path)) and Path(str(data)).exists():
+        elif isinstance(data, Path):
+            if not data.exists():
+                raise FileError(f"File not found: {data}")
             df = FileReader.read_file(data, **kwargs)
         elif isinstance(data, str):
-            # Raw text processing using unified multimodal PDF pipeline
-            import tempfile
+            if not data.strip():
+                raise ValueError("Input text is empty")
 
-            # Create a temporary text file
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False, encoding="utf-8"
-            ) as temp_file:
-                temp_file.write(data)
-                temp_path = temp_file.name
+            candidate_path = Path(data)
+            try:
+                path_exists = candidate_path.exists()
+            except OSError:
+                path_exists = False
 
-            df = FileReader.read_file(temp_path, **kwargs)
-            df.loc[:, "source"] = temp_path  # Set source to temp file path
-
+            if path_exists:
+                df = FileReader.read_file(candidate_path, **kwargs)
+            elif self._looks_like_file_path(data, candidate_path):
+                raise FileError(f"File not found: {candidate_path}")
+            else:
+                df = self._prepare_raw_text(data, **kwargs)
         else:
             raise ValueError(f"Unsupported data type: {type(data)}")
+
+        if df.empty:
+            raise ValueError("Input data is empty")
 
         # Ensure text column exists
         if "text" not in df.columns and len(df.columns) == 1:
             df["text"] = df[df.columns[0]]
 
+        return df
+
+    @staticmethod
+    def _looks_like_file_path(value: str, path: Path) -> bool:
+        supported_extensions = {
+            *FileReader.STRUCTURED_EXTENSIONS,
+            *FileReader.PDF_EXTENSIONS,
+            *FileReader.DOCLING_EXTENSIONS,
+        }
+        windows_absolute = (
+            len(value) >= 3 and value[1] == ":" and value[2] in {"/", "\\"}
+        )
+        return (
+            path.suffix.lower() in supported_extensions
+            or path.is_absolute()
+            or value.startswith(("./", "../", "~/"))
+            or windows_absolute
+        )
+
+    @staticmethod
+    def _prepare_raw_text(data: str, **kwargs: Any) -> pd.DataFrame:
+        """Convert non-empty raw text through the document pipeline."""
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as temp_file:
+            temp_file.write(data)
+            temp_path = temp_file.name
+
+        df = FileReader.read_file(temp_path, **kwargs)
+        df.loc[:, "source"] = temp_path
         return df
 
     def process_batch(

@@ -2,7 +2,9 @@ import sys
 import types
 
 import pandas as pd
+import pytest
 
+from structx.core.exceptions import FileError
 from structx.utils.file_reader import FileReader
 
 
@@ -63,7 +65,9 @@ def install_fake_document_modules(monkeypatch, text="sample text", html="<h1>Doc
 
     monkeypatch.setitem(sys.modules, "docling", docling_module)
     monkeypatch.setitem(sys.modules, "docling.datamodel", datamodel_module)
-    monkeypatch.setitem(sys.modules, "docling.datamodel.base_models", base_models_module)
+    monkeypatch.setitem(
+        sys.modules, "docling.datamodel.base_models", base_models_module
+    )
     monkeypatch.setitem(
         sys.modules,
         "docling.datamodel.pipeline_options",
@@ -97,9 +101,29 @@ def test_read_document_file_converts_to_multimodal_pdf(monkeypatch, sample_docx_
     assert calls["html"] == "<h1>Doc</h1>"
     assert calls["base_url"] == str(sample_docx_path.parent)
     assert calls["pdf_path"] == df.loc[0, "pdf_path"]
+    assert df.attrs["content_sample"] == "sample text"
     format_options = calls["converter_kwargs"]["format_options"]
     assert format_options["image"].pipeline_options.do_ocr is False
     assert format_options["image"].pipeline_options.do_table_structure is False
+
+
+def test_empty_document_is_rejected_before_conversion(monkeypatch, tmp_path):
+    calls = install_fake_document_modules(monkeypatch)
+    empty_document = tmp_path / "empty.docx"
+    empty_document.touch()
+
+    with pytest.raises(FileError, match="File is empty"):
+        FileReader.read_file(empty_document)
+
+    assert "converted_path" not in calls
+
+
+def test_invalid_pdf_is_rejected(tmp_path):
+    invalid_pdf = tmp_path / "invalid.pdf"
+    invalid_pdf.write_text("not a pdf", encoding="utf-8")
+
+    with pytest.raises(FileError, match="Invalid PDF"):
+        FileReader.read_file(invalid_pdf)
 
 
 def test_read_sample_pdf_passes_existing_pdf_through(sample_pdf_path):
