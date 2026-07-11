@@ -4,6 +4,7 @@ Core extraction engine with different processing strategies.
 
 from typing import Any, Dict, List, Type, Union
 
+from instructor.processing.multimodal import PDF
 from loguru import logger
 from pydantic import BaseModel, Field, create_model
 
@@ -118,14 +119,6 @@ class ExtractionEngine:
         Returns:
             List of extracted model instances
         """
-        try:
-            from instructor.multimodal import PDF
-        except ImportError:
-            raise ImportError(
-                "instructor multimodal support is required for PDF processing. "
-                "Install structx with: pip install structx"
-            )
-
         # For multimodal PDF, we need a single wrapper model, not a container with multiple items
         # This is because instructor's multimodal support expects a single response, not multiple tool calls
         wrapper_name = f"{extraction_model.__name__}List"
