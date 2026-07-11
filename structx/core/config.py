@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Type
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -50,8 +50,8 @@ class ExtractionConfig(BaseSettings):
     prefix.
     """
 
-    planning: DictStrAny = Field(default_factory=dict)
-    extraction: DictStrAny = Field(default_factory=dict)
+    planning: StepConfig = Field(default_factory=StepConfig)
+    extraction: StepConfig = Field(default_factory=StepConfig)
 
     model_config = SettingsConfigDict(
         extra="ignore",
@@ -61,11 +61,6 @@ class ExtractionConfig(BaseSettings):
         env_file_encoding="utf-8",
         yaml_file=None,
     )
-
-    @field_validator("planning", "extraction", mode="before")
-    @classmethod
-    def validate_step(cls, value: Any) -> DictStrAny:
-        return StepConfig(**(value or {})).options()
 
     @classmethod
     def settings_customise_sources(
@@ -103,4 +98,4 @@ class ExtractionConfig(BaseSettings):
         """Return provider kwargs for ``planning`` or ``extraction``."""
         if step not in {"planning", "extraction"}:
             raise ConfigurationError(f"Unknown extraction step: {step}")
-        return StepConfig(**getattr(self, step)).options()
+        return getattr(self, step).options()

@@ -2,19 +2,17 @@
 Core extraction engine with different processing strategies.
 """
 
-from typing import Any, Dict, List, Type, Union
+from functools import lru_cache
+from typing import Any, Dict, List, Optional, Type
 
 from instructor.processing.multimodal import PDF
 from loguru import logger
 from pydantic import BaseModel, Field, create_model
 
-from structx.core.exceptions import ExtractionError
-from structx.core.models import ExtractionGuide, QueryRefinement
+from structx.core.input import PdfRow, RowPayload
 from structx.extraction.core.llm_core import LLMCore
-from structx.extraction.core.model_utils import ModelUtils
-from structx.utils.helpers import handle_errors
 from structx.utils.prompts import extraction_system_prompt, extraction_template
-from structx.utils.usage import ExtractionStep
+from structx.utils.usage import ExtractionStep, ExtractorUsage
 
 
 class ExtractionEngine:
@@ -31,34 +29,11 @@ class ExtractionEngine:
         """
         self.llm_core = llm_core
 
-    @handle_errors(error_message="Text extraction failed", error_type=ExtractionError)
-    def extract_with_model(
-        self,
-        text: str,
-        extraction_model: Type[BaseModel],
-        refined_query: QueryRefinement,
-        guide: ExtractionGuide,
-        is_custom_model: bool = False,
-    ) -> List[BaseModel]:
-        """
-        Extract data with enforced structure with retries and usage tracking.
-
-        Args:
-            text: Text to extract from
-            extraction_model: Pydantic model for extraction
-            refined_query: Refined query with details
-            guide: Extraction guide with patterns
-            is_custom_model: Whether this is a user-provided model
-
-        Returns:
-            List of extracted model instances
-        """
-        # Create a container model to wrap the list items
-        # this is necessary to be able to track token usage, when passing an iterable data model
-        # result._raw_response does not exist making usage calculations not possible
-        container_name = f"{extraction_model.__name__}Container"
-        container_model = create_model(
-            container_name,
+    @staticmethod
+    @lru_cache(maxsize=128)
+    def _container_model(extraction_model: Type[BaseModel]) -> Type[BaseModel]:
+        return create_model(
+            f"{extraction_model.__name__}Container",
             __base__=BaseModel,
             items=(
                 List[extraction_model],
@@ -66,45 +41,99 @@ class ExtractionEngine:
             ),
         )
 
-        # Get model context for custom models
-        extra_context = ""
-        if is_custom_model:
-            extra_context = ModelUtils.create_model_context(extraction_model, "text")
+    @classmethod
+    def _text_messages(
+        cls,
+        text: str,
+        extraction_model: Type[BaseModel],
+        instructions: str,
+    ) -> List[Dict[str, Any]]:
+        return [
+            {"role": "system", "content": extraction_system_prompt},
+            {
+                "role": "user",
+                "content": extraction_template.substitute(
+                    instructions=instructions,
+                    text=text,
+                ),
+            },
+        ]
 
-        # Use _perform_llm_completion with the container model
-        container = self.llm_core.complete_with_retry(
-            messages=[
-                {"role": "system", "content": extraction_system_prompt},
-                {
-                    "role": "user",
-                    "content": extraction_template.substitute(
-                        query=refined_query.refined_query,
-                        patterns=guide.structural_patterns,
-                        rules=(
-                            guide.relationship_rules + [extra_context]
-                            if extra_context
-                            else guide.relationship_rules
-                        ),
-                        text=text,
-                    ),
-                },
-            ],
+    @classmethod
+    def _pdf_messages(
+        cls,
+        pdf_path: str,
+        extraction_model: Type[BaseModel],
+        instructions: str,
+    ) -> List[Dict[str, Any]]:
+        content = [
+            f"Extract structured information from this PDF.\n\n{instructions}\n\n",
+            PDF.from_path(pdf_path),
+        ]
+        return [
+            {"role": "system", "content": extraction_system_prompt},
+            {"role": "user", "content": content},
+        ]
+
+    def extract_with_model(
+        self,
+        text: str,
+        extraction_model: Type[BaseModel],
+        instructions: str,
+        usage: Optional[ExtractorUsage] = None,
+    ) -> List[BaseModel]:
+        """
+        Extract data with enforced structure with retries and usage tracking.
+
+        Args:
+            text: Text to extract from
+            extraction_model: Pydantic model for extraction
+            instructions: Explicit extraction instructions
+
+        Returns:
+            List of extracted model instances
+        """
+        container_model = self._container_model(extraction_model)
+
+        container = self.llm_core.complete(
+            messages=self._text_messages(
+                text,
+                extraction_model,
+                instructions,
+            ),
             response_model=container_model,
-            config=self.llm_core.config.extraction,
             step=ExtractionStep.EXTRACTION,
+            usage=usage,
         )
 
         # Return just the items
         return container.items
 
-    @handle_errors(error_message="PDF extraction failed", error_type=ExtractionError)
+    async def extract_with_model_async(
+        self,
+        text: str,
+        extraction_model: Type[BaseModel],
+        instructions: str,
+        usage: Optional[ExtractorUsage] = None,
+    ) -> List[BaseModel]:
+        container = await self.llm_core.complete_async(
+            messages=self._text_messages(
+                text,
+                extraction_model,
+                instructions,
+            ),
+            response_model=self._container_model(extraction_model),
+            step=ExtractionStep.EXTRACTION,
+            usage=usage,
+        )
+        return container.items
+
     def extract_with_multimodal_pdf(
         self,
         pdf_path: str,
         extraction_model: Type[BaseModel],
-        refined_query: QueryRefinement,
-        guide: ExtractionGuide,
-        is_custom_model: bool = False,
+        instructions: str,
+        usage: Optional[ExtractorUsage] = None,
     ) -> List[BaseModel]:
         """
         Extract data from PDF using instructor's multimodal support.
@@ -112,68 +141,53 @@ class ExtractionEngine:
         Args:
             pdf_path: Path to PDF file
             extraction_model: Pydantic model for extraction
-            refined_query: Refined query with details
-            guide: Extraction guide with patterns
-            is_custom_model: Whether this is a user-provided model
+            instructions: Explicit extraction instructions
 
         Returns:
             List of extracted model instances
         """
-        # For multimodal PDF, we need a single wrapper model, not a container with multiple items
-        # This is because instructor's multimodal support expects a single response, not multiple tool calls
-        wrapper_name = f"{extraction_model.__name__}List"
-        wrapper_model = create_model(
-            wrapper_name,
-            __base__=BaseModel,
-            items=(
-                List[extraction_model],
-                Field(
-                    description=f"List of extracted {extraction_model.__name__} items from the document"
-                ),
-            ),
-        )
+        wrapper_model = self._container_model(extraction_model)
 
-        # Get model context for custom models
-        extra_context = ""
-        if is_custom_model:
-            extra_context = ModelUtils.create_model_context(
-                extraction_model, "document"
-            )
+        logger.debug(f"Extracting from PDF: {pdf_path}")
 
-        content = [
-            f"Extract structured information from this PDF document following these guidelines:\n\n"
-            f"Query: {refined_query.refined_query}\n"
-            f"Patterns: {guide.structural_patterns}\n"
-            f"Rules: {guide.relationship_rules + [extra_context] if extra_context else guide.relationship_rules}\n\n",
-            PDF.from_path(pdf_path),
-        ]
-
-        logger.info(
-            f"Extracting from PDF: {pdf_path} with query: {refined_query.refined_query}"
-        )
-
-        result = self.llm_core.complete_with_retry(
+        result = self.llm_core.complete(
             response_model=wrapper_model,
-            messages=[
-                {"role": "system", "content": extraction_system_prompt},
-                {
-                    "role": "user",
-                    "content": content,
-                },
-            ],
+            messages=self._pdf_messages(
+                pdf_path,
+                extraction_model,
+                instructions,
+            ),
             step=ExtractionStep.EXTRACTION,
-            config=self.llm_core.config.extraction,
+            usage=usage,
         )
-        logger.info(f"Completed extraction for PDF: {pdf_path}")
+        logger.debug(f"Completed extraction for PDF: {pdf_path}")
+        return result.items
+
+    async def extract_with_multimodal_pdf_async(
+        self,
+        pdf_path: str,
+        extraction_model: Type[BaseModel],
+        instructions: str,
+        usage: Optional[ExtractorUsage] = None,
+    ) -> List[BaseModel]:
+        result = await self.llm_core.complete_async(
+            response_model=self._container_model(extraction_model),
+            messages=self._pdf_messages(
+                pdf_path,
+                extraction_model,
+                instructions,
+            ),
+            step=ExtractionStep.EXTRACTION,
+            usage=usage,
+        )
         return result.items
 
     def extract_from_row_data(
         self,
-        row_data: Union[str, Dict[str, Any]],
+        row_data: RowPayload,
         extraction_model: Type[BaseModel],
-        refined_query: QueryRefinement,
-        guide: ExtractionGuide,
-        is_custom_model: bool = False,
+        instructions: str,
+        usage: Optional[ExtractorUsage] = None,
     ) -> List[BaseModel]:
         """
         Extract data from row data (either text or multimodal).
@@ -181,34 +195,45 @@ class ExtractionEngine:
         Args:
             row_data: Row data to extract from
             extraction_model: Pydantic model for extraction
-            refined_query: Refined query with details
-            guide: Extraction guide with patterns
-            is_custom_model: Whether this is a user-provided model
+            instructions: Explicit extraction instructions
 
         Returns:
             List of extracted model instances
         """
-        # Check if this is a multimodal PDF row
-        if (
-            isinstance(row_data, dict)
-            and row_data.get("multimodal")
-            and row_data.get("file_type") == "pdf"
-        ):
-            pdf_path = row_data.get("pdf_path")
+        if isinstance(row_data, PdfRow):
             return self.extract_with_multimodal_pdf(
-                pdf_path=pdf_path,
+                pdf_path=str(row_data.pdf_path),
                 extraction_model=extraction_model,
-                refined_query=refined_query,
-                guide=guide,
-                is_custom_model=is_custom_model,
+                instructions=instructions,
+                usage=usage,
             )
         else:
             # Handle regular text extraction
-            row_text = row_data if isinstance(row_data, str) else str(row_data)
             return self.extract_with_model(
-                text=row_text,
+                text=row_data,
                 extraction_model=extraction_model,
-                refined_query=refined_query,
-                guide=guide,
-                is_custom_model=is_custom_model,
+                instructions=instructions,
+                usage=usage,
             )
+
+    async def extract_from_row_data_async(
+        self,
+        row_data: RowPayload,
+        extraction_model: Type[BaseModel],
+        instructions: str,
+        usage: Optional[ExtractorUsage] = None,
+    ) -> List[BaseModel]:
+        """Asynchronously extract one independent row."""
+        if isinstance(row_data, PdfRow):
+            return await self.extract_with_multimodal_pdf_async(
+                pdf_path=str(row_data.pdf_path),
+                extraction_model=extraction_model,
+                instructions=instructions,
+                usage=usage,
+            )
+        return await self.extract_with_model_async(
+            text=row_data,
+            extraction_model=extraction_model,
+            instructions=instructions,
+            usage=usage,
+        )

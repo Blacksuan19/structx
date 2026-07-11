@@ -1,7 +1,15 @@
 from enum import Enum
+import threading
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    computed_field,
+    field_serializer,
+)
 
 
 class ExtractionStep(Enum):
@@ -40,26 +48,36 @@ class ExtractorUsage(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     steps: Dict[ExtractionStep, List[Any]] = Field(default_factory=dict)
+    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     @field_serializer("steps")
     def serialize_steps(
         self, steps: Dict[ExtractionStep, List[Any]]
     ) -> Dict[str, List[Any]]:
-        return {step.value: usages for step, usages in steps.items()}
+        with self._lock:
+            return {step.value: list(usages) for step, usages in steps.items()}
 
     def add_step_usage(self, step: ExtractionStep, usage: Any) -> None:
         """Associate a provider usage object with a pipeline step."""
         if usage is not None:
-            self.steps.setdefault(step, []).append(usage)
+            with self._lock:
+                self.steps.setdefault(step, []).append(usage)
+
+    def merge(self, other: "ExtractorUsage") -> None:
+        """Append another tracker's raw usages while preserving step order."""
+        for step in ExtractionStep:
+            for usage in other.get_step(step):
+                self.add_step_usage(step, usage)
 
     def get_step(self, step: Union[ExtractionStep, str]) -> List[Any]:
         """Return the raw usage objects recorded for a pipeline step."""
         step = ExtractionStep(step) if isinstance(step, str) else step
-        return self.steps.get(step, [])
+        with self._lock:
+            return list(self.steps.get(step, []))
 
     def _all_usages(self) -> Iterable[Any]:
-        for usages in self.steps.values():
-            yield from usages
+        with self._lock:
+            return [usage for usages in self.steps.values() for usage in usages]
 
     @staticmethod
     def _prompt_tokens(usage: Any) -> int:
@@ -81,11 +99,11 @@ class ExtractorUsage(BaseModel):
         details = _read_value(
             usage, "completion_tokens_details", "output_tokens_details"
         )
-        nested = _optional_token_count(
-            details, "reasoning_tokens", "thinking_tokens"
-        )
-        return nested if nested is not None else _optional_token_count(
-            usage, "reasoning_tokens", "thinking_tokens"
+        nested = _optional_token_count(details, "reasoning_tokens", "thinking_tokens")
+        return (
+            nested
+            if nested is not None
+            else _optional_token_count(usage, "reasoning_tokens", "thinking_tokens")
         )
 
     @staticmethod
@@ -97,11 +115,15 @@ class ExtractorUsage(BaseModel):
             "cache_read_tokens",
             "cache_read_input_tokens",
         )
-        return nested if nested is not None else _optional_token_count(
-            usage,
-            "cached_tokens",
-            "cache_read_tokens",
-            "cache_read_input_tokens",
+        return (
+            nested
+            if nested is not None
+            else _optional_token_count(
+                usage,
+                "cached_tokens",
+                "cache_read_tokens",
+                "cache_read_input_tokens",
+            )
         )
 
     @computed_field

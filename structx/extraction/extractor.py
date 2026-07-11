@@ -1,47 +1,54 @@
-"""
-Refactored main extractor class - now acts as an orchestrator with better organization.
-"""
+"""Public orchestration for structured extraction operations."""
 
-import copy
-import threading
+import asyncio
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
 import pandas as pd
-from instructor import Instructor
+from instructor import AsyncInstructor, Instructor
 from loguru import logger
 from pydantic import BaseModel
 
 from structx.core.config import ExtractionConfig
 from structx.core.exceptions import ConfigurationError, ExtractionError
-from structx.core.models import ExtractionResult
+from structx.core.input import PreparedInput, RowPayload
+from structx.core.models import ExtractionResult, RowResult
 from structx.extraction.core.llm_core import LLMCore
 from structx.extraction.engines.extraction_engine import ExtractionEngine
+from structx.extraction.processors.batch_processor import BatchProcessor
 from structx.extraction.processors.content_analyzer import ContentAnalyzer
-from structx.extraction.processors.data_processor import DataProcessor
+from structx.extraction.processors.input_processor import InputProcessor
 from structx.extraction.processors.model_operations import ModelOperations
-from structx.extraction.result_manager import ResultManager
+from structx.extraction.result_manager import ResultCollector
 from structx.utils.helpers import handle_errors
+from structx.utils.usage import ExtractorUsage
+
+
+@dataclass(frozen=True)
+class ExtractionStrategy:
+    """The model and instructions needed to process prepared rows."""
+
+    model: Type[BaseModel]
+    instructions: str
+    target_columns: List[str]
 
 
 class Extractor:
-    """
-    Main class for structured data extraction - now acts as an orchestrator.
-
-    This class coordinates the various specialized components to perform
-    structured data extraction from different types of sources.
+    """Coordinate input preparation, model planning, extraction, and results.
 
     Args:
         client: Instructor-patched client
         model_name: Name of the model to use
         config: Configuration for extraction steps
-        max_threads: Maximum number of concurrent threads
-        batch_size: Size of batches for processing
+        max_threads: Maximum concurrent row requests
+        batch_size: Rows scheduled in each processing batch
         max_retries: Maximum number of retries for extraction
         min_wait: Minimum seconds to wait between retries
         max_wait: Maximum seconds to wait between retries
-        planning_model: Optional model for schema and guide generation
+        planning_model: Optional model for instruction and schema generation
+        async_client: Optional async Instructor client for async methods
     """
 
     def __init__(
@@ -55,18 +62,41 @@ class Extractor:
         min_wait: int = 1,
         max_wait: int = 10,
         planning_model: Optional[str] = None,
+        async_client: Optional[AsyncInstructor] = None,
     ):
         """Initialize extractor."""
+        if (
+            not isinstance(max_threads, int)
+            or isinstance(max_threads, bool)
+            or max_threads < 1
+        ):
+            raise ConfigurationError("max_threads must be a positive integer")
+        if (
+            not isinstance(batch_size, int)
+            or isinstance(batch_size, bool)
+            or batch_size < 1
+        ):
+            raise ConfigurationError("batch_size must be a positive integer")
+        if (
+            not isinstance(max_retries, int)
+            or isinstance(max_retries, bool)
+            or max_retries < 0
+        ):
+            raise ConfigurationError("max_retries must be a non-negative integer")
+        if min_wait < 0 or max_wait < min_wait:
+            raise ConfigurationError(
+                "wait settings must satisfy 0 <= min_wait <= max_wait"
+            )
+
         self.model_name = model_name
 
         # Setup configuration
-        if not config:
+        if config is None:
             self.config = ExtractionConfig()
-        elif isinstance(config, (dict, str, Path)):
-            self.config = ExtractionConfig(
-                config=config if isinstance(config, dict) else None,
-                config_path=config if isinstance(config, (str, Path)) else None,
-            )
+        elif isinstance(config, dict):
+            self.config = ExtractionConfig(**config)
+        elif isinstance(config, (str, Path)):
+            self.config = ExtractionConfig.from_yaml(config)
         elif isinstance(config, ExtractionConfig):
             self.config = config
         else:
@@ -75,6 +105,7 @@ class Extractor:
         # Initialize core components
         self.llm_core = LLMCore(
             client=client,
+            async_client=async_client,
             model_name=model_name,
             config=self.config,
             max_retries=max_retries,
@@ -86,149 +117,261 @@ class Extractor:
         # Initialize specialized processors
         self.model_operations = ModelOperations(self.llm_core)
         self.extraction_engine = ExtractionEngine(self.llm_core)
-        self.data_processor = DataProcessor(max_threads, batch_size)
-        self.result_manager = ResultManager()
+        self.input_processor = InputProcessor()
+        self.batch_processor = BatchProcessor(max_threads, batch_size)
         self.content_analyzer = ContentAnalyzer()
 
-        logger.info(f"Initialized Extractor with configuration: {self.config.conf}")
+        logger.debug(f"Initialized Extractor with configuration: {self.config}")
 
-    def _initialize_extraction(
-        self, df: pd.DataFrame, query: str
-    ) -> tuple[Any, Any, Type[BaseModel]]:
-        """Generate a complete extraction plan and its Pydantic model."""
-        sample_text = self._create_schema_sample(df)
+    @staticmethod
+    def _validate_query(query: str) -> str:
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("query must be a non-empty string")
+        return query.strip()
+
+    @classmethod
+    def _validate_queries(cls, queries: List[str]) -> List[str]:
+        if not isinstance(queries, list) or not queries:
+            raise ValueError("queries must be a non-empty list")
+        validated = [cls._validate_query(query) for query in queries]
+        if len(set(validated)) != len(validated):
+            raise ValueError("queries must not contain duplicates")
+        return validated
+
+    def _build_strategy(
+        self,
+        prepared_input: PreparedInput,
+        query: str,
+        usage: ExtractorUsage,
+        model: Optional[Type[BaseModel]],
+    ) -> ExtractionStrategy:
+        """Build deterministic or model-generated instructions for one operation."""
+        if model is not None:
+            instructions, target_columns = (
+                self.model_operations.generate_from_custom_model(
+                    model=model,
+                    query=query,
+                    data_columns=prepared_input.dataframe.columns.tolist(),
+                )
+            )
+            return ExtractionStrategy(model, instructions, target_columns)
+
+        sample_text = self._create_schema_sample(prepared_input)
+        pdf_path = self._planning_pdf_path(prepared_input)
         plan = self.model_operations.generate_extraction_plan(
             query=query,
             sample_text=sample_text,
-            data_columns=df.columns.tolist(),
+            data_columns=prepared_input.dataframe.columns.tolist(),
+            usage=usage,
+            pdf_path=pdf_path,
         )
-        logger.info(f"Refined Query: {plan.refined_query.refined_query}")
-        logger.info(f"Target Columns: {plan.guide.target_columns}")
+        logger.debug(f"Extraction Instructions: {plan.instructions}")
+        logger.debug(f"Target Columns: {plan.target_columns}")
 
         extraction_model = self.model_operations.create_model_from_schema(
             plan.extraction_schema
         )
-        return plan.refined_query, plan.guide, extraction_model
+        return ExtractionStrategy(
+            extraction_model,
+            plan.instructions,
+            plan.target_columns,
+        )
 
-    def _create_schema_sample(self, df: pd.DataFrame) -> str:
+    async def _build_strategy_async(
+        self,
+        prepared_input: PreparedInput,
+        query: str,
+        usage: ExtractorUsage,
+        model: Optional[Type[BaseModel]],
+    ) -> ExtractionStrategy:
+        """Asynchronously build the strategy when model planning is required."""
+        if model is not None:
+            instructions, target_columns = (
+                self.model_operations.generate_from_custom_model(
+                    model=model,
+                    query=query,
+                    data_columns=prepared_input.dataframe.columns.tolist(),
+                )
+            )
+            return ExtractionStrategy(model, instructions, target_columns)
+
+        plan = await self.model_operations.generate_extraction_plan_async(
+            query=query,
+            sample_text=await asyncio.to_thread(
+                self._create_schema_sample, prepared_input
+            ),
+            data_columns=prepared_input.dataframe.columns.tolist(),
+            usage=usage,
+            pdf_path=self._planning_pdf_path(prepared_input),
+        )
+        extraction_model = self.model_operations.create_model_from_schema(
+            plan.extraction_schema
+        )
+        return ExtractionStrategy(
+            extraction_model,
+            plan.instructions,
+            plan.target_columns,
+        )
+
+    def _create_schema_sample(self, prepared_input: PreparedInput) -> str:
         """Create one representative sample for extraction planning."""
-        is_file_based = "pdf_path" in df.columns or "source" in df.columns
-        if is_file_based:
-            sample_text = self.content_analyzer.extract_content_sample_for_schema(df)
-            content_context = self.content_analyzer.detect_content_type_and_context(df)
+        df = prepared_input.dataframe
+        if prepared_input.pdf_rows:
+            sample_text = prepared_input.planning_sample or ""
+            content_context = self.content_analyzer.detect_content_type_and_context(
+                prepared_input
+            )
             return f"Content type: {content_context}\n\n{sample_text}"
         return "\n".join(df.head().to_string(index=False).splitlines())
 
+    @staticmethod
+    def _planning_pdf_path(prepared_input: PreparedInput) -> Optional[str]:
+        """Attach a PDF to planning only when no text sample is available."""
+        if prepared_input.planning_sample or not prepared_input.pdf_rows:
+            return None
+        first_pdf = prepared_input.pdf_rows[min(prepared_input.pdf_rows)]
+        return str(first_pdf.pdf_path)
+
     def _create_extraction_worker(
         self,
-        extraction_model: Type[BaseModel],
-        refined_query: Any,
-        guide: Any,
-        result_df: pd.DataFrame,
-        result_list: List[Any],
-        failed_rows: List[Dict],
-        return_df: bool,
-        expand_nested: bool,
-        is_custom_model: bool = False,
+        strategy: ExtractionStrategy,
     ):
-        """Create a worker function for threaded extraction."""
+        """Create a worker function for synchronous row extraction."""
 
         def extract_worker(
-            row_data: Union[str, Dict],
-            row_idx: int,
-            semaphore: threading.Semaphore,
-            pbar,
+            row_data: RowPayload,
+            row_position: int,
+            row_label: Any,
         ):
-            with semaphore:
-                try:
-                    items = self.extraction_engine.extract_from_row_data(
-                        row_data=row_data,
-                        extraction_model=extraction_model,
-                        refined_query=refined_query,
-                        guide=guide,
-                        is_custom_model=is_custom_model,
-                    )
-
-                    if return_df:
-                        self.result_manager.update_dataframe(
-                            result_df, items, row_idx, expand_nested
-                        )
-                    else:
-                        result_list.extend(items)
-
-                except Exception as e:
-                    row_text = row_data if isinstance(row_data, str) else str(row_data)
-                    self.result_manager.handle_extraction_error(
-                        result_df, failed_rows, row_idx, row_text, e
-                    )
-                finally:
-                    pbar.update(1)
+            try:
+                row_usage = ExtractorUsage()
+                items = self.extraction_engine.extract_from_row_data(
+                    row_data=row_data,
+                    extraction_model=strategy.model,
+                    instructions=strategy.instructions,
+                    usage=row_usage,
+                )
+                return RowResult(
+                    position=row_position,
+                    source_index=row_label,
+                    input_data=row_data,
+                    items=items,
+                    usage=row_usage,
+                )
+            except Exception as error:
+                return RowResult(
+                    position=row_position,
+                    source_index=row_label,
+                    input_data=row_data,
+                    items=[],
+                    usage=row_usage,
+                    error=str(error),
+                )
 
         return extract_worker
 
-    @handle_errors(error_message="Data processing failed", error_type=ExtractionError)
+    def _create_async_extraction_worker(
+        self,
+        strategy: ExtractionStrategy,
+    ):
+        """Create an async worker that preserves row identity on success or failure."""
+
+        async def extract_worker(
+            row_data: RowPayload,
+            row_position: int,
+            row_label: Any,
+        ) -> RowResult:
+            try:
+                row_usage = ExtractorUsage()
+                items = await self.extraction_engine.extract_from_row_data_async(
+                    row_data=row_data,
+                    extraction_model=strategy.model,
+                    instructions=strategy.instructions,
+                    usage=row_usage,
+                )
+                return RowResult(
+                    position=row_position,
+                    source_index=row_label,
+                    input_data=row_data,
+                    items=items,
+                    usage=row_usage,
+                )
+            except Exception as error:
+                return RowResult(
+                    position=row_position,
+                    source_index=row_label,
+                    input_data=row_data,
+                    items=[],
+                    usage=row_usage,
+                    error=str(error),
+                )
+
+        return extract_worker
+
     def _process_data(
         self,
-        df: pd.DataFrame,
+        prepared_input: PreparedInput,
         query: str,
         return_df: bool,
         expand_nested: bool = False,
         extraction_model: Optional[Type[BaseModel]] = None,
     ) -> ExtractionResult:
         """Process DataFrame with extraction."""
-        # Reset usage tracking
-        self.llm_core.reset_usage()
-
-        # Initialize extraction
-        if extraction_model:
-            # When a custom model is provided, generate refinement and guide from the model
-            # instead of from the query to avoid conflicts
-            refined_query, guide = self.model_operations.generate_from_custom_model(
-                model=extraction_model, query=query, data_columns=df.columns.tolist()
-            )
-            ExtractionModel = extraction_model
-        else:
-            refined_query, guide, ExtractionModel = self._initialize_extraction(
-                df, query
-            )
-
-        # Initialize results
-        result_df, result_list, failed_rows = self.result_manager.initialize_results(
-            df, ExtractionModel
+        operation_usage = ExtractorUsage()
+        strategy = self._build_strategy(
+            prepared_input, query, operation_usage, extraction_model
         )
 
-        # Create worker function - pass is_custom_model flag when using a provided model
-        worker_fn = self._create_extraction_worker(
-            extraction_model=ExtractionModel,
-            refined_query=refined_query,
-            guide=guide,
-            result_df=result_df,
-            result_list=result_list,
-            failed_rows=failed_rows,
+        results = ResultCollector(
+            source=prepared_input.dataframe,
+            model=strategy.model,
             return_df=return_df,
             expand_nested=expand_nested,
-            is_custom_model=extraction_model is not None,
         )
+
+        worker_fn = self._create_extraction_worker(strategy=strategy)
 
         # Process in batches
-        self.data_processor.process_in_batches(df, worker_fn, guide.target_columns)
-
-        # Log statistics
-        self.result_manager.log_extraction_stats(len(df), failed_rows)
-
-        # Create a deep copy of usage for the result
-        result_usage = copy.deepcopy(self.llm_core.get_usage())
-
-        # Reset the extractor's usage for the next operation
-        self.llm_core.reset_usage()
-
-        # Return results
-        return ExtractionResult(
-            data=result_df if return_df else result_list,
-            failed=pd.DataFrame(failed_rows),
-            model=ExtractionModel,
-            usage=result_usage,
+        outcomes = self.batch_processor.map_rows(
+            prepared_input, worker_fn, strategy.target_columns
         )
+        for outcome in outcomes:
+            operation_usage.merge(outcome.usage)
+            results.record(outcome)
+        return results.build(operation_usage)
+
+    async def _process_data_async(
+        self,
+        prepared_input: PreparedInput,
+        query: str,
+        return_df: bool,
+        expand_nested: bool = False,
+        extraction_model: Optional[Type[BaseModel]] = None,
+    ) -> ExtractionResult:
+        """Plan once, then asynchronously process independent rows."""
+        if self.llm_core.async_client is None:
+            raise ConfigurationError(
+                "Async extraction requires an async Instructor client"
+            )
+        operation_usage = ExtractorUsage()
+        strategy = await self._build_strategy_async(
+            prepared_input, query, operation_usage, extraction_model
+        )
+        results = ResultCollector(
+            source=prepared_input.dataframe,
+            model=strategy.model,
+            return_df=return_df,
+            expand_nested=expand_nested,
+        )
+        outcomes = await self.batch_processor.map_rows_async(
+            prepared_input,
+            self._create_async_extraction_worker(strategy),
+            strategy.target_columns,
+        )
+        for outcome in outcomes:
+            operation_usage.merge(outcome.usage)
+            results.record(outcome)
+        return results.build(operation_usage)
 
     @handle_errors(error_message="Extraction failed", error_type=ExtractionError)
     def extract(
@@ -255,8 +398,11 @@ class Extractor:
         Returns:
             Extraction result with extracted data, failed rows, and model (if requested)
         """
-        df = self.data_processor.prepare_data(data, **kwargs)
-        return self._process_data(df, query, return_df, expand_nested, model)
+        query = self._validate_query(query)
+        with self.input_processor.prepared(data, **kwargs) as prepared_input:
+            return self._process_data(
+                prepared_input, query, return_df, expand_nested, model
+            )
 
     async def extract_async(
         self,
@@ -282,15 +428,16 @@ class Extractor:
         Returns:
             ExtractionResult containing extracted data, failed rows, and the model
         """
-        return await self.data_processor.run_async(
-            self.extract,
-            data=data,
-            query=query,
-            model=model,
-            return_df=return_df,
-            expand_nested=expand_nested,
-            **kwargs,
-        )
+        try:
+            query = self._validate_query(query)
+            async with self.input_processor.prepared_async(
+                data, **kwargs
+            ) as prepared_input:
+                return await self._process_data_async(
+                    prepared_input, query, return_df, expand_nested, model
+                )
+        except Exception as error:
+            raise ExtractionError(f"Async extraction failed: {error}") from error
 
     @handle_errors(error_message="Batch extraction failed", error_type=ExtractionError)
     def extract_queries(
@@ -315,27 +462,25 @@ class Extractor:
         Returns:
             Dictionary mapping queries to their results (extracted data and failed extractions)
         """
-        results = {}
-
-        for query in queries:
-            logger.info(f"\nProcessing query: {query}")
-            result = self.extract(
-                data=data,
-                query=query,
-                return_df=return_df,
-                expand_nested=expand_nested,
-                **kwargs,
-            )
-            results[query] = result
-
-        return results
+        queries = self._validate_queries(queries)
+        with self.input_processor.prepared(data, **kwargs) as prepared_input:
+            results = {}
+            for query in queries:
+                logger.debug(f"Processing query: {query}")
+                results[query] = self._process_data(
+                    prepared_input=prepared_input,
+                    query=query,
+                    return_df=return_df,
+                    expand_nested=expand_nested,
+                )
+            return results
 
     async def extract_queries_async(
         self,
         *,
         data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
         queries: List[str],
-        return_df: bool = False,
+        return_df: bool = True,
         expand_nested: bool = False,
         **kwargs: Any,
     ) -> Dict[str, ExtractionResult]:
@@ -352,14 +497,22 @@ class Extractor:
         Returns:
             Dictionary mapping queries to ExtractionResult objects
         """
-        return await self.data_processor.run_async(
-            self.extract_queries,
-            data=data,
-            queries=queries,
-            return_df=return_df,
-            expand_nested=expand_nested,
-            **kwargs,
-        )
+        try:
+            queries = self._validate_queries(queries)
+            async with self.input_processor.prepared_async(
+                data, **kwargs
+            ) as prepared_input:
+                results = {}
+                for query in queries:
+                    results[query] = await self._process_data_async(
+                        prepared_input=prepared_input,
+                        query=query,
+                        return_df=return_df,
+                        expand_nested=expand_nested,
+                    )
+                return results
+        except Exception as error:
+            raise ExtractionError(f"Async batch extraction failed: {error}") from error
 
     @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
     def get_schema(
@@ -380,47 +533,26 @@ class Extractor:
         Returns:
             Pydantic model for extraction with `.usage` attribute for token tracking
         """
-        if isinstance(data, str) and not Path(data).exists():
-            sample_text = data
-            columns = ["text"]
-        else:
-            df = self.data_processor.prepare_data(data, **kwargs)
-            is_file_based = "pdf_path" in df.columns or "source" in df.columns
-            columns = df.columns.tolist()
+        query = self._validate_query(query)
+        with self.input_processor.prepared(data, **kwargs) as prepared_input:
+            sample_text = self._create_schema_sample(prepared_input)
+            columns = prepared_input.dataframe.columns.tolist()
 
-            if is_file_based:
-                sample_text = self.content_analyzer.extract_content_sample_for_schema(
-                    df
-                )
-                content_context = self.content_analyzer.detect_content_type_and_context(
-                    df
-                )
-                sample_text = f"Content type: {content_context}\n\n{sample_text}"
-            else:
-                # For traditional tabular data, create a representative sample
-                sample_text = "\n".join(df.head().to_string(index=False).splitlines())
+            operation_usage = ExtractorUsage()
+            pdf_path = self._planning_pdf_path(prepared_input)
+            plan = self.model_operations.generate_extraction_plan(
+                query=query,
+                sample_text=sample_text,
+                data_columns=columns,
+                usage=operation_usage,
+                pdf_path=pdf_path,
+            )
 
-        plan = self.model_operations.generate_extraction_plan(
-            query=query,
-            sample_text=sample_text,
-            data_columns=columns,
-        )
-
-        # Create model
-        extraction_model = self.model_operations.create_model_from_schema(
-            plan.extraction_schema
-        )
-
-        # Create a deep copy of usage for the model
-        model_usage = copy.deepcopy(self.llm_core.get_usage())
-
-        # Reset the extractor's usage for the next operation
-        self.llm_core.reset_usage()
-
-        # Add usage to model
-        extraction_model.usage = model_usage
-
-        return extraction_model
+            extraction_model = self.model_operations.create_model_from_schema(
+                plan.extraction_schema
+            )
+            extraction_model.usage = operation_usage
+            return extraction_model
 
     async def get_schema_async(
         self,
@@ -440,13 +572,30 @@ class Extractor:
         Returns:
             Dynamically generated Pydantic model class
         """
-        return await self.data_processor.run_async(
-            self.get_schema,
-            data=data,
-            query=query,
-            **kwargs,
-        )
+        try:
+            query = self._validate_query(query)
+            async with self.input_processor.prepared_async(
+                data, **kwargs
+            ) as prepared_input:
+                usage = ExtractorUsage()
+                plan = await self.model_operations.generate_extraction_plan_async(
+                    query=query,
+                    sample_text=await asyncio.to_thread(
+                        self._create_schema_sample, prepared_input
+                    ),
+                    data_columns=prepared_input.dataframe.columns.tolist(),
+                    usage=usage,
+                    pdf_path=self._planning_pdf_path(prepared_input),
+                )
+                model = self.model_operations.create_model_from_schema(
+                    plan.extraction_schema
+                )
+                model.usage = usage
+                return model
+        except Exception as error:
+            raise ExtractionError(f"Async schema generation failed: {error}") from error
 
+    @handle_errors(error_message="Model refinement failed", error_type=ExtractionError)
     def refine_data_model(
         self,
         *,
@@ -469,20 +618,39 @@ class Extractor:
         if model_name is None:
             model_name = f"Refined{model.__name__}"
 
+        operation_usage = ExtractorUsage()
         refined_model = self.model_operations.refine_existing_model(
-            model, refinement_instructions, model_name
+            model=model,
+            instructions=refinement_instructions,
+            model_name=model_name,
+            usage=operation_usage,
         )
 
-        # Create a deep copy of usage for the model
-        model_usage = copy.deepcopy(self.llm_core.get_usage())
-
-        # Reset the extractor's usage for the next operation
-        self.llm_core.reset_usage()
-
         # Add usage to model
-        refined_model.usage = model_usage
+        refined_model.usage = operation_usage
 
         return refined_model
+
+    async def refine_data_model_async(
+        self,
+        *,
+        model: Type[BaseModel],
+        refinement_instructions: str,
+        model_name: Optional[str] = None,
+    ) -> Type[BaseModel]:
+        """Asynchronously refine an existing data model."""
+        try:
+            usage = ExtractorUsage()
+            refined_model = await self.model_operations.refine_existing_model_async(
+                model=model,
+                instructions=refinement_instructions,
+                model_name=model_name,
+                usage=usage,
+            )
+            refined_model.usage = usage
+            return refined_model
+        except Exception as error:
+            raise ExtractionError(f"Async model refinement failed: {error}") from error
 
     @classmethod
     def from_litellm(
@@ -506,32 +674,30 @@ class Extractor:
             model: Model identifier (e.g., "gpt-4", "claude-2", "azure/gpt-4")
             api_key: API key for the model provider
             config: Per-step completion parameters passed to the model provider
-            max_threads: Maximum number of concurrent threads
-            batch_size: Size of processing batches
+            max_threads: Maximum concurrent row requests
+            batch_size: Rows scheduled in each processing batch
             max_retries: Maximum number of retries for extraction
             min_wait: Minimum seconds to wait between retries
             max_wait: Maximum seconds to wait between retries
-            planning_model: Optional model for schema and guide generation
+            planning_model: Optional model for instruction and schema generation
             **litellm_kwargs: Additional kwargs for litellm (e.g., api_base, organization)
         """
         import instructor
-        import litellm
-        from litellm import completion
+        from litellm import acompletion, completion
 
-        # Set up litellm
+        completion_options = {**litellm_kwargs, "drop_params": True}
         if api_key:
-            litellm.api_key = api_key
+            completion_options["api_key"] = api_key
 
-        # Set additional litellm configs
-        for key, value in litellm_kwargs.items():
-            setattr(litellm, key, value)
-
-        # Scope LiteLLM's capability-based parameter filtering to this client.
-        completion_with_filtered_params = partial(completion, drop_params=True)
+        # Bind provider settings to this client instead of mutating LiteLLM globals.
+        completion_with_filtered_params = partial(completion, **completion_options)
         client = instructor.from_litellm(completion_with_filtered_params)
+        async_completion = partial(acompletion, **completion_options)
+        async_client = instructor.from_litellm(async_completion, async_client=True)
 
         return cls(
             client=client,
+            async_client=async_client,
             model_name=model,
             config=config,
             max_threads=max_threads,

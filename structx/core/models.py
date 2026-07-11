@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Generic, List, Optional, Type, Union
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from structx.core.input import RowPayload
 from structx.core.type_system import normalize_field_definition
 from structx.utils.types import T
 from structx.utils.usage import ExtractorUsage
@@ -58,56 +59,6 @@ class ModelField(BaseModel):
         return self
 
 
-class QueryRefinement(BaseModel):
-    """Refined query with structural information"""
-
-    refined_query: str = Field(description="Expanded query with structure requirements")
-    data_characteristics: List[str] = Field(
-        default_factory=list, description="Characteristics of data to extract"
-    )
-    structural_requirements: Dict[str, Any] = Field(
-        default_factory=dict, description="Requirements for data structure"
-    )
-
-    @field_validator("data_characteristics", mode="before")
-    @classmethod
-    def default_data_characteristics(cls, value: Any) -> Any:
-        return [] if value is None else value
-
-    @field_validator("structural_requirements", mode="before")
-    @classmethod
-    def default_structural_requirements(cls, value: Any) -> Any:
-        return {} if value is None else value
-
-
-class ExtractionGuide(BaseModel):
-    """Guide for structured extraction"""
-
-    model_config = ConfigDict(extra="allow")
-
-    target_columns: List[str] = Field(description="Columns to analyze")
-
-    structural_patterns: Dict[str, str] = Field(
-        default_factory=dict, description="Patterns for structuring data"
-    )
-    relationship_rules: List[str] = Field(
-        default_factory=list, description="Rules for data relationships"
-    )
-    organization_principles: List[str] = Field(
-        default_factory=list, description="Principles for data organization"
-    )
-
-    @field_validator("relationship_rules", "organization_principles", mode="before")
-    @classmethod
-    def default_list_fields(cls, value: Any) -> Any:
-        return [] if value is None else value
-
-    @field_validator("structural_patterns", mode="before")
-    @classmethod
-    def default_structural_patterns(cls, value: Any) -> Any:
-        return {} if value is None else value
-
-
 class ExtractionRequest(BaseModel):
     """Request for model generation"""
 
@@ -119,9 +70,39 @@ class ExtractionRequest(BaseModel):
 class ExtractionPlan(BaseModel):
     """A complete extraction plan generated in one model call."""
 
-    refined_query: QueryRefinement
-    guide: ExtractionGuide
+    instructions: str = Field(description="Explicit extraction instructions")
+    target_columns: List[str] = Field(description="Input columns needed for extraction")
     extraction_schema: ExtractionRequest = Field(alias="schema")
+
+
+@dataclass(frozen=True)
+class RowResult(Generic[T]):
+    """Extraction outcome, provenance, and usage for one input row.
+
+    Attributes:
+        position: Zero-based input position, unique even when DataFrame index
+            labels are duplicated.
+        source_index: Original DataFrame index label.
+        input_data: Exact text or PDF payload sent for this row.
+        items: Zero or more validated model instances returned for the row.
+        usage: Provider usage recorded by this row's extraction request. It does
+            not include operation-level schema planning.
+        error: Error text for a failed row, otherwise ``None``.
+    """
+
+    position: int
+    source_index: Any
+    input_data: RowPayload
+    items: List[T]
+    usage: ExtractorUsage = field(default_factory=ExtractorUsage)
+    error: Optional[str] = None
+
+    @property
+    def status(self) -> str:
+        """Return ``success``, ``empty``, or ``failed`` for this row."""
+        if self.error is not None:
+            return "failed"
+        return "success" if self.items else "empty"
 
 
 @dataclass
@@ -131,32 +112,65 @@ class ExtractionResult(Generic[T]):
 
     Attributes:
         data: Extracted data (DataFrame or list of model instances)
-        failed: DataFrame with failed extractions
+        rows: Row-level outcomes with provenance and usage
         model: Generated or provided model class
         usage: Token usage information across all extraction steps
+
+    ``data`` is the convenient flattened output. ``rows`` is the canonical
+    mapping back to each input row and preserves empty results, failures, and
+    row-specific usage.
     """
 
     data: Union[pd.DataFrame, List[T]]
-    failed: pd.DataFrame
+    rows: List[RowResult[T]]
     model: Type[T]
-    usage: Optional[ExtractorUsage] = None
+    usage: ExtractorUsage = field(default_factory=ExtractorUsage)
+
+    @property
+    def failed(self) -> pd.DataFrame:
+        """Failed row details as a compatibility-friendly DataFrame view."""
+        return pd.DataFrame.from_records(
+            [
+                {
+                    "index": row.source_index,
+                    "text": str(row.input_data),
+                    "error": row.error,
+                }
+                for row in self.rows
+                if row.error is not None
+            ],
+            columns=["index", "text", "error"],
+        )
+
+    @property
+    def attempted_count(self) -> int:
+        """Number of input rows submitted for extraction."""
+        return len(self.rows)
 
     @property
     def success_count(self) -> int:
-        """Number of successful extractions"""
-        if isinstance(self.data, pd.DataFrame):
-            return len(self.data)
+        """Number of input rows extracted successfully."""
+        return sum(row.error is None for row in self.rows)
+
+    @property
+    def empty_count(self) -> int:
+        """Number of successful input rows that produced no model instances."""
+        return sum(row.status == "empty" for row in self.rows)
+
+    @property
+    def extracted_count(self) -> int:
+        """Number of extracted model instances or result rows returned."""
         return len(self.data)
 
     @property
     def failure_count(self) -> int:
-        """Number of failed extractions"""
+        """Number of input rows that failed extraction."""
         return len(self.failed)
 
     @property
     def success_rate(self) -> float:
-        """Success rate as a percentage"""
-        total = self.success_count + self.failure_count
+        """Percentage of attempted rows that did not fail."""
+        total = self.attempted_count
         return (self.success_count / total * 100) if total > 0 else 0
 
     def __repr__(self) -> str:
