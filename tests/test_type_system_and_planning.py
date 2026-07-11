@@ -154,6 +154,50 @@ def test_nested_array_uses_the_generated_item_model():
     )
 
 
+def test_generated_model_preserves_required_nullable_and_nested_set_semantics():
+    request = ExtractionRequest(
+        model_name="Agreement",
+        model_description="Agreement details",
+        fields=[
+            ModelField(
+                name="title",
+                type="string",
+                description="Agreement title",
+                required=True,
+                nullable=False,
+            ),
+            ModelField(
+                name="parties",
+                type="Set[object]",
+                description="Unique parties",
+                nested_fields=[
+                    ModelField(name="name", type="string", description="Party name")
+                ],
+            ),
+        ],
+    )
+
+    model = ModelGenerator.from_extraction_request(request)
+    with pytest.raises(ValidationError):
+        model()
+    with pytest.raises(ValidationError):
+        model(title=None)
+
+    result = model(title="Consultancy", parties=[{"name": "Client"}])
+    assert isinstance(result.parties, set)
+    assert {party.name for party in result.parties} == {"Client"}
+
+
+def test_model_field_rejects_optional_but_non_nullable_definition():
+    with pytest.raises(ValidationError, match="non-required field must be nullable"):
+        ModelField(
+            name="title",
+            type="string",
+            description="Agreement title",
+            nullable=False,
+        )
+
+
 class FakeLLMCore:
     def __init__(self, plan):
         self.plan = plan

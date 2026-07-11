@@ -28,6 +28,12 @@ class ModelField(BaseModel):
     nested_fields: Optional[List["ModelField"]] = Field(
         default=None, description="Fields for nested models"
     )
+    required: bool = Field(
+        default=False, description="Whether the generated field must be present"
+    )
+    nullable: bool = Field(
+        default=True, description="Whether the generated field may be null"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -41,7 +47,15 @@ class ModelField(BaseModel):
         )
         normalized["type"] = field_type
         normalized["validation"] = validation
+        if normalized.get("nullable") is False and field_type.startswith("Optional["):
+            normalized["type"] = field_type[len("Optional[") : -1]
         return normalized
+
+    @model_validator(mode="after")
+    def validate_presence_semantics(self) -> "ModelField":
+        if not self.required and not self.nullable:
+            raise ValueError("A non-required field must be nullable")
+        return self
 
 
 class QueryRefinement(BaseModel):
