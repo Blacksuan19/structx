@@ -37,25 +37,25 @@ classifiers = [
 ]
 
 dependencies = [
-    "instructor==1.8.0",
-    "litellm==1.68.1",
-    "loguru==0.7.3",
-    "omegaconf==2.3.0",
-    "openpyxl==3.1.5",
-    "pandas==2.2.3",
-    "pydantic==2.11.4",
-    "tabulate==0.9.0", # required for pandas .to_markdown()
-    "tenacity==9.1.2",
-    "tqdm==4.68.4",
+    "instructor>=1.15.4",
+    "litellm>=1.91.1",
+    "loguru>=0.7.3",
+    "omegaconf>=2.3.0",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "pydantic>=2.11.7",
+    "tabulate>=0.9.0", # required for pandas .to_markdown()
+    "tenacity>=9.1.2",
+    "tqdm>=4.68.4",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "black==25.1.0",
-    "bumpver==2024.1130",
-    "pip-tools==7.4.1",
-    "pytest==9.1.1",
-    "wheel==0.45.1",
+    "black>=25.1.0",
+    "bumpver>=2024.1130",
+    "pip-tools>=7.4.1",
+    "pytest>=9.1.1",
+    "wheel>=0.45.1",
 ]
 
 # Optional document processing support. Kept out of the base install because
@@ -63,20 +63,20 @@ dev = [
 # The format-pdf extra is still needed because DocumentConverter imports its
 # PDF backend dependencies even when existing PDFs are passed through directly.
 docs = [
-    "docling-slim[convert-core,format-docx,format-html,format-latex,format-markdown,format-opendocument,format-pdf,format-pptx,format-web,models-local]==2.111.0",
-    "torch==2.13.0",
-    "torchvision==0.28.0",
-    "weasyprint==69.0",
+    "docling-slim[convert-core,format-docx,format-html,format-latex,format-markdown,format-opendocument,format-pdf,format-pptx,format-web,models-local]>=2.111.0",
+    "torch>=2.13.0",
+    "torchvision>=0.28.0",
+    "weasyprint>=69.0",
 ]
 
 # Documentation site tooling.
 mkdocs = [
-    "mkdocs==1.6.1",
-    "mkdocs-material==9.7.6",
-    "mkdocstrings[python]==0.29.1",
-    "mkdocs-git-revision-date-localized-plugin==1.4.5",
-    "mkdocs-material[imaging]==9.7.6",
-    "mkdocs-mermaid2-plugin==1.2.3",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.6",
+    "mkdocstrings[python]>=0.29.1",
+    "mkdocs-git-revision-date-localized-plugin>=1.4.5",
+    "mkdocs-material[imaging]>=9.7.6",
+    "mkdocs-mermaid2-plugin>=1.2.3",
 ]
 
 [[tool.uv.index]]
