@@ -46,7 +46,7 @@ with powerful capabilities.
         ```
 
     If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
-    For document/PDF processing, install `structx[docs]`.
+    Install `structx[docs]` for non-PDF document conversion.
 
 ### How structx Works
 
@@ -55,32 +55,29 @@ with powerful capabilities.
 
 ```mermaid
 graph TB
-    A[Input Data] --> B{Data Type Detection}
-    B -->|Structured| C[Direct Processing]
-    B -->|Unstructured| D[Document Conversion]
-
-    C --> E[Schema Generation]
-    D --> F[PDF Pipeline]
-    F --> G[Multimodal Processing]
-    G --> E
-
-    E --> H[LLM Extraction]
-    H --> I[Type-Safe Models]
-    I --> J[Structured Output]
+    A[Input Data] --> B[Input Processor]
+    B --> C[PreparedInput]
+    C --> D[Instruction and Schema Planning]
+    D --> E[Pydantic Model Creation]
+    E --> F[Bounded Row Processing]
+    F --> G[Text or Multimodal Extraction]
+    G --> H[RowResult Collection]
+    H --> I[ExtractionResult]
 
     subgraph "Document Types"
-        K[CSV/Excel/JSON] --> C
-        L[PDF] --> G
-        M[DOCX/TXT/MD] --> D
+        J[CSV/Excel/JSON] --> B
+        K[PDF] --> B
+        L[DOCX/PPTX/TXT/MD] --> M[Docling and WeasyPrint]
+        M --> B
     end
 
-    subgraph "Processing Pipeline"
-        N[Schema and Guide Planning] --> O[Pydantic Model Creation]
-        O --> P[Data Extraction]
-        P --> Q[Result Collection]
+    subgraph "Per Row"
+        N[Source Index and Payload] --> O[Independent Request]
+        O --> P[Items Error and Usage]
     end
 
-    E --> N
+    F --> N
+    P --> H
 ```
 
 </details>
@@ -94,15 +91,17 @@ graph TB
 - 📊 **Complex Data Structures**: Support for nested and hierarchical data
 - 🔄 **Natural Language Refinement**: Improve models with conversational
   instructions
-- **Multimodal Document Processing**: Optional PDF/document pipeline through
-  `structx[docs]`
+- **Multimodal Document Processing**: Direct PDF passthrough plus optional
+  non-PDF conversion through `structx[docs]`
 - 🖼️ **Vision-Enabled Extraction**: Native instructor multimodal support for
   PDFs
-- 🚀 **Flexible Processing**: Threaded batches and async wrappers
+- 🚀 **Flexible Processing**: Threaded sync and native async row requests
 - ⚡ **Smart Format Detection**: Automatic processing mode selection
-- 🔧 **Flexible Configuration**: Configurable extraction using OmegaConf
-- 📁 **Flexible File Support**: CSV, Excel, JSON, and Parquet in the base
-  install; PDF, DOCX, TXT, and more via `structx[docs]`
+- 🔧 **Flexible Configuration**: Pydantic Settings support for YAML,
+  environment variables, dotenv files, and secrets
+- 📁 **Flexible File Support**: CSV, Excel, JSON, Parquet, raw text, and
+  existing PDFs in the base install; DOCX, PPTX, images, and more via
+  `structx[docs]`
 - 🏗️ **Type Safety**: Type-safe data models using Pydantic
 - 🎮 **Simple Interface**: Easy-to-use API with powerful capabilities
 - 🔌 **Multiple LLM Providers**: Support through litellm integration
@@ -115,7 +114,7 @@ graph TB
 pip install structx
 ```
 
-For document and multimodal PDF support:
+For converting non-PDF documents and images to multimodal PDF input:
 
 ```bash
 pip install "structx[docs]"

@@ -53,7 +53,7 @@ results = extractor.extract_queries(
 # Access results by query
 for query, result in results.items():
     print(f"\nResults for query: '{query}'")
-    print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")
+    print(f"Processed {result.success_count} rows with {result.success_rate:.1f}% success rate")
 
     # Access the data
     for item in result.data:
@@ -106,9 +106,9 @@ results = asyncio.run(process_queries())
 3. **Configuration**: Return and file-reader options are applied consistently.
 4. **Usage Tracking**: Each returned result contains usage for that query.
 
-The current implementation processes queries sequentially and invokes the
-normal extraction path for each query. Document conversion and model planning
-therefore occur once per query.
+The current implementation prepares the input and converts a document only
+once, then processes queries sequentially against that prepared data. Each
+query still receives its own model plan, result object, and usage tracker.
 
 ## Use Cases
 

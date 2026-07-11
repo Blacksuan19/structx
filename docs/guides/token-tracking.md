@@ -10,7 +10,7 @@ extraction process, helping you monitor costs and optimize your queries.
 
 ```mermaid
 graph TD
-    A[Extraction Request] --> B[Schema and Guide Planning]
+    A[Extraction Request] --> B[Instruction and Schema Planning]
     B --> D[Data Extraction]
     D --> E[Result Collection]
 
@@ -32,7 +32,7 @@ graph TD
     subgraph "Tracking Steps"
         N[Schema Generation Step]
         O[Extraction Step]
-        P[Individual Extraction Items]
+        P[Per Row Usage]
     end
 
     F2 --> N
@@ -84,6 +84,17 @@ for call_usage in extraction_calls:
     print(call_usage.model_dump())
 ```
 
+Usage is also attached to each ordered row outcome, making cost and provenance
+available without matching calls back to input positions:
+
+```python
+for row in result.rows:
+    print(row.source_index, row.status, row.usage.total_tokens)
+```
+
+For the complete relationship between `data`, row outcomes, failures, and
+counts, see [Working with Results](working-with-results.md).
+
 The in-memory `steps` mapping uses `ExtractionStep` keys. Both
 `usage.model_dump()` and `usage.model_dump_json()` serialize those keys as
 `"schema_generation"` and `"extraction"`.
@@ -92,8 +103,8 @@ The in-memory `steps` mapping uses `ExtractionStep` keys. Both
 
 The summary contains only model-backed steps that actually ran:
 
-1. **Schema Generation**: Performs planning, including schema or extraction
-   guide generation depending on whether a custom model was supplied.
+1. **Schema Generation**: Performs dynamic schema planning or model refinement.
+   This step is absent when a custom model is supplied.
 2. **Extraction**: Performs the actual extraction, potentially across multiple
    calls.
 

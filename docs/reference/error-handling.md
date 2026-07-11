@@ -32,7 +32,7 @@ from structx.core.exceptions import FileError
 from structx.utils.file_reader import FileReader
 
 try:
-    frame = FileReader.read_file("missing.pdf")
+    prepared_input = FileReader.read_file("missing.pdf")
 except FileError as error:
     print(f"File error: {error}")
 ```
@@ -40,8 +40,9 @@ except FileError as error:
 ## Configuration Errors
 
 `ConfigurationError` is raised when `Extractor` receives an unsupported
-configuration object type. YAML loading and provider-specific parameter errors
-may originate from OmegaConf or the selected provider instead.
+configuration object type, a YAML path does not exist, or an unknown step is
+requested. Pydantic validation and provider-specific errors retain their native
+details.
 
 ```python
 from structx.core.exceptions import ConfigurationError
@@ -68,11 +69,16 @@ result = extractor.extract(
 )
 
 if result.failure_count:
-    print(result.failed[["index", "error", "timestamp"]])
+    print(result.failed[["index", "error"]])
 ```
 
 Pydantic response-validation failures are normally represented here rather
-than raised directly to the caller.
+than raised directly to the caller. The canonical row outcomes are available
+through `result.rows`, including provenance and usage for successful, empty,
+and failed rows.
+
+See [Working with Results](../guides/working-with-results.md) for row status and
+counter semantics.
 
 ## Logging
 

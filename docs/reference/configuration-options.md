@@ -54,13 +54,11 @@ extractor = Extractor.from_litellm(
 from structx import ExtractionConfig
 
 config = ExtractionConfig(
-    config={
-        "planning": {"reasoning_effort": "low"},
-        "extraction": {
-            "reasoning_effort": "medium",
-            "max_completion_tokens": 16000,
-        },
-    }
+    planning={"reasoning_effort": "low"},
+    extraction={
+        "reasoning_effort": "medium",
+        "max_completion_tokens": 16000,
+    },
 )
 
 extractor = Extractor.from_litellm(
@@ -76,8 +74,66 @@ extractor = Extractor.from_litellm(
 
 Each step in the extraction process can be configured separately:
 
-1. **Planning**: Query refinement, extraction guidance, and model generation
+1. **Planning**: Extraction instructions, target columns, and model generation
 2. **Extraction**: Actual data extraction
+
+`ExtractionConfig` ignores unrelated settings, which allows it to share a
+project-wide `.env` file safely.
+
+### Environment And Dotenv
+
+Settings use the `STRUCTX_` prefix. Supply a complete step as JSON:
+
+```bash
+export STRUCTX_PLANNING='{"reasoning_effort":"low"}'
+export STRUCTX_EXTRACTION='{"reasoning_effort":"medium","max_completion_tokens":16000}'
+```
+
+The same values can be placed in a `.env` file. Nested variables such as
+`STRUCTX_EXTRACTION__REASONING_EFFORT=medium` are also supported. Constructor
+values take precedence over environment values, which take precedence over
+dotenv, YAML, and file secrets.
+
+Nested numeric and boolean values are decoded before being forwarded:
+
+```bash
+export STRUCTX_EXTRACTION__TEMPERATURE=0.2
+export STRUCTX_EXTRACTION__STREAM=false
+```
+
+You can also load YAML directly when constructing settings:
+
+```python
+config = ExtractionConfig.from_yaml("config.yaml")
+```
+
+Constructor values override the loaded YAML when both are supplied:
+
+```python
+config = ExtractionConfig.from_yaml(
+    "config.yaml",
+    extraction={"reasoning_effort": "low"},
+)
+```
+
+### File Secrets
+
+Pass a secrets directory through Pydantic Settings when configuration is
+mounted as files. Filenames use the `STRUCTX_` prefix and each file contains a
+JSON object for that step:
+
+```text
+/run/secrets/STRUCTX_PLANNING
+/run/secrets/STRUCTX_EXTRACTION
+```
+
+```python
+config = ExtractionConfig(_secrets_dir="/run/secrets")
+```
+
+For example, `STRUCTX_EXTRACTION` may contain
+`{"reasoning_effort":"low"}`. Secrets have the lowest priority, so local
+constructor, environment, dotenv, or YAML values can override them.
 
 ### Model Parameters
 
@@ -91,8 +147,8 @@ LiteLLM drops parameters it knows are unsupported for the selected model. Model
 metadata cannot describe every value restriction or custom OpenAI-compatible
 endpoint, so consult the provider's model documentation before setting a value.
 
-For lower planning latency, use a smaller model for schema and guide generation
-while keeping the primary model for document extraction:
+For lower planning latency, use a smaller model for instruction and schema
+generation while keeping the primary model for document extraction:
 
 ```python
 extractor = Extractor.from_litellm(
@@ -106,13 +162,13 @@ extractor = Extractor.from_litellm(
 
 ## Retry Configuration
 
-You can configure the retry behavior for extraction:
+You can configure retry behavior for all model-backed steps:
 
 ```python
 extractor = Extractor.from_litellm(
     model="openai/gpt-4o",
     api_key="your-api-key",
-    max_retries=5,      # Maximum total extraction attempts
+    max_retries=5,      # Five retries after the initial attempt
     min_wait=2,         # Minimum seconds to wait between retries
     max_wait=30         # Maximum seconds to wait between retries
 )
@@ -120,11 +176,11 @@ extractor = Extractor.from_litellm(
 
 ### Retry Parameters
 
-| Parameter   | Type | Default | Description                             |
-| ----------- | ---- | ------- | --------------------------------------- |
-| max_retries | int  | 3       | Maximum total extraction attempts       |
-| min_wait    | int  | 1       | Minimum seconds to wait between retries |
-| max_wait    | int  | 10      | Maximum seconds to wait between retries |
+| Parameter   | Type | Default | Description                              |
+| ----------- | ---- | ------- | ---------------------------------------- |
+| max_retries | int  | 3       | Retries allowed after the initial attempt |
+| min_wait    | int  | 1       | Minimum seconds to wait between retries  |
+| max_wait    | int  | 10      | Maximum seconds to wait between retries  |
 
 ## Processing Configuration
 
@@ -134,8 +190,8 @@ You can configure the processing behavior:
 extractor = Extractor.from_litellm(
     model="openai/gpt-4o",
     api_key="your-api-key",
-    max_threads=20,     # Maximum number of concurrent threads
-    batch_size=50       # Size of processing batches
+    max_threads=20,     # Maximum concurrent row requests
+    batch_size=50       # Rows scheduled at once
 )
 ```
 
@@ -143,8 +199,8 @@ extractor = Extractor.from_litellm(
 
 | Parameter   | Type | Default | Description                          |
 | ----------- | ---- | ------- | ------------------------------------ |
-| max_threads | int  | 10      | Maximum number of concurrent threads |
-| batch_size  | int  | 100     | Size of processing batches           |
+| max_threads | int  | 10      | Maximum concurrent row requests       |
+| batch_size  | int  | 100     | Rows scheduled in each processing batch |
 
 ## Best Practices
 
@@ -159,6 +215,6 @@ extractor = Extractor.from_litellm(
    - Adjust based on your data size and memory constraints
    - Smaller batches use less memory but may be slower
 
-3. **Thread Count**:
-   - Set based on your CPU capabilities
-   - Too many threads can cause resource contention
+3. **Concurrency**:
+   - Set based on provider rate and connection limits
+   - Each concurrent operation has its own `max_threads` allowance

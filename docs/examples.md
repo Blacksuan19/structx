@@ -37,13 +37,13 @@ query = "summarize the main terms and conditions of this consultancy agreement, 
 result = extractor.extract(data=agreement_path, query=query)
 
 # Access the extraction results
-print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")
+print(f"Processed {result.success_count} rows with {result.success_rate:.1f}% success rate")
 print(result.data)
 ```
 
 ### Results:
 
-Extracted 1 items with 100.0% success rate
+Processed 1 rows with 100.0% success rate
 
 ### Token Usage:
 Total tokens used: 11127
@@ -154,7 +154,7 @@ result = extractor.extract(data=invoice_path, query=query)
 
 ### Results:
 
-Extracted 6 items with 100.0% success rate
+Processed 6 rows with 100.0% success rate
 
 ### Token Usage:
 Total tokens used: 5769

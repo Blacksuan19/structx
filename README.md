@@ -8,9 +8,9 @@ support.
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
 `structx` is a powerful Python library for extracting structured data from text,
-tables, and documents using Large Language Models (LLMs). With the optional
-`docs` extra, it provides a multimodal PDF pipeline that passes PDFs directly to
-vision-capable models and converts other document formats to PDF first.
+tables, and documents using Large Language Models (LLMs). It passes existing
+PDFs directly to vision-capable models; the optional `docs` extra converts other
+document formats to PDF first.
 
 ## 🔔 Package rename notice (PyPI)
 
@@ -29,7 +29,7 @@ pip install -U structx
 ```
 
 If you previously pinned `structx-llm` in requirements or lock files, replace it
-with `structx`. For document/PDF processing, install `structx[docs]`.
+with `structx`. Install `structx[docs]` for non-PDF document conversion.
 
 ## ✨ Key Features
 
@@ -41,8 +41,8 @@ with `structx`. For document/PDF processing, install `structx[docs]`.
   PDFs and images
 - **🔄 Smart Format Detection**: Automatic processing mode selection for best
   results
-- **📊 Flexible File Support**: CSV, Excel, JSON, Parquet in the base install,
-  with PDF, DOCX, TXT, Markdown, and more via `structx[docs]`
+- **📊 Flexible File Support**: CSV, Excel, JSON, Parquet, raw text, and existing
+  PDFs in the base install; DOCX, PPTX, images, and more via `structx[docs]`
 
 ### 🚀 **Intelligent Data Extraction**
 
@@ -56,11 +56,12 @@ with `structx`. For document/PDF processing, install `structx[docs]`.
 
 ### ⚡ **Performance & Reliability**
 
-- **🚀 High-Performance Processing**: Multi-threaded and async operations
+- **🚀 High-Performance Processing**: Threaded sync and native async row requests
 - **🔄 Robust Error Handling**: Automatic retry mechanism with exponential
   backoff
 - **📈 Token Usage Tracking**: Detailed step-by-step metrics for cost monitoring
-- **� Flexible Configuration**: Configurable extraction using OmegaConf
+- **Flexible Configuration**: Model settings from arguments, YAML, environment
+  variables, dotenv files, and secrets through Pydantic Settings
 - **🔌 Multiple LLM Providers**: Support through litellm integration
 
 ## Installation
@@ -69,7 +70,8 @@ with `structx`. For document/PDF processing, install `structx[docs]`.
 pip install structx
 ```
 
-For document and multimodal PDF support:
+For converting DOCX, PowerPoint, OpenDocument, markup, image, and other
+non-PDF document formats:
 
 ```bash
 pip install "structx[docs]"
@@ -105,14 +107,14 @@ result = extractor.extract(
 )
 
 # Access results
-print(f"Extracted {result.success_count} items")
+print(f"Successful rows: {result.success_count}")
 print(result.data[0].model_dump_json(indent=2))
 ```
 
 ### 📄 Document Processing with Multimodal Support
 
 Install `structx[docs]` before using non-PDF document formats. Existing PDFs can
-be passed directly through the multimodal path.
+be passed directly through the multimodal path with the base installation.
 
 ```python
 # Process a PDF invoice through the multimodal pipeline
@@ -161,6 +163,7 @@ For comprehensive documentation, examples, and guides, visit our
 
 - [Getting Started](https://structx.aolabs.dev/getting-started)
 - [Basic Extraction](https://structx.aolabs.dev/guides/basic-extraction)
+- [Working with Results](https://structx.aolabs.dev/guides/working-with-results)
 - [Unstructured Text Processing](https://structx.aolabs.dev/guides/unstructured-text)
 - [Async Operations](https://structx.aolabs.dev/guides/async-operations)
 - [Multiple Queries](https://structx.aolabs.dev/guides/multiple-queries)

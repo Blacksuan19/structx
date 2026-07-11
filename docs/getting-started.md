@@ -18,7 +18,7 @@ extraction.
         ```
 
     If you pinned `structx-llm` in requirements or lock files, replace it with `structx`.
-    For document/PDF processing, install `structx[docs]`.
+    Install `structx[docs]` for non-PDF document conversion.
 
 Install the package:
 
@@ -26,7 +26,7 @@ Install the package:
 pip install structx
 ```
 
-For document and multimodal PDF support:
+For converting non-PDF documents and images to multimodal PDF input:
 
 ```bash
 pip install "structx[docs]"
@@ -35,12 +35,11 @@ pip install "structx[docs]"
 ### What You Get
 
 - **Structured Data**: CSV, JSON, Excel, Parquet, and Feather through pandas
-- **Documents**: Optional unstructured document processing with multimodal PDF
-  support through `structx[docs]`
-  - Direct PDF passthrough
+- **Existing PDFs**: Direct Instructor multimodal passthrough in the base install
+- **Other Documents**: Optional Docling and WeasyPrint conversion through
+  `structx[docs]`
   - Document-to-PDF conversion for supported non-PDF formats
-  - Instructor's multimodal vision capabilities
-  - Enhanced extraction quality for supported document types
+  - OCR-free visual interpretation by the selected multimodal model
 
 ## Basic Usage
 
@@ -110,16 +109,16 @@ result = extractor.extract(
 ```
 
 !!! note "Document dependencies"
-    Install `structx[docs]` before using PDF or document file inputs. The base
-    install supports structured files, DataFrames, and lists of dictionaries.
-    Raw strings and document paths use the optional document pipeline.
+    Existing PDFs and raw strings work with the base installation. Install
+    `structx[docs]` for non-PDF document paths such as DOCX, PPTX, HTML, or
+    images that must be converted through Docling and WeasyPrint.
 
 ### Access Results
 
 ```python
 # Check extraction statistics
-print(f"Extracted {result.success_count} items")
-print(f"Failed {result.failure_count} items")
+print(f"Successful rows: {result.success_count}")
+print(f"Failed rows: {result.failure_count}")
 print(f"Success rate: {result.success_rate:.1f}%")
 
 # Access as list of model instances
@@ -134,7 +133,14 @@ print(df)
 # Access the generated model
 print(f"Model: {result.model.__name__}")
 print(result.model.model_json_schema())
+
+# Inspect row provenance, status, and row-specific usage
+for row in result.rows:
+    print(row.source_index, row.status, row.usage.total_tokens)
 ```
+
+See [Working with Results](guides/working-with-results.md) for status meanings,
+row provenance, multiple items per row, counters, and DataFrame behavior.
 
 ### Check Token Usage
 
@@ -182,7 +188,7 @@ extractor = Extractor.from_litellm(
 extractor = Extractor.from_litellm(
     model="openai/gpt-4o",
     api_key="your-api-key",
-    max_retries=5,      # Maximum total extraction attempts
+    max_retries=5,      # Five retries after the initial attempt
     min_wait=2,         # Minimum seconds between retries
     max_wait=30         # Maximum seconds between retries
 )
@@ -195,6 +201,8 @@ parameters supported by your model.
 ## Next Steps
 
 - Learn about [Basic Extraction](guides/basic-extraction.md) techniques
+- Understand [Extraction Results](guides/working-with-results.md), row status,
+  provenance, and per-row usage
 - Explore [Custom Models](guides/custom-models.md) for specific extraction needs
 - Learn about the [Retry Mechanism](guides/retry-mechanism.md) for handling
   transient errors

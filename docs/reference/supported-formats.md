@@ -31,7 +31,7 @@ result = extractor.extract(
 
 ## Documents
 
-Install the document extra before processing document paths or raw strings:
+Install the document extra before processing non-PDF document or image paths:
 
 ```bash
 pip install "structx[docs]"
@@ -52,6 +52,10 @@ Existing PDFs are not parsed by Docling. Non-PDF inputs are converted once;
 the resulting text sample is reused for schema planning and the generated PDF
 is sent to the extraction model. OCR and Docling table-structure analysis are
 disabled, leaving visual interpretation to the multimodal model.
+
+Existing PDFs and raw strings work with the base installation. PDF extraction
+still requires the selected model and provider endpoint to accept multimodal
+PDF input.
 
 ```python
 # Existing PDF passthrough
@@ -87,9 +91,8 @@ result = extractor.extract(data=data, query="extract invoice name and total")
 
 ### Raw Strings
 
-Non-empty strings that do not look like paths are written to a temporary text
-file and processed through the document pipeline. Raw strings therefore require
-`structx[docs]`:
+Non-empty strings that do not look like paths are processed directly in memory
+and do not require `structx[docs]`:
 
 ```python
 result = extractor.extract(
@@ -104,6 +107,11 @@ Structx rejects missing paths, directories, empty files, empty DataFrames or
 lists, malformed PDFs, and unsupported extensions before model planning begins.
 Strings with a supported extension, an absolute path, or a relative-path prefix
 such as `./` or `../` are treated as paths rather than raw text.
+
+Low-level `FileReader.read_file()` calls return a
+[`PreparedInput`](../api/inputs.md#preparedinput). Converted documents include
+temporary PDFs that direct callers must clean up; `Extractor` handles this
+automatically.
 
 ## Output Types
 

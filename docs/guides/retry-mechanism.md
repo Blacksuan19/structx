@@ -1,7 +1,8 @@
 # Retry Mechanism
 
-`structx` retries failed extraction completions with exponential backoff.
-Planning and model-refinement calls are not retried by this mechanism.
+`structx` retries transient model-call failures with exponential backoff. The
+same policy applies to dynamic schema planning, model refinement, and row
+extraction. Custom-model guidance is derived locally and needs no retry.
 
 ## Basic Usage
 
@@ -24,7 +25,7 @@ You can customize the retry behavior when initializing the extractor:
 extractor = Extractor.from_litellm(
     model="openai/gpt-4o",
     api_key="your-api-key",
-    max_retries=5,      # Maximum total extraction attempts
+    max_retries=5,      # Five retries after the initial attempt
     min_wait=2,         # Minimum seconds to wait between retries
     max_wait=30         # Maximum seconds to wait between retries
 )
@@ -75,11 +76,14 @@ graph TD
 
 ## Retry-Eligible Errors
 
-Extraction completion errors are normalized to `ExtractionError` and retried.
-The current implementation does not classify failures by provider error type,
-so authentication or invalid-parameter errors may also consume all configured
-attempts. Input preparation, planning, and model-refinement failures are outside
-the extraction retry loop.
+Model-call errors are normalized to `ExtractionError`, while their original
+exception chain is retained for classification. Structx retries connection,
+timeout, rate-limit, bad-gateway, service-unavailable, and internal-server
+errors. HTTP status codes `408`, `429`, and `5xx` are also retryable.
+
+Authentication, permission, invalid-parameter, validation, and other permanent
+failures are raised immediately. Input preparation is performed before any
+model call and is never retried.
 
 ## Monitoring Retries
 

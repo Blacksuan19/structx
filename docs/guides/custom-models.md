@@ -10,38 +10,31 @@ use your own custom Pydantic models for extraction.
 
 ```mermaid
 graph LR
-    A[Custom Model] --> B[Model Analysis]
-    B --> C[Field Mapping]
-    C --> D[Guide Generation]
-    D --> E[Direct Extraction]
-    E --> F[Type Validation]
-    F --> G[Result Object]
-
-    subgraph "Model Analysis"
-        B1[Extract Schema] --> B2[Analyze Fields]
-        B2 --> B3[Identify Types]
-        B3 --> B4[Parse Descriptions]
-    end
-
-    subgraph "Field Mapping"
-        C1[Data Column Detection] --> C2[Field Alignment]
-        C2 --> C3[Type Compatibility]
-        C3 --> C4[Mapping Strategy]
-    end
+    A[Query and Custom Model] --> B[Deterministic Instructions]
+    B --> C[Keep All Input Columns]
+    C --> D[Independent Row Extraction]
+    D --> E[Pydantic Validation]
+    E --> F[RowResult Collection]
+    F --> G[ExtractionResult]
 
     subgraph "Extraction Benefits"
-        H[Skip Query Analysis]
+        H[Skip Planning Request]
         I[Skip Model Generation]
         J[Direct Type Safety]
-        K[Validation Included]
+        K[Per Row Provenance]
     end
 
-    B --> B1
-    C --> C1
-    E --> H
+    D --> H
+    D --> I
+    E --> J
+    F --> K
 ```
 
 </details>
+
+Custom models bypass schema planning entirely. Structx creates deterministic
+instructions from the query and model contract, retains every available input
+column, and makes only the row extraction calls.
 
 ## Using Custom Models
 

@@ -1,8 +1,13 @@
 # Async Operations
 
-`structx` provides async wrappers for extraction, multiple-query processing,
-and schema generation. These wrappers offload the synchronous operation to an
-executor so it does not block the caller's event loop.
+`structx` uses LiteLLM's asynchronous completion API through an Instructor
+`AsyncInstructor`. Planning and row extraction are native async model calls.
+Blocking file parsing and document conversion are the only operations moved to
+a worker thread.
+
+`Extractor.from_litellm` configures both clients automatically. When creating
+`Extractor` directly, pass both `client` and `async_client`; async methods fail
+fast when no async Instructor client is configured.
 
 ## Basic Async Extraction
 
@@ -29,6 +34,7 @@ For each synchronous method, there is an async counterpart:
 | `extract`          | `extract_async`         |
 | `extract_queries`  | `extract_queries_async` |
 | `get_schema`       | `get_schema_async`      |
+| `refine_data_model` | `refine_data_model_async` |
 
 ## Parallel Processing
 
@@ -40,33 +46,17 @@ Process multiple documents in parallel:
 <summary>View Async Processing Flow Diagram</summary>
 
 ```mermaid
-graph TB
-    A[Multiple Files] --> B[Create Async Tasks]
-    B --> C[Parallel Execution]
-
-    C --> D1[File 1 Processing]
-    C --> D2[File 2 Processing]
-    C --> D3[File 3 Processing]
-    C --> D4[File N Processing]
-
-    D1 --> E1[Result 1]
-    D2 --> E2[Result 2]
-    D3 --> E3[Result 3]
-    D4 --> E4[Result N]
-
-    E1 --> F[Gather Results]
+graph LR
+    A[Prepare Input] --> B[Plan Model Once]
+    B --> C[Create Row Tasks]
+    C --> D[Async Semaphore]
+    D --> E1[Row 1 Request]
+    D --> E2[Row 2 Request]
+    D --> E3[Row N Request]
+    E1 --> F[Stable Row Outcomes]
     E2 --> F
     E3 --> F
-    E4 --> F
-
-    F --> G[Combined Output]
-
-    subgraph "Concurrent Execution"
-        D1
-        D2
-        D3
-        D4
-    end
+    F --> G[Result Collection]
 ```
 
 </details>
@@ -128,15 +118,32 @@ async def process_multiple_queries():
 results = asyncio.run(process_multiple_queries())
 ```
 
-`extract_queries_async` offloads the synchronous sequential query loop; it does
-not execute the queries concurrently. Use separate `extract_async` tasks with
-`asyncio.gather` when independent operations should overlap.
+`extract_queries_async` prepares the input once and processes queries
+sequentially. Rows within each query are concurrent. Keeping queries sequential
+prevents query concurrency from multiplying row concurrency unexpectedly.
+
+## Row Concurrency
+
+Each row remains an independent model request. `max_threads` is also the maximum
+number of in-flight async row requests for one extraction operation, while
+`batch_size` limits how many row tasks are scheduled at once. Results are stored
+by input position, so completion order does not affect output order or failure
+attribution. Each `result.rows` entry retains its own usage object; the top-level
+usage is merged in stable input order.
+
+Rows are intentionally not combined into one prompt. Combining them would
+require token-aware packing, generated row identifiers, partial-response
+validation, and retrying only failed members of a combined call. It also lets
+one oversized or malformed row invalidate unrelated rows. Independent requests
+provide predictable limits, exact usage per call, and isolated retries.
+
+Use separate `extract_async` tasks with `asyncio.gather` for independent
+documents. Be aware that each operation has its own `max_threads` allowance.
 
 ## Best Practices
 
 1. **Use in Async Environments**: Only use async methods in async environments
-2. **Limit Concurrency**: Be mindful of API rate limits when processing in
-   parallel
+2. **Limit Concurrency**: Set `max_threads` to match provider rate limits
 3. **Handle Errors**: Use try/except with async operations
 4. **Close Resources**: Ensure proper cleanup of resources in async contexts
 

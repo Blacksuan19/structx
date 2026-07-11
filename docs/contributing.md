@@ -65,8 +65,18 @@ def example_function(param1: str, param2: int = 0) -> bool:
 
 ```bash
 uv run pytest
-uv run mkdocs build --strict
+uv run pytest --run-integration
+uv run --extra mkdocs mkdocs build --strict
 ```
+
+Live endpoint tests are opt-in. Configure `OPENAI_API_KEY` and
+`OPENAI_BASE_URL` in `.env`, optionally set `STRUCTX_TEST_MODEL`, and run:
+
+```bash
+uv run pytest --run-live tests/test_live_llm.py
+```
+
+Neither the normal suite nor `--run-integration` makes external model calls.
 
 4. **Commit Your Changes**:
 

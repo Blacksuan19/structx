@@ -6,7 +6,7 @@ This guide covers the fundamentals of data extraction with `structx`.
 
 When you use `structx` to extract data, the following happens:
 
-1. **Planning**: The query, extraction guide, and schema are generated together
+1. **Planning**: Instructions, target columns, and the schema are generated together
 2. **Model Generation**: A Pydantic model is created from the planned schema
 3. **Data Extraction**: The model is used to extract structured data from the
    text
@@ -20,7 +20,7 @@ When you use `structx` to extract data, the following happens:
 
 ```mermaid
 graph LR
-    A[Raw Query] --> B[Schema and Guide Planning]
+    A[Raw Query] --> B[Instruction and Schema Planning]
     B --> C[Model Generation]
     C --> D[Model Creation]
     D --> E[Data Extraction]
@@ -28,8 +28,8 @@ graph LR
     F --> G[ExtractionResult]
 
     subgraph "LLM Operations"
-        B1[Analyze Query] --> B2[Infer Schema]
-        B2 --> B3[Generate Guide]
+        B1[Write Instructions] --> B2[Select Columns]
+        B2 --> B3[Infer Schema]
     end
 
     B --> B1
@@ -41,16 +41,14 @@ graph LR
 
 When you provide a data model, the workflow is optimized:
 
-1. **Model-Driven Guide Generation**: A guide is generated based on the model
-   structure and available data columns
+1. **Deterministic Instructions**: The query is combined with the supplied
+   model contract without a planning model call
 2. **Data Extraction**: The provided model is used to extract structured data
 3. **Result Collection**: Results are collected and returned as an
    `ExtractionResult` object
 
-This workflow is more efficient as it skips the query analysis step and uses the
-model structure to guide the extraction process. The guide generation focuses on
-mapping model fields to available data columns and ensuring proper data type
-handling.
+This workflow skips planning entirely. Every input column is retained so a
+name-based heuristic cannot accidentally omit evidence needed by the model.
 
 ### Custom Model Flow
 
@@ -59,22 +57,11 @@ handling.
 
 ```mermaid
 graph LR
-    A[Custom Model] --> B[Model Analysis]
-    B --> C[Field Mapping]
-    C --> D[Guide Generation]
-    D --> E[Direct Extraction]
+    A[Query and Custom Model] --> B[Deterministic Instructions]
+    B --> C[Keep All Input Columns]
+    C --> D[Independent Row Extraction]
+    D --> E[RowResult Collection]
     E --> F[ExtractionResult]
-
-    subgraph "Model Processing"
-        B1[Schema Analysis] --> B2[Field Discovery]
-        B2 --> B3[Type Inference]
-
-        C1[Column Mapping] --> C2[Field Alignment]
-        C2 --> C3[Validation Rules]
-    end
-
-    B --> B1
-    C --> C1
 ```
 
 </details>
@@ -121,9 +108,8 @@ extract the following details from the invoice:
 documents, you'll primarily use file paths.
 
 !!! note "Document dependencies"
-    Install `structx[docs]` before using PDF or document file inputs. The base
-    install supports structured files, DataFrames, and lists of dictionaries.
-    Raw strings and document paths use the optional document pipeline.
+    Existing PDFs and raw strings work with the base installation. Install
+    `structx[docs]` for non-PDF document paths that require conversion.
 
 ### Files
 
@@ -188,22 +174,29 @@ result = extractor.extract(
 The `extract` method returns an `ExtractionResult` object with:
 
 - `data`: Extracted data (DataFrame or list of model instances)
-- `failed`: DataFrame with failed extractions
+- `rows`: Ordered row outcomes containing source index, input payload, items,
+  error, status, and row-specific usage
+- `failed`: Derived DataFrame view of failed rows
 - `model`: Generated or provided model class
 - `usage`: Raw provider usage grouped by schema-generation and extraction calls
-- `success_count`: Number of successful extractions
-- `failure_count`: Number of failed extractions
+- `success_count`: Number of input rows without an extraction error
+- `empty_count`: Number of successful rows that returned no model instances
+- `extracted_count`: Number of returned model instances or DataFrame rows
+- `failure_count`: Number of failed input rows
 - `success_rate`: Success rate as a percentage
 
 ```python
 # Check extraction statistics
-print(f"Extracted {result.success_count} items")
-print(f"Failed {result.failure_count} items")
+print(f"Successful rows: {result.success_count}")
+print(f"Failed rows: {result.failure_count}")
 print(f"Success rate: {result.success_rate:.1f}%")
 
 # Access the model schema
 print(result.model.model_json_schema())
 ```
+
+See [Working with Results](working-with-results.md) for the full distinction
+between flattened `data`, canonical row outcomes, counters, and per-row usage.
 
 ## Error Handling
 

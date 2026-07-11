@@ -48,7 +48,7 @@ def print_extraction_results(results: ExtractionResult):
     """Print extraction results including stats, token usage, and data."""
     print("\n### Results:")
     print(
-        f"\nExtracted {results.success_count} items with {results.success_rate:.1f}% success rate"
+        f"\nProcessed {results.success_count} rows with {results.success_rate:.1f}% success rate"
     )
 
     print_token_usage(results.usage)
@@ -149,7 +149,7 @@ def main():
             f'query = "{q1}"',
             "result = extractor.extract(data=agreement_path, query=query)",
             "\n# Access the extraction results",
-            'print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")',
+            'print(f"Processed {result.success_count} rows with {result.success_rate:.1f}% success rate")',
             "print(result.data)",
         ],
     )

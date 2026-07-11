@@ -1,7 +1,8 @@
 # Documents and Raw Text
 
-Structx processes PDFs, office documents, markup, images, captions, and raw
-strings through an optional multimodal document pipeline.
+Structx sends existing PDFs directly to multimodal models and processes raw
+strings as text. Office documents, markup, images, and captions use the optional
+document conversion pipeline.
 
 ## Installation
 
@@ -13,18 +14,25 @@ The extra installs Docling Slim, its local model dependencies, PyTorch,
 Torchvision, and WeasyPrint. Linux environments managed by this repository use
 the CPU-only PyTorch index.
 
-The base installation does not process document paths or raw strings. It does
-support structured files, DataFrames, and lists of dictionaries.
+The base installation supports existing PDFs, raw strings, structured files,
+DataFrames, and lists of dictionaries. The `docs` extra is required only for
+non-PDF paths that Docling and WeasyPrint must convert.
 
 ## Pipeline
 
 ```mermaid
 graph LR
-    A[Existing PDF] --> D[Instructor Multimodal Input]
-    B[Non-PDF Document] --> C[Docling HTML Export]
-    C --> E[WeasyPrint PDF]
-    E --> D
-    D --> F[Structured Pydantic Output]
+    A[Existing PDF] --> D[Prepared PDF Payload]
+    B[Non-PDF Document] --> C[Docling Conversion]
+    C --> E[Text Planning Sample]
+    C --> F[HTML Export]
+    F --> G[WeasyPrint PDF]
+    G --> D
+    D --> H[Instructor Multimodal Extraction]
+    E --> I[Instruction and Schema Planning]
+    A --> I
+    I --> H
+    H --> J[Structured Pydantic Output]
 ```
 
 1. Existing PDFs are validated and passed through unchanged.
@@ -76,8 +84,8 @@ result = extractor.extract(
 
 ## Raw Strings
 
-A non-empty string that does not look like a path is written to a temporary
-`.txt` file and passed through the document pipeline:
+A non-empty string that does not look like a path is processed directly as
+in-memory text. It does not require the document extra:
 
 ```python
 text = """
@@ -95,8 +103,7 @@ Strings with supported file extensions, absolute paths, or prefixes such as
 `./`, `../`, and `~/` are treated as file paths. A missing path is rejected
 before planning or extraction.
 
-To process text without the document extra, place it in a DataFrame or list of
-dictionaries:
+DataFrames and lists of dictionaries use the same direct text path:
 
 ```python
 import pandas as pd
