@@ -1,84 +1,39 @@
 from string import Template
 
-query_refinement_system_prompt = """You are a data structuring specialist.
-Analyze queries to determine the inherent structure of the data
-and provide clear requirements for extraction."""
+extraction_plan_system_prompt = """You design complete structured extraction plans.
+Return a refined query, extraction guide, and model schema that agree with each other.
+Use only these field type forms: str, int, float, bool, date, datetime, time,
+Decimal, UUID, Any, List[T], Dict[str, T], Set[T], and Optional[T].
+Fields are nullable by default, so do not add Optional unless it clarifies intent.
+Represent nested objects with nested_fields and use List[Any] or Dict[str, Any]
+only when a more precise type cannot be determined."""
 
-query_refinement_template = Template(
-    """
-    Analyze and expand the following query to ensure structured extraction.
-    Consider:
-    1. What are the inherent characteristics of the data?
-    2. What structural patterns would best represent it?
-    3. How should multiple related items be organized?
-    4. Are there nested relationships or hierarchies?
-    5. What data types would best represent each piece?
+extraction_plan_template = Template("""
+    Build one complete extraction plan for this request.
 
-    Query: ${query}
+    Original query:
+    ${query}
 
-    """
-)
-
-
-schema_system_prompt = """You are a schema design specialist.
-Create detailed schemas that capture complex data structures."""
-
-schema_template = Template(
-    """
-    Design a data extraction schema that enforces structured organization.
-    
-    Refined Query: ${refined_query} 
-    
-    Data Characteristics:
-    ${data_characteristics}
-    
-    Structural Requirements:
-    ${structural_requirements}
-    
-    Organization Principles:
-    ${organization_principles}
-    
-    Sample text:
-    ${sample_text}
-    
-    Important:
-    1. Create structured objects for complex information
-    2. Define appropriate data types
-    3. Include nested models where needed
-    4. Maintain consistent patterns
-    5. Preserve relationships
-    """
-)
-
-
-guide_system_prompt = """You are a data modeling specialist.
-Create clear patterns for organizing complex, nested data structures.
-Provide patterns as simple string descriptions and identify the correct target columns to analyze."""
-
-
-guide_template = Template(
-    """
-    Create guidelines for structured data extraction based on these characteristics:
-    ${data_characteristics}
-
-    here is the list of available columns in the dataset:
+    Available input columns:
     ${available_columns}
-    
-    Provide:
-    1. Structural patterns as key-value pairs of string descriptions
-    2. Relationship rules as a list of clear instructions
-    3. Organization principles as a list of guidelines
-    4. Target columns (target_columns) as a list of column names that contain the text to analyze
-    
-    The target_columns field is very important - it must contain only column names that actually exist in the dataset.
-    If unsure, use the first column or the 'text' column if available.
-    Keep all values as simple strings.
-    """
-)
+
+    Representative input:
+    ${sample_text}
+
+    Requirements:
+    1. Refine the query into explicit extraction instructions.
+    2. Select target_columns only from the available input columns.
+    3. Create structural patterns, relationship rules, and organization principles.
+    4. Define the smallest model schema that fully answers the query. Prefer a few
+       focused fields over an exhaustive document audit.
+    5. Use nested_fields for structured objects and canonical field types exactly as instructed.
+    6. Do not encode nullability using JSON Schema or TypeScript syntax.
+    7. Do not add catch-all summaries, issue inventories, metadata, or unrelated legal
+       terms unless the query explicitly requests them.
+    """)
 
 # Specialized template for custom model extraction
-custom_model_guide_template = Template(
-    """
+custom_model_guide_template = Template("""
     Create guidelines for structured data extraction based on these model field characteristics:
     ${data_characteristics}
 
@@ -111,8 +66,7 @@ custom_model_guide_template = Template(
     - Add rules to prevent invented or fabricated values for any field
 
     Keep all values as simple strings.
-    """
-)
+    """)
 
 
 extraction_system_prompt = """
@@ -128,8 +82,7 @@ You are a precise data extraction system specialized in transforming raw data in
 9. When working with custom models, leave fields as null rather than inventing values
 """
 
-extraction_template = Template(
-    """
+extraction_template = Template("""
     Extract structured information following these guidelines:
     
     Query: ${query} 
@@ -147,16 +100,14 @@ extraction_template = Template(
 
     Text to analyze:
     ${text}
-    """
-)
+    """)
 
 # Refinement prompt for existing models
 refinement_system_prompt = """You are a data model refinement specialist.
 Analyze the existing model and the refinement instructions to create
 a new model that incorporates the requested changes."""
 
-refinement_template = Template(
-    """
+refinement_template = Template("""
     Refine the following data model according to these instructions:
     
     EXISTING MODEL SCHEMA:
@@ -179,5 +130,4 @@ refinement_template = Template(
     - Use `Field` with validation parameters instead of validators where possible
     
     Include a clear description of the model and each field.
-    """
-)
+    """)

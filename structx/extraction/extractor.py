@@ -4,6 +4,7 @@ Refactored main extractor class - now acts as an orchestrator with better organi
 
 import copy
 import threading
+from functools import partial
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
@@ -40,6 +41,7 @@ class Extractor:
         max_retries: Maximum number of retries for extraction
         min_wait: Minimum seconds to wait between retries
         max_wait: Maximum seconds to wait between retries
+        planning_model: Optional model for schema and guide generation
     """
 
     def __init__(
@@ -52,6 +54,7 @@ class Extractor:
         max_retries: int = 3,
         min_wait: int = 1,
         max_wait: int = 10,
+        planning_model: Optional[str] = None,
     ):
         """Initialize extractor."""
         self.model_name = model_name
@@ -77,6 +80,7 @@ class Extractor:
             max_retries=max_retries,
             min_wait=min_wait,
             max_wait=max_wait,
+            planning_model_name=planning_model,
         )
 
         # Initialize specialized processors
@@ -89,45 +93,31 @@ class Extractor:
         logger.info(f"Initialized Extractor with configuration: {self.config.conf}")
 
     def _initialize_extraction(
-        self, df: pd.DataFrame, query: str, generate_model: bool = True
-    ) -> tuple[Any, Any, Optional[Type[BaseModel]]]:
-        """Initialize the extraction process by refining query and generating models if needed."""
-        # Refine query
-        refined_query = self.llm_core.refine_query(query)
-        logger.info(f"Refined Query: {refined_query.refined_query}")
-
-        # Generate guide
-        guide = self.llm_core.generate_extraction_guide(
-            refined_query, df.columns.tolist()
+        self, df: pd.DataFrame, query: str
+    ) -> tuple[Any, Any, Type[BaseModel]]:
+        """Generate a complete extraction plan and its Pydantic model."""
+        sample_text = self._create_schema_sample(df)
+        plan = self.model_operations.generate_extraction_plan(
+            query=query,
+            sample_text=sample_text,
+            data_columns=df.columns.tolist(),
         )
-        logger.info(f"Target Columns: {guide.target_columns}")
+        logger.info(f"Refined Query: {plan.refined_query.refined_query}")
+        logger.info(f"Target Columns: {plan.guide.target_columns}")
 
-        if not generate_model:
-            return refined_query, guide, None
-
-        # Get sample text for schema generation
-        # Check if this is file-based extraction (contains pdf_path or source columns)
-        is_file_based = "pdf_path" in df.columns or "source" in df.columns
-
-        if is_file_based:
-            # For file-based extractions, extract actual content samples
-            sample_text = self.content_analyzer.extract_content_sample_for_schema(df)
-            # Add context about the content type
-            content_context = self.content_analyzer.detect_content_type_and_context(df)
-            sample_text = f"Content type: {content_context}\n\n{sample_text}"
-        else:
-            # For traditional tabular data, use the existing approach
-            sample_text = df[guide.target_columns].iloc[0]
-
-        # Generate model
-        schema_request = self.model_operations.generate_extraction_schema(
-            sample_text, refined_query, guide
-        )
         extraction_model = self.model_operations.create_model_from_schema(
-            schema_request
+            plan.extraction_schema
         )
+        return plan.refined_query, plan.guide, extraction_model
 
-        return refined_query, guide, extraction_model
+    def _create_schema_sample(self, df: pd.DataFrame) -> str:
+        """Create one representative sample for extraction planning."""
+        is_file_based = "pdf_path" in df.columns or "source" in df.columns
+        if is_file_based:
+            sample_text = self.content_analyzer.extract_content_sample_for_schema(df)
+            content_context = self.content_analyzer.detect_content_type_and_context(df)
+            return f"Content type: {content_context}\n\n{sample_text}"
+        return "\n".join(df.head().to_string(index=False).splitlines())
 
     def _create_extraction_worker(
         self,
@@ -199,7 +189,7 @@ class Extractor:
             ExtractionModel = extraction_model
         else:
             refined_query, guide, ExtractionModel = self._initialize_extraction(
-                df, query, generate_model=True
+                df, query
             )
 
         # Initialize results
@@ -410,20 +400,15 @@ class Extractor:
                 # For traditional tabular data, create a representative sample
                 sample_text = "\n".join(df.head().to_string(index=False).splitlines())
 
-        # Refine query
-        refined_query = self.llm_core.refine_query(query)
-
-        # Generate guide
-        guide = self.llm_core.generate_extraction_guide(refined_query, columns)
-
-        # Generate schema
-        schema_request = self.model_operations.generate_extraction_schema(
-            sample_text, refined_query, guide
+        plan = self.model_operations.generate_extraction_plan(
+            query=query,
+            sample_text=sample_text,
+            data_columns=columns,
         )
 
         # Create model
         extraction_model = self.model_operations.create_model_from_schema(
-            schema_request
+            plan.extraction_schema
         )
 
         # Create a deep copy of usage for the model
@@ -505,12 +490,13 @@ class Extractor:
         *,
         model: str,
         api_key: Optional[str] = None,
-        config: Optional[Union[Dict, str]] = None,
+        config: Optional[Union[Dict, str, Path, ExtractionConfig]] = None,
         max_threads: int = 10,
         batch_size: int = 100,
         max_retries: int = 3,
         min_wait: int = 1,
         max_wait: int = 10,
+        planning_model: Optional[str] = None,
         **litellm_kwargs: Any,
     ) -> "Extractor":
         """
@@ -519,12 +505,13 @@ class Extractor:
         Args:
             model: Model identifier (e.g., "gpt-4", "claude-2", "azure/gpt-4")
             api_key: API key for the model provider
-            config: Extraction configuration
+            config: Per-step completion parameters passed to the model provider
             max_threads: Maximum number of concurrent threads
             batch_size: Size of processing batches
             max_retries: Maximum number of retries for extraction
             min_wait: Minimum seconds to wait between retries
             max_wait: Maximum seconds to wait between retries
+            planning_model: Optional model for schema and guide generation
             **litellm_kwargs: Additional kwargs for litellm (e.g., api_base, organization)
         """
         import instructor
@@ -535,15 +522,13 @@ class Extractor:
         if api_key:
             litellm.api_key = api_key
 
-        # drop unnecessary parameters
-        litellm.drop_params = True
-
         # Set additional litellm configs
         for key, value in litellm_kwargs.items():
             setattr(litellm, key, value)
 
-        # Create patched client
-        client = instructor.from_litellm(completion)
+        # Scope LiteLLM's capability-based parameter filtering to this client.
+        completion_with_filtered_params = partial(completion, drop_params=True)
+        client = instructor.from_litellm(completion_with_filtered_params)
 
         return cls(
             client=client,
@@ -554,4 +539,5 @@ class Extractor:
             max_retries=max_retries,
             min_wait=min_wait,
             max_wait=max_wait,
+            planning_model=planning_model,
         )

@@ -4,7 +4,8 @@ Core LLM operations and query processing.
 
 import logging
 import threading
-from typing import Dict, List, Type
+import time
+from typing import Dict, List, Mapping, Optional, Type
 
 from instructor import Instructor
 from loguru import logger
@@ -19,16 +20,9 @@ from tenacity import (
 
 from structx.core.config import DictStrAny, ExtractionConfig
 from structx.core.exceptions import ExtractionError
-from structx.core.models import ExtractionGuide, QueryRefinement
 from structx.utils.helpers import handle_errors
-from structx.utils.prompts import (
-    guide_system_prompt,
-    guide_template,
-    query_refinement_system_prompt,
-    query_refinement_template,
-)
 from structx.utils.types import ResponseType
-from structx.utils.usage import ExtractionStep, ExtractorUsage, StepUsage
+from structx.utils.usage import ExtractionStep, ExtractorUsage
 
 
 class LLMCore:
@@ -44,6 +38,7 @@ class LLMCore:
         max_retries: int = 3,
         min_wait: int = 1,
         max_wait: int = 10,
+        planning_model_name: Optional[str] = None,
     ):
         """
         Initialize LLM core.
@@ -55,6 +50,7 @@ class LLMCore:
             max_retries: Maximum number of retries for extraction
             min_wait: Minimum seconds to wait between retries
             max_wait: Maximum seconds to wait between retries
+            planning_model_name: Optional model for non-extraction planning steps
         """
         self.client = client
         self.model_name = model_name
@@ -62,6 +58,7 @@ class LLMCore:
         self.max_retries = max_retries
         self.min_wait = min_wait
         self.max_wait = max_wait
+        self.planning_model_name = planning_model_name or model_name
         self.usage_lock = threading.Lock()
         self.usage = ExtractorUsage()
 
@@ -107,20 +104,43 @@ class LLMCore:
         Returns:
             Completion result
         """
-        result, completion = self.client.chat.completions.create_with_completion(
-            model=self.model_name,
-            response_model=response_model,
-            messages=messages,
-            **config,
+        started_at = time.perf_counter()
+        model_name = (
+            self.model_name
+            if step == ExtractionStep.EXTRACTION
+            else self.planning_model_name
+        )
+        try:
+            result, completion = self.client.chat.completions.create_with_completion(
+                model=model_name,
+                response_model=response_model,
+                messages=messages,
+                **config,
+            )
+        except Exception:
+            elapsed = time.perf_counter() - started_at
+            logger.error(
+                f"LLM step {step.value} with {model_name} failed after {elapsed:.2f}s"
+            )
+            raise
+
+        elapsed = time.perf_counter() - started_at
+        logger.info(
+            f"LLM step {step.value} with {model_name} completed in {elapsed:.2f}s"
         )
 
-        usage = StepUsage.from_completion(completion, step)
+        usage = (
+            completion.get("usage")
+            if isinstance(completion, Mapping)
+            else getattr(completion, "usage", None)
+        )
 
         # Add to usage tracking if available (thread-safe)
-        if usage:
+        if usage is not None:
             with self.usage_lock:
-                self.usage.add_step_usage(usage)
-            logger.debug(f"Step {step.value}: {usage.total_tokens} tokens used")
+                self.usage.add_step_usage(step, usage)
+            total_tokens = getattr(usage, "total_tokens", 0)
+            logger.debug(f"Step {step.value}: {total_tokens} tokens used")
 
         return result
 
@@ -150,57 +170,3 @@ class LLMCore:
             return self.complete(messages, response_model, config, step)
 
         return _complete()
-
-    @handle_errors(error_message="Query refinement failed", error_type=ExtractionError)
-    def refine_query(self, query: str) -> QueryRefinement:
-        """
-        Refine and expand query with structural requirements.
-
-        Args:
-            query: Original query string
-
-        Returns:
-            Refined query with additional details
-        """
-        return self.complete(
-            messages=[
-                {"role": "system", "content": query_refinement_system_prompt},
-                {
-                    "role": "user",
-                    "content": query_refinement_template.substitute(query=query),
-                },
-            ],
-            response_model=QueryRefinement,
-            config=self.config.refinement,
-            step=ExtractionStep.REFINEMENT,
-        )
-
-    @handle_errors(error_message="Guide generation failed", error_type=ExtractionError)
-    def generate_extraction_guide(
-        self, refined_query: QueryRefinement, data_columns: List[str]
-    ) -> ExtractionGuide:
-        """
-        Generate extraction guide based on refined query.
-
-        Args:
-            refined_query: Refined query with details
-            data_columns: Available data columns
-
-        Returns:
-            Extraction guide with patterns and rules
-        """
-        return self.complete(
-            messages=[
-                {"role": "system", "content": guide_system_prompt},
-                {
-                    "role": "user",
-                    "content": guide_template.substitute(
-                        data_characteristics=refined_query.data_characteristics,
-                        available_columns=data_columns,
-                    ),
-                },
-            ],
-            response_model=ExtractionGuide,
-            config=self.config.refinement,
-            step=ExtractionStep.GUIDE,
-        )

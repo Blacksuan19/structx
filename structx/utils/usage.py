@@ -1,327 +1,140 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_serializer
 
 
 class ExtractionStep(Enum):
-    """
-    Enumeration of extraction process steps.
+    """A model-backed step in the extraction pipeline."""
 
-    Represents the different steps in the extraction pipeline where token usage is tracked.
-    """
-
-    REFINEMENT = "refinement"
     SCHEMA_GENERATION = "schema_generation"
     EXTRACTION = "extraction"
-    GUIDE = "guide"
 
 
-class TokenDetails(BaseModel):
-    """
-    Details about token usage with advanced metrics.
-
-    Stores specialized token metrics such as reasoning (thinking) tokens,
-    audio tokens, and cached tokens when available from the LLM provider.
-    """
-
-    audio_tokens: int = 0
-    reasoning_tokens: int = 0
-    cached_tokens: int = 0
-
-
-class StepUsage(BaseModel):
-    """
-    Token usage information for a single step in the extraction process.
-
-    Contains detailed token usage statistics for one step, including both prompt and
-    completion tokens, along with any provider-specific token details.
-    """
-
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
-    step: ExtractionStep
-    completion_tokens_details: Optional[TokenDetails] = None
-    prompt_tokens_details: Optional[TokenDetails] = None
-
-    @classmethod
-    def from_completion(
-        cls, completion: Any, step: ExtractionStep
-    ) -> Optional["StepUsage"]:
-        """
-        Create StepUsage from completion object.
-
-        Args:
-            completion: LLM completion response object
-            step: Which extraction step this usage belongs to
-
-        Returns:
-            StepUsage object or None if no usage data is available
-        """
-        if not completion or not hasattr(completion, "usage"):
-            return None
-
-        usage = completion.usage
-        usage_data = {
-            "prompt_tokens": getattr(usage, "prompt_tokens", 0),
-            "completion_tokens": getattr(usage, "completion_tokens", 0),
-            "total_tokens": getattr(usage, "total_tokens", 0),
-            "step": step,
-        }
-
-        # Add token details if available
-        if hasattr(usage, "completion_tokens_details"):
-            details = usage.completion_tokens_details
-            usage_data["completion_tokens_details"] = TokenDetails(
-                audio_tokens=getattr(details, "audio_tokens", 0),
-                reasoning_tokens=getattr(details, "reasoning_tokens", 0),
-            )
-
-        if hasattr(usage, "prompt_tokens_details"):
-            details = usage.prompt_tokens_details
-            usage_data["prompt_tokens_details"] = TokenDetails(
-                audio_tokens=getattr(details, "audio_tokens", 0),
-                cached_tokens=getattr(details, "cached_tokens", 0),
-            )
-
-        return cls(**usage_data)
-
-
-class StepSummary(BaseModel):
-    """
-    Token usage summary for a single step.
-
-    Provides a simple summary of token consumption for a specific step
-    of the extraction process.
-
-    Attributes:
-        tokens: Number of tokens used in this step
-        name: Name of the step (analysis, refinement, etc.)
-    """
-
-    tokens: int
-    name: str
-
-
-class ExtractionSummary(BaseModel):
-    """
-    Token usage summary for extraction steps.
-
-    Extends StepSummary with additional details about individual extraction steps.
-
-    Attributes:
-        tokens: Number of tokens used across all extraction steps
-        name: Always "extraction"
-        steps: Detailed breakdown of individual extraction calls
-    """
-
-    tokens: int
-    name: str = "extraction"
-    steps: List[StepSummary] = []
-
-
-class UsageSummary(BaseModel):
-    """
-    Overall token usage summary across all extraction steps.
-
-    Provides a complete view of token usage throughout the extraction process,
-    including totals and per-step breakdowns.
-
-    Attributes:
-        total_tokens: Total tokens used across all steps
-        prompt_tokens: Total tokens used in prompts
-        completion_tokens: Total tokens generated in completions
-        thinking_tokens: Total thinking/reasoning tokens (if available)
-        cached_tokens: Total cached tokens (if available)
-        steps: List of per-step usage summaries
-    """
-
-    total_tokens: int
-    prompt_tokens: int
-    completion_tokens: int
-    thinking_tokens: Optional[int] = None
-    cached_tokens: Optional[int] = None
-    steps: List[Union[StepSummary, ExtractionSummary]]
-
-    def get_step(
-        self, step_name: str
-    ) -> Optional[Union[StepSummary, ExtractionSummary]]:
-        """
-        Get a step summary by its name.
-
-        Args:
-            step_name: Name of the step to retrieve
-
-        Returns:
-            Step summary or None if not found
-        """
-        for step in self.steps:
-            if step.name == step_name:
-                return step
+def _read_value(source: Any, *names: str) -> Any:
+    if source is None:
         return None
+    for name in names:
+        if isinstance(source, Mapping):
+            value = source.get(name)
+        else:
+            value = getattr(source, name, None)
+        if value is not None:
+            return value
+    return None
+
+
+def _token_count(source: Any, *names: str) -> int:
+    value = _read_value(source, *names)
+    return value if isinstance(value, int) else 0
+
+
+def _optional_token_count(source: Any, *names: str) -> Optional[int]:
+    value = _read_value(source, *names)
+    return value if isinstance(value, int) else None
 
 
 class ExtractorUsage(BaseModel):
-    """
-    Aggregated token usage tracking across all extraction steps.
+    """Raw provider usage objects grouped by extraction step."""
 
-    Stores and manages token usage data for the entire extraction process,
-    providing methods to calculate totals and generate summaries.
-    """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    steps: Dict[ExtractionStep, Union[StepUsage, List[StepUsage]]] = Field(
-        default_factory=dict
-    )
+    steps: Dict[ExtractionStep, List[Any]] = Field(default_factory=dict)
 
-    def add_step_usage(self, usage: Optional[StepUsage]):
-        """Add usage information for a step"""
-        if not usage:
-            return
+    @field_serializer("steps")
+    def serialize_steps(
+        self, steps: Dict[ExtractionStep, List[Any]]
+    ) -> Dict[str, List[Any]]:
+        return {step.value: usages for step, usages in steps.items()}
 
-        if usage.step == ExtractionStep.EXTRACTION:
-            # For extraction steps, collect as a list
-            if ExtractionStep.EXTRACTION not in self.steps:
-                self.steps[ExtractionStep.EXTRACTION] = []
-            extraction_list = self.steps[ExtractionStep.EXTRACTION]
-            if isinstance(extraction_list, list):
-                extraction_list.append(usage)
-        else:
-            # For other steps, store a single usage
-            self.steps[usage.step] = usage
+    def add_step_usage(self, step: ExtractionStep, usage: Any) -> None:
+        """Associate a provider usage object with a pipeline step."""
+        if usage is not None:
+            self.steps.setdefault(step, []).append(usage)
 
-    def _get_attribute_value(self, obj: Any, attr_path: str) -> Optional[int]:
-        """Extract a nested attribute value from an object using a dot-notation path"""
-        value = obj
-        for attr in attr_path.split("."):
-            if not hasattr(value, attr) or getattr(value, attr) is None:
-                return None
-            value = getattr(value, attr)
-        return value if isinstance(value, int) else None
+    def get_step(self, step: Union[ExtractionStep, str]) -> List[Any]:
+        """Return the raw usage objects recorded for a pipeline step."""
+        step = ExtractionStep(step) if isinstance(step, str) else step
+        return self.steps.get(step, [])
 
-    def _get_token_sum(self, attr_path: str) -> int:
-        """Get sum of tokens across steps for a specific attribute path"""
-        total = 0
+    def _all_usages(self) -> Iterable[Any]:
+        for usages in self.steps.values():
+            yield from usages
 
-        # Process all steps
-        for step_type in ExtractionStep:
-            if step_type not in self.steps:
-                continue
+    @staticmethod
+    def _prompt_tokens(usage: Any) -> int:
+        return _token_count(usage, "prompt_tokens", "input_tokens")
 
-            step_data = self.steps[step_type]
+    @staticmethod
+    def _completion_tokens(usage: Any) -> int:
+        return _token_count(usage, "completion_tokens", "output_tokens")
 
-            # Single step case
-            if isinstance(step_data, StepUsage):
-                value = self._get_attribute_value(step_data, attr_path)
-                if value is not None:
-                    total += value
+    @classmethod
+    def _total_tokens(cls, usage: Any) -> int:
+        total = _optional_token_count(usage, "total_tokens")
+        if total is not None:
+            return total
+        return cls._prompt_tokens(usage) + cls._completion_tokens(usage)
 
-            # Multiple extraction steps case
-            elif isinstance(step_data, list):
-                for item in step_data:
-                    value = self._get_attribute_value(item, attr_path)
-                    if value is not None:
-                        total += value
-
-        return total
-
-    # Simple property accessors using _get_token_sum
-    @property
-    def total_tokens(self) -> int:
-        """Total tokens across all steps"""
-        return self._get_token_sum("total_tokens")
-
-    @property
-    def prompt_tokens(self) -> int:
-        """Total prompt tokens"""
-        return self._get_token_sum("prompt_tokens")
-
-    @property
-    def completion_tokens(self) -> int:
-        """Total completion tokens"""
-        return self._get_token_sum("completion_tokens")
-
-    @property
-    def thinking_tokens(self) -> int:
-        """Total thinking tokens"""
-        return self._get_token_sum("completion_tokens_details.reasoning_tokens")
-
-    @property
-    def cached_tokens(self) -> int:
-        """Total cached tokens"""
-        return self._get_token_sum("prompt_tokens_details.cached_tokens")
-
-    def get_usage_summary(self, detailed: bool = False) -> UsageSummary:
-        """Get structured token usage summary.
-
-        Args:
-            detailed: Whether to include detailed breakdown of extraction steps
-
-        Returns:
-            UsageSummary object with token usage information
-        """
-        # Create step summaries for standard steps
-        step_summaries = []
-        for step_type in [
-            ExtractionStep.REFINEMENT,
-            ExtractionStep.SCHEMA_GENERATION,
-            ExtractionStep.GUIDE,
-        ]:
-            if step_type in self.steps and isinstance(self.steps[step_type], StepUsage):
-                step_summaries.append(
-                    StepSummary(
-                        tokens=self.steps[step_type].total_tokens, name=step_type.value
-                    )
-                )
-            else:
-                step_summaries.append(StepSummary(tokens=0, name=step_type.value))
-
-        # Create extraction summary
-        extraction_summary = None
-        if ExtractionStep.EXTRACTION in self.steps:
-            extraction_steps = self.steps[ExtractionStep.EXTRACTION]
-            if isinstance(extraction_steps, list):
-                # Total tokens
-                total_extraction_tokens = sum(
-                    step.total_tokens for step in extraction_steps
-                )
-
-                # Individual step details if requested
-                extraction_steps_summary = []
-                if detailed:
-                    extraction_steps_summary = [
-                        StepSummary(tokens=step.total_tokens, name=f"extraction_{i}")
-                        for i, step in enumerate(extraction_steps)
-                    ]
-
-                extraction_summary = ExtractionSummary(
-                    tokens=total_extraction_tokens,
-                    name=ExtractionStep.EXTRACTION.value,
-                    steps=extraction_steps_summary,
-                )
-
-        if not extraction_summary:
-            extraction_summary = ExtractionSummary(
-                tokens=0, name=ExtractionStep.EXTRACTION.value
-            )
-
-        step_summaries.append(extraction_summary)
-
-        # Create the complete summary
-        summary = UsageSummary(
-            total_tokens=self.total_tokens,
-            prompt_tokens=self.prompt_tokens,
-            completion_tokens=self.completion_tokens,
-            steps=step_summaries,
+    @staticmethod
+    def _reasoning_tokens(usage: Any) -> Optional[int]:
+        details = _read_value(
+            usage, "completion_tokens_details", "output_tokens_details"
+        )
+        nested = _optional_token_count(
+            details, "reasoning_tokens", "thinking_tokens"
+        )
+        return nested if nested is not None else _optional_token_count(
+            usage, "reasoning_tokens", "thinking_tokens"
         )
 
-        # Add optional fields if they have values
-        thinking_tokens = self.thinking_tokens
-        if thinking_tokens > 0:
-            summary.thinking_tokens = thinking_tokens
+    @staticmethod
+    def _cached_tokens(usage: Any) -> Optional[int]:
+        details = _read_value(usage, "prompt_tokens_details", "input_tokens_details")
+        nested = _optional_token_count(
+            details,
+            "cached_tokens",
+            "cache_read_tokens",
+            "cache_read_input_tokens",
+        )
+        return nested if nested is not None else _optional_token_count(
+            usage,
+            "cached_tokens",
+            "cache_read_tokens",
+            "cache_read_input_tokens",
+        )
 
-        cached_tokens = self.cached_tokens
-        if cached_tokens > 0:
-            summary.cached_tokens = cached_tokens
+    @computed_field
+    @property
+    def total_tokens(self) -> int:
+        return sum(self._total_tokens(usage) for usage in self._all_usages())
 
-        return summary
+    @computed_field
+    @property
+    def prompt_tokens(self) -> int:
+        return sum(self._prompt_tokens(usage) for usage in self._all_usages())
+
+    @computed_field
+    @property
+    def completion_tokens(self) -> int:
+        return sum(self._completion_tokens(usage) for usage in self._all_usages())
+
+    @computed_field
+    @property
+    def thinking_tokens(self) -> Optional[int]:
+        values = [
+            value
+            for usage in self._all_usages()
+            if (value := self._reasoning_tokens(usage)) is not None
+        ]
+        return sum(values) if values else None
+
+    @computed_field
+    @property
+    def cached_tokens(self) -> Optional[int]:
+        values = [
+            value
+            for usage in self._all_usages()
+            if (value := self._cached_tokens(usage)) is not None
+        ]
+        return sum(values) if values else None

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from structx.core.type_system import normalize_field_definition
 from structx.utils.types import T
-from structx.utils.usage import ExtractorUsage, UsageSummary
+from structx.utils.usage import ExtractorUsage
 
 
 class ModelField(BaseModel):
@@ -48,12 +48,22 @@ class QueryRefinement(BaseModel):
     """Refined query with structural information"""
 
     refined_query: str = Field(description="Expanded query with structure requirements")
-    data_characteristics: Optional[List[str]] = Field(
-        description="Characteristics of data to extract"
+    data_characteristics: List[str] = Field(
+        default_factory=list, description="Characteristics of data to extract"
     )
-    structural_requirements: Optional[Dict[str, Any]] = Field(
-        description="Requirements for data structure"
+    structural_requirements: Dict[str, Any] = Field(
+        default_factory=dict, description="Requirements for data structure"
     )
+
+    @field_validator("data_characteristics", mode="before")
+    @classmethod
+    def default_data_characteristics(cls, value: Any) -> Any:
+        return [] if value is None else value
+
+    @field_validator("structural_requirements", mode="before")
+    @classmethod
+    def default_structural_requirements(cls, value: Any) -> Any:
+        return {} if value is None else value
 
 
 class ExtractionGuide(BaseModel):
@@ -63,15 +73,25 @@ class ExtractionGuide(BaseModel):
 
     target_columns: List[str] = Field(description="Columns to analyze")
 
-    structural_patterns: Optional[Dict[str, str]] = Field(
-        description="Patterns for structuring data"
+    structural_patterns: Dict[str, str] = Field(
+        default_factory=dict, description="Patterns for structuring data"
     )
-    relationship_rules: Optional[List[str]] = Field(
-        description="Rules for data relationships"
+    relationship_rules: List[str] = Field(
+        default_factory=list, description="Rules for data relationships"
     )
-    organization_principles: Optional[List[str]] = Field(
-        description="Principles for data organization"
+    organization_principles: List[str] = Field(
+        default_factory=list, description="Principles for data organization"
     )
+
+    @field_validator("relationship_rules", "organization_principles", mode="before")
+    @classmethod
+    def default_list_fields(cls, value: Any) -> Any:
+        return [] if value is None else value
+
+    @field_validator("structural_patterns", mode="before")
+    @classmethod
+    def default_structural_patterns(cls, value: Any) -> Any:
+        return {} if value is None else value
 
 
 class ExtractionRequest(BaseModel):
@@ -80,6 +100,14 @@ class ExtractionRequest(BaseModel):
     model_name: str = Field(description="Name for generated model")
     model_description: str = Field(description="Description of model purpose")
     fields: List[ModelField] = Field(description="Fields to extract")
+
+
+class ExtractionPlan(BaseModel):
+    """A complete extraction plan generated in one model call."""
+
+    refined_query: QueryRefinement
+    guide: ExtractionGuide
+    extraction_schema: ExtractionRequest = Field(alias="schema")
 
 
 @dataclass
@@ -116,38 +144,6 @@ class ExtractionResult(Generic[T]):
         """Success rate as a percentage"""
         total = self.success_count + self.failure_count
         return (self.success_count / total * 100) if total > 0 else 0
-
-    def get_token_usage(self, detailed: bool = False) -> Optional[UsageSummary]:
-        """
-        Get structured token usage information.
-
-        Provides a detailed breakdown of token usage across all steps of the
-        extraction process.
-
-        Args:
-            detailed: If True, includes detailed breakdown of each extraction step
-                    (useful for multi-document extraction)
-
-        Returns:
-            UsageSummary object with token usage information, or None if usage tracking
-            isn't available
-
-        Example:
-            ```python
-            result = extractor.extract(data, query)
-            usage = result.get_token_usage()
-            print(f"Total tokens: {usage.total_tokens}")
-
-            # Access step-specific usage
-            for step in usage.steps:
-                print(f"{step.name}: {step.tokens} tokens")
-            ```
-        """
-
-        if not self.usage:
-            return None
-
-        return self.usage.get_usage_summary(detailed=detailed)
 
     def __repr__(self) -> str:
         """String representation"""

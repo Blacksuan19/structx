@@ -5,6 +5,7 @@ structx: Structured data extraction using LLMs
 from structx.core.config import ExtractionConfig, StepConfig
 from structx.core.models import (
     ExtractionGuide,
+    ExtractionPlan,
     ExtractionRequest,
     ModelField,
     QueryRefinement,
@@ -20,5 +21,6 @@ __all__ = [
     "QueryAnalysis",
     "QueryRefinement",
     "ExtractionGuide",
+    "ExtractionPlan",
     "ExtractionRequest",
 ]

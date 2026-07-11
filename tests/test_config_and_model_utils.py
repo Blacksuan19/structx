@@ -1,7 +1,6 @@
 from typing import Literal
 
-import pytest
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 
 from structx.core.config import ExtractionConfig, StepConfig
 from structx.extraction.core.model_utils import ModelUtils
@@ -15,30 +14,30 @@ class IncidentModel(BaseModel):
     count: int
 
 
-def test_step_config_merges_defaults_with_overrides():
-    assert StepConfig(temperature=0.7).model_dump() == {
-        "temperature": 0.7,
-        "top_p": 0.1,
-        "max_tokens": 2000,
+def test_step_config_has_no_implicit_model_parameters():
+    assert StepConfig().model_dump() == {}
+
+
+def test_step_config_preserves_provider_specific_parameters():
+    assert StepConfig(
+        reasoning_effort="low",
+        max_completion_tokens=16_000,
+    ).model_dump() == {
+        "reasoning_effort": "low",
+        "max_completion_tokens": 16_000,
     }
 
 
-def test_step_config_validates_ranges():
-    with pytest.raises(ValidationError):
-        StepConfig(temperature=2.0)
-
-
-def test_extraction_config_merges_nested_overrides():
+def test_extraction_config_only_returns_explicit_parameters():
     config = ExtractionConfig(
         config={
-            "extraction": {"temperature": 0.3},
-            "analysis": {"max_tokens": 123},
+            "planning": {"reasoning_effort": "low"},
+            "extraction": {"max_completion_tokens": 16_000},
         }
     )
 
-    assert config.extraction["temperature"] == 0.3
-    assert config.extraction["max_tokens"] == 8192
-    assert config.analysis["max_tokens"] == 123
+    assert config.planning == {"reasoning_effort": "low"}
+    assert config.extraction == {"max_completion_tokens": 16_000}
 
 
 def test_model_utils_extracts_schema_info_and_enum_values():
@@ -61,6 +60,8 @@ def test_model_utils_extracts_characteristics_requirements_and_description():
     requirements = ModelUtils.extract_structural_requirements(IncidentModel)
     description = ModelUtils.get_model_description(IncidentModel)
 
-    assert any("severity" in item and "Possible values" in item for item in characteristics)
+    assert any(
+        "severity" in item and "Possible values" in item for item in characteristics
+    )
     assert requirements["summary"] == "string"
     assert description == "Incident record."

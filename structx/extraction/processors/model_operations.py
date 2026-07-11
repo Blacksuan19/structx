@@ -9,7 +9,12 @@ from loguru import logger
 from pydantic import BaseModel
 
 from structx.core.exceptions import ExtractionError
-from structx.core.models import ExtractionGuide, ExtractionRequest, QueryRefinement
+from structx.core.models import (
+    ExtractionGuide,
+    ExtractionPlan,
+    ExtractionRequest,
+    QueryRefinement,
+)
 from structx.extraction.core.llm_core import LLMCore
 from structx.extraction.core.model_utils import ModelUtils
 from structx.extraction.generator import ModelGenerator
@@ -17,10 +22,10 @@ from structx.extraction.processors.content_analyzer import ContentAnalyzer
 from structx.utils.helpers import handle_errors
 from structx.utils.prompts import (
     custom_model_guide_template,
+    extraction_plan_system_prompt,
+    extraction_plan_template,
     refinement_system_prompt,
     refinement_template,
-    schema_system_prompt,
-    schema_template,
 )
 from structx.utils.usage import ExtractionStep
 
@@ -39,39 +44,36 @@ class ModelOperations:
         """
         self.llm_core = llm_core
 
-    @handle_errors(error_message="Schema generation failed", error_type=ExtractionError)
-    def generate_extraction_schema(
-        self, sample_text: str, refined_query: QueryRefinement, guide: ExtractionGuide
-    ) -> ExtractionRequest:
-        """
-        Generate schema with enforced structure.
-
-        Args:
-            sample_text: Sample content for context
-            refined_query: Refined query with details
-            guide: Extraction guide with patterns
-
-        Returns:
-            Extraction request with model schema
-        """
-        return self.llm_core.complete(
+    @handle_errors(error_message="Plan generation failed", error_type=ExtractionError)
+    def generate_extraction_plan(
+        self, query: str, sample_text: str, data_columns: List[str]
+    ) -> ExtractionPlan:
+        """Generate refinement, guide, and schema in one model call."""
+        plan = self.llm_core.complete(
             messages=[
-                {"role": "system", "content": schema_system_prompt},
+                {"role": "system", "content": extraction_plan_system_prompt},
                 {
                     "role": "user",
-                    "content": schema_template.substitute(
-                        refined_query=refined_query.refined_query,
-                        data_characteristics=refined_query.data_characteristics,
-                        structural_requirements=refined_query.structural_requirements,
-                        organization_principles=guide.organization_principles,
+                    "content": extraction_plan_template.substitute(
+                        query=query,
+                        available_columns=data_columns,
                         sample_text=sample_text,
                     ),
                 },
             ],
-            response_model=ExtractionRequest,
-            config=self.llm_core.config.refinement,
+            response_model=ExtractionPlan,
+            config=self.llm_core.config.planning,
             step=ExtractionStep.SCHEMA_GENERATION,
         )
+        available_columns = set(data_columns)
+        plan.guide.target_columns = [
+            column
+            for column in plan.guide.target_columns
+            if column in available_columns
+        ]
+        if not plan.guide.target_columns:
+            plan.guide.target_columns = data_columns
+        return plan
 
     def create_model_from_schema(
         self, schema_request: ExtractionRequest
@@ -131,7 +133,7 @@ class ModelOperations:
                     ),
                 },
             ],
-            config=self.llm_core.config.refinement,
+            config=self.llm_core.config.planning,
             step=ExtractionStep.SCHEMA_GENERATION,
         )
 
@@ -212,8 +214,8 @@ class ModelOperations:
         guide = self.llm_core.complete(
             messages=guide_messages,
             response_model=ExtractionGuide,
-            config=self.llm_core.config.refinement,
-            step=ExtractionStep.GUIDE,
+            config=self.llm_core.config.planning,
+            step=ExtractionStep.SCHEMA_GENERATION,
         )
 
         logger.info(f"Extraction Columns: {guide.target_columns}")

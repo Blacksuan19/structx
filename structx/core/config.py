@@ -1,60 +1,24 @@
 from pathlib import Path
-from typing import Annotated, Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from omegaconf import OmegaConf
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from structx.utils.types import DictStrAny
 
 
 class StepConfig(BaseModel):
-    """Configuration for an individual extraction step"""
+    """Provider-specific completion parameters for one extraction step."""
 
-    model_config = ConfigDict(validate_assignment=True)
-
-    temperature: Optional[
-        Annotated[
-            float, Field(ge=0.0, le=1.0, description="Sampling temperature for LLM")
-        ]
-    ] = None
-    top_p: Optional[
-        Annotated[
-            float, Field(ge=0.0, le=1.0, description="Nucleus sampling parameter")
-        ]
-    ] = None
-    max_tokens: Optional[
-        Annotated[int, Field(gt=0, description="Maximum tokens in completion")]
-    ] = None
-
-    def model_dump(self, *args, **kwargs) -> Dict[str, Any]:
-        """
-        Return dictionary of non-None values merged with defaults
-        """
-        # Default values for each step
-        defaults = {
-            "temperature": 0.1,
-            "top_p": 0.1,
-            "max_tokens": 2000,
-        }
-
-        # Get current values, excluding None
-        current = {
-            k: v
-            for k, v in super().model_dump(*args, **kwargs).items()
-            if v is not None
-        }
-
-        # Merge with defaults, preferring current values
-        return {**defaults, **current}
+    model_config = ConfigDict(validate_assignment=True, extra="allow")
 
 
 class ExtractionConfig:
     """Configuration management for structx using OmegaConf and Pydantic"""
 
     DEFAULT_CONFIG = {
-        "analysis": {"temperature": 0.2, "top_p": 0.1, "max_tokens": 2000},
-        "refinement": {"temperature": 0.1, "top_p": 0.05, "max_tokens": 2000},
-        "extraction": {"temperature": 0.0, "top_p": 0.1, "max_tokens": 8192},
+        "planning": {},
+        "extraction": {},
     }
 
     def __init__(
@@ -90,21 +54,15 @@ class ExtractionConfig:
 
     def _validate_config(self) -> None:
         """Validate configuration using Pydantic models"""
-        for step in ["analysis", "refinement", "extraction"]:
+        for step in ["planning", "extraction"]:
             step_config: DictStrAny = OmegaConf.to_container(self.conf.get(step, {}))  # type: ignore
             # Validate using StepConfig model
             StepConfig(**step_config)
 
     @property
-    def analysis(self) -> DictStrAny:
-        """Get validated analysis step configuration"""
-        config: DictStrAny = OmegaConf.to_container(self.conf.analysis)  # type: ignore
-        return StepConfig(**config).model_dump(exclude_none=True)
-
-    @property
-    def refinement(self) -> DictStrAny:
-        """Get validated refinement step configuration"""
-        config: DictStrAny = OmegaConf.to_container(self.conf.refinement)  # type: ignore
+    def planning(self) -> DictStrAny:
+        """Get validated planning step configuration"""
+        config: DictStrAny = OmegaConf.to_container(self.conf.planning)  # type: ignore
         return StepConfig(**config).model_dump(exclude_none=True)
 
     @property
