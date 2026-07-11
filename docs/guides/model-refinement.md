@@ -7,13 +7,15 @@ your data models as requirements change without having to manually rewrite them.
 ## Basic Usage
 
 ```python
+from datetime import date
+from typing import List
+
+from pydantic import BaseModel
 from structx import Extractor
-from pydantic import BaseModel, Field
-from typing import List, date
 
 # Initialize the extractor
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="openai/gpt-4o",
     api_key="your-api-key"
 )
 

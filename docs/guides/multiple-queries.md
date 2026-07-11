@@ -12,22 +12,12 @@ efficiently.
 ```mermaid
 graph TD
     A[Input Data] --> B[Multiple Queries]
-    B --> C{Processing Strategy}
-
-    C -->|Parallel| D[Concurrent Extraction]
-    C -->|Sequential| E[Sequential Extraction]
-
-    D --> F1[Query 1 Processing]
-    D --> F2[Query 2 Processing]
-    D --> F3[Query 3 Processing]
+    B --> E[Sequential Extraction]
 
     E --> G1[Query 1]
     G1 --> G2[Query 2]
     G2 --> G3[Query 3]
 
-    F1 --> H[Results Collection]
-    F2 --> H
-    F3 --> H
     G3 --> H
 
     H --> I[Combined Results Map]
@@ -38,7 +28,6 @@ graph TD
         L --> M[Result Object]
     end
 
-    F1 --> J
     G1 --> J
 ```
 
@@ -57,7 +46,8 @@ queries = [
 # Process all queries on the same document
 results = extractor.extract_queries(
     data="scripts/example_input/free-consultancy-agreement.docx",
-    queries=queries
+    queries=queries,
+    return_df=False
 )
 
 # Access results by query
@@ -88,7 +78,7 @@ results = extractor.extract_queries(
 
 ## Async Processing
 
-For better performance, you can use the async version:
+Use the async wrapper when calling from an async application:
 
 ```python
 import asyncio
@@ -109,15 +99,16 @@ results = asyncio.run(process_queries())
 
 ## Benefits of Multiple Queries
 
-Using `extract_queries` has several advantages over making separate calls:
+`extract_queries` provides a convenient result map for a list of queries:
 
-1. **Efficiency**: The document is loaded and preprocessed only once.
-2. **Consistency**: All queries operate on the exact same version of the
-   document.
-3. **Organization**: Results are neatly organized by the query that produced
-   them.
-4. **Performance**: Better resource utilization, especially with async
-   operations.
+1. **Organization**: Results are keyed by the query that produced them.
+2. **Consistency**: Every query receives the same input value and options.
+3. **Configuration**: Return and file-reader options are applied consistently.
+4. **Usage Tracking**: Each returned result contains usage for that query.
+
+The current implementation processes queries sequentially and invokes the
+normal extraction path for each query. Document conversion and model planning
+therefore occur once per query.
 
 ## Use Cases
 

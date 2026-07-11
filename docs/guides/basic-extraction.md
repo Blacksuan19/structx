@@ -91,6 +91,7 @@ class Invoice(BaseModel):
 # Extract using the provided model
 result = extractor.extract(
     data="scripts/example_input/S0305SampleInvoice.pdf",
+    query="extract the invoice number, total amount, and line items",
     model=Invoice
 )
 ```
@@ -121,8 +122,8 @@ documents, you'll primarily use file paths.
 
 !!! note "Document dependencies"
     Install `structx[docs]` before using PDF or document file inputs. The base
-    install supports structured files and text/table inputs without Docling,
-    WeasyPrint, or PyTorch.
+    install supports structured files, DataFrames, and lists of dictionaries.
+    Raw strings and document paths use the optional document pipeline.
 
 ### Files
 
@@ -189,6 +190,7 @@ The `extract` method returns an `ExtractionResult` object with:
 - `data`: Extracted data (DataFrame or list of model instances)
 - `failed`: DataFrame with failed extractions
 - `model`: Generated or provided model class
+- `usage`: Raw provider usage grouped by schema-generation and extraction calls
 - `success_count`: Number of successful extractions
 - `failure_count`: Number of failed extractions
 - `success_rate`: Success rate as a percentage

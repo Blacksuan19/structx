@@ -1,221 +1,121 @@
 # Supported Formats
 
-`structx` supports structured file formats in the base install and optional
-multimodal document processing through the `docs` extra.
+Structx handles tabular inputs directly and routes document-like inputs through
+its optional multimodal PDF pipeline.
 
-## Structured Data Formats
+## Structured Data
 
-These formats are processed directly as structured data without conversion:
+These extensions are dispatched to pandas readers:
 
-| Format  | Extension   | Description                         | Processing Method        |
-| ------- | ----------- | ----------------------------------- | ------------------------ |
-| CSV     | .csv        | Comma-separated values              | Direct pandas processing |
-| Excel   | .xlsx, .xls | Microsoft Excel spreadsheets        | Direct pandas processing |
-| JSON    | .json       | JavaScript Object Notation          | Direct pandas processing |
-| Parquet | .parquet    | Columnar storage format             | Direct pandas processing |
-| Feather | .feather    | Fast on-disk format for data frames | Direct pandas processing |
+| Format | Extensions | Reader |
+| --- | --- | --- |
+| CSV | `.csv` | `pandas.read_csv` |
+| Excel | `.xlsx`, `.xls` | `pandas.read_excel` |
+| JSON | `.json` | `pandas.read_json` |
+| Parquet | `.parquet` | `pandas.read_parquet` |
+| Feather | `.feather` | `pandas.read_feather` |
 
-## Unstructured Document Formats
+The base installation includes `openpyxl` for `.xlsx`. Legacy `.xls` files and
+Parquet or Feather files may require an additional pandas-compatible engine,
+such as `xlrd` or `pyarrow`.
 
-Install `structx[docs]` to use the multimodal document pipeline:
-
-| Format | Extension                               | Processing Method                  | Dependencies |
-| ------ | --------------------------------------- | ---------------------------------- | ------------ |
-| PDF    | .pdf                                    | PDF → Multimodal                   | `structx[docs]` |
-| Word   | .docx, .doc                             | Docling → HTML → PDF → Multimodal  | `structx[docs]` |
-| PowerPoint | .pptx, .ppt                         | Docling → HTML → PDF → Multimodal  | `structx[docs]` |
-| Text   | .txt, .md, .py, .html, .xml, .log, .rst | Docling → HTML → PDF → Multimodal  | `structx[docs]` |
-
-### Advanced Processing Features
-
-- **Multimodal PDF Processing**: Native instructor vision support for PDFs
-- **PDF Passthrough**: Existing PDFs are sent directly to multimodal extraction
-- **Intelligent Conversion**: Automatic document-to-PDF conversion with styling for supported non-PDF formats
-- **Structure Preservation**: Maintains tables, formatting, and layout
-- **Context Awareness**: Full document context without chunking limitations
-
-## Processing Examples
-
-### Structured Data
+Reader options can be passed through `file_options`:
 
 ```python
-# CSV files - direct pandas processing
-result = extractor.extract(
-    data="sales_data.csv",
-    query="extract top performing products and their revenue"
-)
-
-# Excel files with specific sheet
 result = extractor.extract(
     data="financial_report.xlsx",
     query="extract quarterly revenue figures",
-    file_options={"sheet_name": "Q4 Results"}
-)
-
-# JSON data
-result = extractor.extract(
-    data="api_logs.json",
-    query="extract error events and response times"
+    file_options={"sheet_name": "Q4 Results", "skiprows": 2},
 )
 ```
 
-### Unstructured Documents (Multimodal Processing)
+## Documents
+
+Install the document extra before processing document paths or raw strings:
+
+```bash
+pip install "structx[docs]"
+```
+
+| Category | Extensions | Processing |
+| --- | --- | --- |
+| PDF | `.pdf` | Validated and passed directly to multimodal extraction |
+| Word | `.doc`, `.docx` | Docling to HTML, then WeasyPrint to PDF |
+| PowerPoint | `.ppt`, `.pptx` | Docling to HTML, then WeasyPrint to PDF |
+| OpenDocument | `.odt`, `.ods`, `.odp` | Docling to HTML, then WeasyPrint to PDF |
+| E-book | `.epub` | Docling to HTML, then WeasyPrint to PDF |
+| Markup and text | `.md`, `.markdown`, `.adoc`, `.asciidoc`, `.tex`, `.html`, `.xhtml`, `.xml`, `.txt`, `.py`, `.log`, `.rst` | Docling to HTML, then WeasyPrint to PDF |
+| Images | `.png`, `.jpg`, `.jpeg`, `.tiff`, `.bmp`, `.webp` | Docling image input to PDF |
+| Captions | `.webvtt`, `.vtt` | Docling to HTML, then WeasyPrint to PDF |
+
+Existing PDFs are not parsed by Docling. Non-PDF inputs are converted once;
+the resulting text sample is reused for schema planning and the generated PDF
+is sent to the extraction model. OCR and Docling table-structure analysis are
+disabled, leaving visual interpretation to the multimodal model.
 
 ```python
-# PDF documents - passed directly to multimodal extraction
-result = extractor.extract(
+# Existing PDF passthrough
+pdf_result = extractor.extract(
     data="contract.pdf",
-    query="extract parties, dates, and payment terms"
+    query="extract parties, dates, and payment terms",
 )
 
-# DOCX documents - converted via the Docling pipeline
-result = extractor.extract(
+# Non-PDF document conversion
+docx_result = extractor.extract(
     data="project_proposal.docx",
-    query="extract deliverables, timeline, and budget"
-)
-
-# Text files - converted via the Docling pipeline
-result = extractor.extract(
-    data="meeting_notes.txt",
-    query="extract action items and responsible parties"
-)
-
-# Markdown files - converted via the Docling pipeline
-result = extractor.extract(
-    data="README.md",
-    query="extract installation steps and requirements"
-)
-
-# Code files - converted via the Docling pipeline
-result = extractor.extract(
-    data="main.py",
-    query="extract function definitions and their purposes"
+    query="extract deliverables, timeline, and budget",
 )
 ```
 
-## Input Data Types
+## In-Memory Inputs
 
-`structx` can extract data from various input formats:
-
-### 1. File Paths
-
-```python
-result = extractor.extract(
-    data="path/to/file.csv",
-    query="extract key information"
-)
-```
-
-### 2. DataFrames
+### DataFrames
 
 ```python
 import pandas as pd
 
-df = pd.DataFrame({"text": ["Sample text 1", "Sample text 2"]})
-
-result = extractor.extract(
-    data=df,
-    query="extract key information"
-)
+data = pd.DataFrame({"text": ["Incident at 09:30", "Resolved at 10:15"]})
+result = extractor.extract(data=data, query="extract incident timestamps")
 ```
 
-### 3. Lists of Dictionaries
+### Lists of Dictionaries
 
 ```python
-data = [
-    {"text": "Sample text 1"},
-    {"text": "Sample text 2"}
-]
-
-result = extractor.extract(
-    data=data,
-    query="extract key information"
-)
+data = [{"text": "Invoice A totals $100"}, {"text": "Invoice B totals $250"}]
+result = extractor.extract(data=data, query="extract invoice name and total")
 ```
 
-### 4. Raw Text
+### Raw Strings
 
-```python
-text = """
-Sample text with information to extract.
-More text with additional information.
-"""
-
-result = extractor.extract(
-    data=text,
-    query="extract key information"
-)
-```
-
-## File Reading Options
-
-### CSV Options
+Non-empty strings that do not look like paths are written to a temporary text
+file and processed through the document pipeline. Raw strings therefore require
+`structx[docs]`:
 
 ```python
 result = extractor.extract(
-    data="data.csv",
-    query="extract key information",
-    file_options={
-        "delimiter": ";",      # Custom delimiter
-        "encoding": "latin1",  # Custom encoding
-        "skiprows": 1          # Skip header row
-    }
+    data="Incident 42 occurred at 09:30 and affected the billing service.",
+    query="extract incident number, time, and affected service",
 )
 ```
 
-### Excel Options
+## Input Validation
 
-```python
-result = extractor.extract(
-    data="data.xlsx",
-    query="extract key information",
-    file_options={
-        "sheet_name": "Sheet2",  # Specific sheet
-        "skiprows": 3            # Skip header rows
-    }
-)
-```
+Structx rejects missing paths, directories, empty files, empty DataFrames or
+lists, malformed PDFs, and unsupported extensions before model planning begins.
+Strings with a supported extension, an absolute path, or a relative-path prefix
+such as `./` or `../` are treated as paths rather than raw text.
 
 ## Output Types
 
-`structx` can return data in different formats:
-
-1. **Model Instances** (default):
-
-   ```python
-   result = extractor.extract(
-       data=df,
-       query="extract key information",
-       return_df=False  # Default
-   )
-
-   # Access as list of model instances
-   for item in result.data:
-       print(item.field_name)
-   ```
-
-2. **DataFrame**:
-
-   ```python
-   result = extractor.extract(
-       data=df,
-       query="extract key information",
-       return_df=True
-   )
-
-   # Access as DataFrame
-   print(result.data.head())
-   ```
-
-## Nested Data Handling
-
-For nested data structures, you can choose to flatten them:
+By default, `result.data` is a list of Pydantic model instances. Set
+`return_df=True` for a DataFrame, and combine it with `expand_nested=True` to
+flatten nested extracted objects:
 
 ```python
 result = extractor.extract(
-    data=df,
-    query="extract key information",
+    data=data,
+    query="extract incident dates and affected systems",
     return_df=True,
-    expand_nested=True  # Flatten nested structures
+    expand_nested=True,
 )
 ```

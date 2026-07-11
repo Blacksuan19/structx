@@ -1,7 +1,8 @@
 # Async Operations
 
-`structx` provides asynchronous versions of all extraction methods for better
-performance in async environments.
+`structx` provides async wrappers for extraction, multiple-query processing,
+and schema generation. These wrappers offload the synchronous operation to an
+executor so it does not block the caller's event loop.
 
 ## Basic Async Extraction
 
@@ -96,22 +97,13 @@ results = asyncio.run(process_documents(documents))
 
 ```python
 import asyncio
-import aiofiles
 
-async def read_and_extract(file_path, query):
-    # Asynchronously read a file
-    async with aiofiles.open(file_path, mode='r') as f:
-        content = await f.read()
-
-    # Extract information from the content
-    result = await extractor.extract_async(
-        data=content,
+async def fetch_and_extract(fetch_text, query):
+    content = await fetch_text()
+    return await extractor.extract_async(
+        data=[{"text": content}],
         query=query
     )
-
-    return result
-
-result = asyncio.run(read_and_extract("path/to/your/document.txt", "extract key details"))
 ```
 
 ## Async Multiple Queries
@@ -135,6 +127,10 @@ async def process_multiple_queries():
 
 results = asyncio.run(process_multiple_queries())
 ```
+
+`extract_queries_async` offloads the synchronous sequential query loop; it does
+not execute the queries concurrently. Use separate `extract_async` tasks with
+`asyncio.gather` when independent operations should overlap.
 
 ## Best Practices
 

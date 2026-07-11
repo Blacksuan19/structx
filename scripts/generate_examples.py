@@ -4,14 +4,14 @@ import sys
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from structx import Extractor
 from structx.core.models import ExtractionResult
 from structx.utils.usage import ExtractorUsage
 
 
-def print_section_header(title: str, description: str = None):
+def print_section_header(title: str, description: Optional[str] = None):
     """Print a section header with an optional description."""
     print(f"\n## {title}")
     if description:
@@ -72,7 +72,7 @@ def run_extraction_example(
     print_section_header(title, description)
     print_code_block(code_lines)
 
-    results = extractor.extract(data_path, query)
+    results = extractor.extract(data=data_path, query=query)
     print_extraction_results(results)
 
     # For complex examples that benefit from showing the model schema
@@ -108,7 +108,7 @@ def main():
             "import os",
             "\n# Initialize the extractor",
             "extractor = Extractor.from_litellm(",
-            '    model="gpt-4o",',
+            '    model="openai/gpt-4o",',
             '    api_key="your-api-key"',
             ")",
         ]
@@ -130,7 +130,7 @@ def main():
 
     # Initialize extractor
     extractor = Extractor.from_litellm(
-        model="gpt-4o",
+        model="openai/gpt-4o",
         api_base=os.getenv("OPENAI_BASE_URL"),
     )
 
@@ -147,7 +147,7 @@ def main():
             f'agreement_path = Path("{consultancy_agreement_path}")',
             "\n# Define the extraction query",
             f'query = "{q1}"',
-            "result = extractor.extract(agreement_path, query)",
+            "result = extractor.extract(data=agreement_path, query=query)",
             "\n# Access the extraction results",
             'print(f"Extracted {result.success_count} items with {result.success_rate:.1f}% success rate")',
             "print(result.data)",
@@ -167,7 +167,7 @@ def main():
             f'invoice_path = Path("{invoice_path}")',
             "\n# Define the extraction query",
             f'query = "{q2}"',
-            "result = extractor.extract(invoice_path, query)",
+            "result = extractor.extract(data=invoice_path, query=query)",
         ],
     )
 

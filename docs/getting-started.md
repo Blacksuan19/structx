@@ -51,7 +51,7 @@ from structx import Extractor
 
 # Using litellm (supports multiple providers)
 extractor = Extractor.from_litellm(
-    model="gpt-4o",  # or any other model supported by litellm
+    model="openai/gpt-4o",  # or another LiteLLM model identifier
     api_key="your-api-key"
 )
 
@@ -111,8 +111,8 @@ result = extractor.extract(
 
 !!! note "Document dependencies"
     Install `structx[docs]` before using PDF or document file inputs. The base
-    install supports structured files and text/table inputs without Docling,
-    WeasyPrint, or PyTorch.
+    install supports structured files, DataFrames, and lists of dictionaries.
+    Raw strings and document paths use the optional document pipeline.
 
 ### Access Results
 
@@ -156,7 +156,7 @@ for step, calls in usage.steps.items():
 ```python
 # With a YAML file
 extractor = Extractor.from_litellm(
-    model="gpt-5.5",
+    model="openai/gpt-5.5",
     api_key="your-api-key",
     config="config.yaml"
 )
@@ -173,16 +173,16 @@ config = {
 }
 
 extractor = Extractor.from_litellm(
-    model="gpt-5.5",
+    model="openai/gpt-5.5",
     api_key="your-api-key",
     config=config
 )
 
 # With retry settings
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="openai/gpt-4o",
     api_key="your-api-key",
-    max_retries=5,      # Maximum retry attempts
+    max_retries=5,      # Maximum total extraction attempts
     min_wait=2,         # Minimum seconds between retries
     max_wait=30         # Maximum seconds between retries
 )

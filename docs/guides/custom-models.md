@@ -48,8 +48,10 @@ graph LR
 ### Define Your Model
 
 ```python
+from datetime import date
+from typing import List
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, date
 
 class Party(BaseModel):
     name: str = Field(description="Name of the party")
@@ -72,6 +74,7 @@ class Invoice(BaseModel):
 # Extract from a legal document
 result = extractor.extract(
     data="scripts/example_input/free-consultancy-agreement.docx",
+    query="extract the parties, effective date, and governing law",
     model=ConsultancyAgreement
 )
 
@@ -85,6 +88,7 @@ for agreement in result.data:
 # Extract from an invoice
 result_invoice = extractor.extract(
     data="scripts/example_input/S0305SampleInvoice.pdf",
+    query="extract the invoice number, total amount, and issue date",
     model=Invoice
 )
 
@@ -108,6 +112,7 @@ result1 = extractor.extract(
 # Reuse the model for another contract
 result2 = extractor.extract(
     data="another_contract.docx",
+    query="extract parties and effective date",
     model=result1.model
 )
 ```
@@ -129,6 +134,7 @@ print(LegalClauseModel.model_json_schema())
 # Use the model for extraction
 result = extractor.extract(
     data="scripts/example_input/free-consultancy-agreement.docx",
+    query="extract the termination clause, including notice period and conditions",
     model=LegalClauseModel
 )
 ```

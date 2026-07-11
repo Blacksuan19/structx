@@ -49,7 +49,7 @@ from structx import Extractor
 
 # Initialize extractor
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="openai/gpt-4o",
     api_key="your-api-key"
 )
 
@@ -84,6 +84,10 @@ for call_usage in extraction_calls:
     print(call_usage.model_dump())
 ```
 
+The in-memory `steps` mapping uses `ExtractionStep` keys. Both
+`usage.model_dump()` and `usage.model_dump_json()` serialize those keys as
+`"schema_generation"` and `"extraction"`.
+
 ## Understanding the Steps
 
 The summary contains only model-backed steps that actually ran:
@@ -115,10 +119,10 @@ Some LLM providers offer additional metrics like thinking tokens or cached
 tokens. These metrics are included when available:
 
 ```python
-if usage.thinking_tokens:
+if usage.thinking_tokens is not None:
     print(f"Thinking tokens: {usage.thinking_tokens}")
 
-if usage.cached_tokens:
+if usage.cached_tokens is not None:
     print(f"Cached tokens: {usage.cached_tokens}")
 ```
 

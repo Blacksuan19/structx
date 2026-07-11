@@ -75,7 +75,7 @@ graph TB
     end
 
     subgraph "Processing Pipeline"
-        N[Schema and Guide Planning] --> O[Model Generation]
+        N[Schema and Guide Planning] --> O[Pydantic Model Creation]
         O --> P[Data Extraction]
         P --> Q[Result Collection]
     end
@@ -94,11 +94,11 @@ graph TB
 - 📊 **Complex Data Structures**: Support for nested and hierarchical data
 - 🔄 **Natural Language Refinement**: Improve models with conversational
   instructions
-- � **Multimodal Document Processing**: Optional PDF/document pipeline through
+- **Multimodal Document Processing**: Optional PDF/document pipeline through
   `structx[docs]`
 - 🖼️ **Vision-Enabled Extraction**: Native instructor multimodal support for
   PDFs
-- 🚀 **High-Performance Processing**: Multi-threaded and async operations
+- 🚀 **Flexible Processing**: Threaded batches and async wrappers
 - ⚡ **Smart Format Detection**: Automatic processing mode selection
 - 🔧 **Flexible Configuration**: Configurable extraction using OmegaConf
 - 📁 **Flexible File Support**: CSV, Excel, JSON, and Parquet in the base
@@ -141,7 +141,7 @@ from structx import Extractor
 
 # Initialize extractor
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="openai/gpt-4o",
     api_key="your-api-key"
 )
 

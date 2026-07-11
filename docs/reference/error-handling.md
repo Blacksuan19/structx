@@ -1,138 +1,96 @@
 # Error Handling
 
-`structx` provides comprehensive error handling for extraction processes.
+The public extraction methods normalize pipeline failures to
+`ExtractionError`. Individual row failures are collected on the returned
+`ExtractionResult` instead of aborting the complete batch.
 
-## Error Types
-
-### ExtractionError
-
-The base exception for extraction errors:
+## Public Extraction Errors
 
 ```python
+from structx.core.exceptions import ExtractionError
+
 try:
     result = extractor.extract(
-        data=df,
-        query="extract key information"
+        data="contract.pdf",
+        query="extract parties and payment terms",
     )
-except ExtractionError as e:
-    print(f"Extraction failed: {e}")
+except ExtractionError as error:
+    print(f"Extraction failed: {error}")
 ```
 
-### ConfigurationError
+Missing, empty, unsupported, or malformed file inputs fail during data
+preparation and are surfaced through this same `ExtractionError` boundary.
 
-Raised when there's an issue with the configuration:
+## FileReader Errors
+
+`FileReader.read_file()` is a lower-level utility. When called directly, it
+raises `FileError` for invalid paths, empty files, unsupported extensions,
+malformed PDFs, and conversion failures:
 
 ```python
+from structx.core.exceptions import FileError
+from structx.utils.file_reader import FileReader
+
 try:
-    extractor = Extractor.from_litellm(
-        model="gpt-4o",
-        api_key="your-api-key",
-        config="invalid_config.yaml"
-    )
-except ConfigurationError as e:
-    print(f"Configuration error: {e}")
+    frame = FileReader.read_file("missing.pdf")
+except FileError as error:
+    print(f"File error: {error}")
 ```
 
-### ValidationError
+## Configuration Errors
 
-Raised when there's a validation issue with the extracted data:
+`ConfigurationError` is raised when `Extractor` receives an unsupported
+configuration object type. YAML loading and provider-specific parameter errors
+may originate from OmegaConf or the selected provider instead.
 
 ```python
+from structx.core.exceptions import ConfigurationError
+
 try:
-    result = extractor.extract(
-        data=df,
-        query="extract key information"
+    extractor = Extractor(
+        client=client,
+        model_name="openai/gpt-4o",
+        config=object(),
     )
-except ValidationError as e:
-    print(f"Validation error: {e}")
+except ConfigurationError as error:
+    print(f"Configuration error: {error}")
 ```
 
-### ModelGenerationError
+## Failed Rows
 
-Raised when there's an issue generating the extraction model:
-
-```python
-try:
-    model = extractor.get_schema(
-        query="extract key information",
-        data="document.pdf"
-    )
-except ModelGenerationError as e:
-    print(f"Model generation error: {e}")
-```
-
-### FileError
-
-Raised when there's an issue with file operations:
-
-```python
-try:
-    result = extractor.extract(
-        data="nonexistent_file.pdf",
-        query="extract key information"
-    )
-except FileError as e:
-    print(f"File error: {e}")
-```
-
-## Handling Failed Extractions
-
-Even when the overall extraction succeeds, individual items may fail. These are
-collected in the `failed` DataFrame:
+Once batch extraction starts, failures for individual rows are recorded in the
+`failed` DataFrame. Successful rows remain available in `data`:
 
 ```python
 result = extractor.extract(
     data=df,
-    query="extract key information"
+    query="extract key information",
 )
 
-if result.failure_count > 0:
-    print(f"Failed extractions: {result.failure_count}")
-    print(result.failed)
+if result.failure_count:
+    print(result.failed[["index", "error", "timestamp"]])
 ```
 
-## Retry Mechanism
-
-`structx` includes an automatic retry mechanism for handling transient failures:
-
-```python
-extractor = Extractor.from_litellm(
-    model="gpt-4o",
-    api_key="your-api-key",
-    max_retries=5,      # Maximum number of retry attempts
-    min_wait=2,         # Minimum seconds to wait between retries
-    max_wait=30         # Maximum seconds to wait between retries
-)
-```
-
-The retry mechanism uses exponential backoff, meaning the wait time between
-retries increases exponentially (but is capped at `max_wait`).
+Pydantic response-validation failures are normally represented here rather
+than raised directly to the caller.
 
 ## Logging
 
-`structx` uses [loguru](https://github.com/Delgan/loguru) for logging. You can
-configure the logging level:
+Structx uses Loguru. Replace the default sink to control verbosity:
 
 ```python
+import sys
+
 from loguru import logger
 
-# Set logging level
-logger.remove()
-logger.add(sys.stderr, level="INFO")  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-```
-
-For detailed debugging:
-
-```python
 logger.remove()
 logger.add(sys.stderr, level="DEBUG")
 ```
 
-## Best Practices
+## Recommendations
 
-1. **Always Check Failures**: Always check `result.failure_count` and
-   `result.failed` for failed extractions
-2. **Use Try/Except**: Wrap extraction calls in try/except blocks
-3. **Configure Retries**: Adjust retry settings based on your API stability
-4. **Log Errors**: Enable appropriate logging levels for debugging
-5. **Validate Results**: Validate extracted data before using it
+1. Catch `ExtractionError` around public extraction and schema operations.
+2. Check `failure_count` and `failed` after every batch extraction.
+3. Use `FileReader` directly only when you need file-level error distinctions.
+4. Inspect provider errors before increasing extraction attempts.
+5. Validate extracted values before using them in downstream systems.

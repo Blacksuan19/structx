@@ -22,7 +22,7 @@ extraction:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-5.5",
+    model="openai/gpt-5.5",
     api_key="your-api-key",
     config="config.yaml"
 )
@@ -42,7 +42,7 @@ config = {
 }
 
 extractor = Extractor.from_litellm(
-    model="gpt-5.5",
+    model="openai/gpt-5.5",
     api_key="your-api-key",
     config=config
 )
@@ -64,7 +64,7 @@ config = ExtractionConfig(
 )
 
 extractor = Extractor.from_litellm(
-    model="gpt-5.5",
+    model="openai/gpt-5.5",
     api_key="your-api-key",
     config=config
 )
@@ -110,9 +110,9 @@ You can configure the retry behavior for extraction:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="openai/gpt-4o",
     api_key="your-api-key",
-    max_retries=5,      # Maximum number of retry attempts
+    max_retries=5,      # Maximum total extraction attempts
     min_wait=2,         # Minimum seconds to wait between retries
     max_wait=30         # Maximum seconds to wait between retries
 )
@@ -122,7 +122,7 @@ extractor = Extractor.from_litellm(
 
 | Parameter   | Type | Default | Description                             |
 | ----------- | ---- | ------- | --------------------------------------- |
-| max_retries | int  | 3       | Maximum number of retry attempts        |
+| max_retries | int  | 3       | Maximum total extraction attempts       |
 | min_wait    | int  | 1       | Minimum seconds to wait between retries |
 | max_wait    | int  | 10      | Maximum seconds to wait between retries |
 
@@ -132,7 +132,7 @@ You can configure the processing behavior:
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="openai/gpt-4o",
     api_key="your-api-key",
     max_threads=20,     # Maximum number of concurrent threads
     batch_size=50       # Size of processing batches

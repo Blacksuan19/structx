@@ -36,7 +36,8 @@ graph TB
     subgraph "Core Processing Modules"
         B[LLM Core]
         C[Model Utils]
-        D[Data Content Processor]
+        D[Data Processor]
+        D1[Content Analyzer]
         E[Model Operations]
         F[Extraction Engine]
     end
@@ -78,6 +79,7 @@ graph TB
     
     B --> C
     B --> D
+    D --> D1
     C --> E
     E --> F
     F --> P

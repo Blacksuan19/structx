@@ -1,6 +1,8 @@
 # Token Usage Tracking
 
-The token usage tracking API provides detailed information about token consumption across different steps of the extraction process.
+`ExtractionResult.usage` contains raw provider usage objects grouped by
+schema-generation and extraction calls, plus computed operation totals. See the
+[Token Tracking Guide](../guides/token-tracking.md) for examples.
 
 ::: structx.utils.usage.ExtractorUsage
     options:
