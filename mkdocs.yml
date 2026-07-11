@@ -34,6 +34,7 @@ nav:
   - Changelog: changelog.md
   - User Guide:
       - Basic Extraction: guides/basic-extraction.md
+      - Working with Results: guides/working-with-results.md
       - Custom Models: guides/custom-models.md
       - Unstructured Text: guides/unstructured-text.md
       - Multiple Queries: guides/multiple-queries.md
@@ -44,10 +45,12 @@ nav:
 
   - API Reference:
       - Extractor: api/extractor.md
+      - Input Contracts: api/inputs.md
       - Models: api/models.md
       - Configuration: api/configuration.md
       - Token Tracking: api/token-tracking.md
       - Utilities: api/utilities.md
+      - Exceptions: api/exceptions.md
   - Reference:
       - Supported Formats: reference/supported-formats.md
       - Configuration Options: reference/configuration-options.md

@@ -2,18 +2,38 @@
 
 The `Extractor` class is the main interface for structured data extraction.
 
-## API Requirements
+## Construction
 
-**All methods require keyword arguments.** The `*` in method signatures indicates that all parameters after it must be passed as keyword arguments:
+`from_litellm()` is the recommended constructor. It creates both synchronous
+and asynchronous Instructor clients, scopes provider settings to the extractor,
+and enables LiteLLM's unsupported-parameter filtering:
 
 ```python
-# ✅ Correct usage
+extractor = Extractor.from_litellm(
+    model="openai/gpt-5.5",
+    api_key="your-api-key",
+    api_base="https://api.example.com/v1",
+    planning_model="openai/gpt-4o",
+)
+```
+
+Direct construction accepts a patched synchronous `Instructor` client. Pass an
+`AsyncInstructor` through `async_client` as well if any async method will be
+used. The async methods fail early when it is absent.
+
+## API Requirements
+
+**All public operation methods require keyword arguments.** The `*` in method
+signatures indicates that all parameters after it must be passed by name:
+
+```python
+# Correct usage
 result = extractor.extract(data="file.pdf", query="extract information")
 result = extractor.extract_queries(data="file.pdf", queries=["query1", "query2"])
 model = extractor.get_schema(data="file.pdf", query="extract information")
 refined = extractor.refine_data_model(model=ExistingModel, refinement_instructions="add field")
 
-# ❌ Incorrect usage - will raise TypeError
+# Incorrect usage - raises TypeError
 result = extractor.extract("file.pdf", "extract information")
 result = extractor.extract_queries("file.pdf", ["query1", "query2"])
 ```
@@ -33,12 +53,12 @@ graph TB
         A4[refine_data_model]
     end
     
-    subgraph "Core Processing Modules"
+    subgraph "Core Processing"
         B[LLM Core]
-        C[Model Utils]
-        D[Data Processor]
-        D1[Content Analyzer]
-        E[Model Operations]
+        C[Input Processor]
+        C1[PreparedInput]
+        D[Model Operations]
+        E[Batch Processor]
         F[Extraction Engine]
     end
     
@@ -58,10 +78,11 @@ graph TB
     end
     
     subgraph "Output Management"
-        P[Result Manager]
+        P[Result Collector]
         Q[Type Safety]
         R[Error Handling]
-        S[Usage Statistics]
+        S[Operation Usage]
+        T[RowResult and Row Usage]
     end
     
     A --> A1
@@ -69,19 +90,20 @@ graph TB
     A --> A3
     A --> A4
     
-    A1 --> B
-    A1 --> G
     B --> L
     G --> H
     H --> I
     I --> J
     J --> K
+    K --> C
     
-    B --> C
-    B --> D
-    D --> D1
-    C --> E
+    A --> C
+    C --> C1
+    C --> D
+    C --> G
+    D --> E
     E --> F
+    F --> B
     F --> P
     
     L --> M
@@ -90,9 +112,13 @@ graph TB
     P --> Q
     P --> R
     P --> S
+    P --> T
 ```
 
 </details>
+
+For output semantics and row-level provenance, see
+[Working with Results](../guides/working-with-results.md).
 
 ::: structx.Extractor
     options:

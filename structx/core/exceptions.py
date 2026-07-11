@@ -1,34 +1,34 @@
 class StructXError(Exception):
-    """Base exception for all structx errors"""
+    """Base exception for errors raised directly by Structx."""
 
     pass
 
 
 class ConfigurationError(StructXError):
-    """Error in configuration"""
+    """Raised for invalid Structx configuration or runtime settings."""
 
     pass
 
 
 class ExtractionError(StructXError):
-    """Error during extraction process"""
+    """Raised when a public extraction operation cannot complete."""
 
     pass
 
 
 class ValidationError(StructXError):
-    """Error in data validation"""
+    """Raised for Structx-specific input validation failures."""
 
     pass
 
 
 class ModelGenerationError(StructXError):
-    """Error in dynamic model generation"""
+    """Raised when an extraction schema cannot become a Pydantic model."""
 
     pass
 
 
 class FileError(StructXError):
-    """Error in file operations"""
+    """Raised for invalid paths, unsupported files, or conversion failures."""
 
     pass

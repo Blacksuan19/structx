@@ -2,9 +2,26 @@
 
 These are the core models used in `structx` for data extraction and results.
 
+## RowResult
+
+::: structx.core.models.RowResult
+    options:
+      show_bases: false
+      heading_level: 3
+
 ## ExtractionResult
 
 ::: structx.core.models.ExtractionResult
+    options:
+      show_bases: false
+      heading_level: 3
+
+The distinction between flattened output and row provenance is covered in
+[Working with Results](../guides/working-with-results.md).
+
+## ModelField
+
+::: structx.core.models.ModelField
     options:
       show_bases: false
       heading_level: 3
@@ -29,9 +46,31 @@ Legacy validation names such as `regex`, `min_items`, and `max_items` are
 normalized to their Pydantic v2 equivalents. Unsupported constraints and
 invalid regular expressions are discarded before model creation.
 
-## Other Models
+## ExtractionRequest
 
-::: structx.core.models
+::: structx.core.models.ExtractionRequest
     options:
       show_bases: false
       heading_level: 3
+
+## ExtractionPlan
+
+::: structx.core.models.ExtractionPlan
+    options:
+      show_bases: false
+      heading_level: 3
+
+`ExtractionPlan` is the validated result of dynamic planning. It combines the
+instructions used for row extraction, selected input columns, and the generated
+schema. Supplying a custom Pydantic model skips this planning request.
+
+## ModelGenerator
+
+::: structx.extraction.generator.ModelGenerator
+    options:
+      show_bases: false
+      heading_level: 3
+
+`ModelGenerator.from_extraction_request()` is the low-level path for turning an
+`ExtractionRequest` into a runtime Pydantic model. Normal extraction performs
+this step automatically.
