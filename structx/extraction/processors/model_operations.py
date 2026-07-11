@@ -14,11 +14,7 @@ from structx.extraction.core.llm_core import LLMCore
 from structx.extraction.core.model_utils import ModelUtils
 from structx.extraction.generator import ModelGenerator
 from structx.extraction.processors.content_analyzer import ContentAnalyzer
-from structx.utils.helpers import (
-    convert_pydantic_v1_to_v2,
-    handle_errors,
-    sanitize_regex_patterns,
-)
+from structx.utils.helpers import handle_errors
 from structx.utils.prompts import (
     custom_model_guide_template,
     refinement_system_prompt,
@@ -143,12 +139,7 @@ class ModelOperations:
         if model_name:
             extraction_request.model_name = model_name
 
-        # Sanitize regex patterns to prevent validation errors
-        sanitized_request = sanitize_regex_patterns(extraction_request)
-
-        # Convert from v1 to v2 if needed and generate model
-        converted_request = convert_pydantic_v1_to_v2(sanitized_request)
-        refined_model = ModelGenerator.from_extraction_request(converted_request)
+        refined_model = ModelGenerator.from_extraction_request(extraction_request)
 
         return refined_model
 

@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, Generic, List, Optional, Type, Union
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from structx.core.type_system import normalize_field_definition
 from structx.utils.types import T
 from structx.utils.usage import ExtractorUsage, UsageSummary
 
@@ -11,10 +12,15 @@ from structx.utils.usage import ExtractorUsage, UsageSummary
 class ModelField(BaseModel):
     """Definition of a field in the extraction model"""
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(frozen=True)
 
     name: str = Field(description="Name of the field")
-    type: str = Field(description="Type of the field")
+    type: str = Field(
+        description=(
+            "Canonical Python type for the field, such as str, int, float, bool, "
+            "date, datetime, List[str], Dict[str, Any], or Optional[List[str]]"
+        )
+    )
     description: str = Field(description="Description of what this field represents")
     validation: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Additional validation rules"
@@ -22,6 +28,20 @@ class ModelField(BaseModel):
     nested_fields: Optional[List["ModelField"]] = Field(
         default=None, description="Fields for nested models"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_definition(cls, value: Any) -> Any:
+        if not isinstance(value, dict) or "type" not in value:
+            return value
+
+        normalized = value.copy()
+        field_type, validation = normalize_field_definition(
+            normalized["type"], normalized.get("validation")
+        )
+        normalized["type"] = field_type
+        normalized["validation"] = validation
+        return normalized
 
 
 class QueryRefinement(BaseModel):
