@@ -1,17 +1,7 @@
-from typing import Literal
-
-from pydantic import BaseModel, Field
+import pytest
 
 from structx.core.config import ExtractionConfig, StepConfig
-from structx.extraction.core.model_utils import ModelUtils
-
-
-class IncidentModel(BaseModel):
-    """Incident record."""
-
-    severity: Literal["low", "high"] = Field(description="Incident severity")
-    summary: str = Field(description="Short incident summary")
-    count: int
+from structx.core.exceptions import ConfigurationError
 
 
 def test_step_config_has_no_implicit_model_parameters():
@@ -22,7 +12,7 @@ def test_step_config_preserves_provider_specific_parameters():
     assert StepConfig(
         reasoning_effort="low",
         max_completion_tokens=16_000,
-    ).model_dump() == {
+    ).options() == {
         "reasoning_effort": "low",
         "max_completion_tokens": 16_000,
     }
@@ -30,38 +20,54 @@ def test_step_config_preserves_provider_specific_parameters():
 
 def test_extraction_config_only_returns_explicit_parameters():
     config = ExtractionConfig(
-        config={
-            "planning": {"reasoning_effort": "low"},
-            "extraction": {"max_completion_tokens": 16_000},
-        }
+        planning={"reasoning_effort": "low"},
+        extraction={"max_completion_tokens": 16_000},
     )
 
-    assert config.planning == {"reasoning_effort": "low"}
-    assert config.extraction == {"max_completion_tokens": 16_000}
+    assert config.for_step("planning") == {"reasoning_effort": "low"}
+    assert config.for_step("extraction") == {"max_completion_tokens": 16_000}
 
 
-def test_model_utils_extracts_schema_info_and_enum_values():
-    schema_info = ModelUtils.extract_model_schema_info(IncidentModel)
-
-    assert "- severity" in schema_info
-    assert "Possible values: low, high" in schema_info
-    assert "Short incident summary" in schema_info
-
-
-def test_model_utils_creates_context_for_document_model():
-    context = ModelUtils.create_model_context(IncidentModel, "document")
-
-    assert "Model fields and descriptions" in context
-    assert "from the document" in context
-
-
-def test_model_utils_extracts_characteristics_requirements_and_description():
-    characteristics = ModelUtils.extract_field_characteristics(IncidentModel)
-    requirements = ModelUtils.extract_structural_requirements(IncidentModel)
-    description = ModelUtils.get_model_description(IncidentModel)
-
-    assert any(
-        "severity" in item and "Possible values" in item for item in characteristics
+def test_extraction_config_loads_yaml(tmp_path):
+    config_path = tmp_path / "structx.yml"
+    config_path.write_text(
+        "planning:\n  reasoning_effort: low\nextraction:\n  temperature: 0.2\n",
+        encoding="utf-8",
     )
-    assert requirements["summary"] == "string"
-    assert description == "Incident record."
+
+    config = ExtractionConfig.from_yaml(config_path)
+
+    assert config.for_step("planning") == {"reasoning_effort": "low"}
+    assert config.for_step("extraction") == {"temperature": 0.2}
+
+
+def test_extraction_config_environment_overrides_yaml(monkeypatch, tmp_path):
+    config_path = tmp_path / "structx.yml"
+    config_path.write_text("extraction:\n  temperature: 0.2\n", encoding="utf-8")
+    monkeypatch.setenv("STRUCTX_EXTRACTION", '{"temperature": 0.7}')
+
+    config = ExtractionConfig.from_yaml(config_path)
+
+    assert config.for_step("extraction") == {"temperature": 0.7}
+
+
+def test_extraction_config_decodes_nested_environment_scalars(monkeypatch):
+    monkeypatch.setenv("STRUCTX_EXTRACTION__TEMPERATURE", "0.2")
+    monkeypatch.setenv("STRUCTX_EXTRACTION__STREAM", "false")
+
+    config = ExtractionConfig(_env_file=None)
+
+    assert config.for_step("extraction") == {
+        "temperature": 0.2,
+        "stream": False,
+    }
+
+
+def test_extraction_config_rejects_missing_yaml():
+    with pytest.raises(ConfigurationError, match="Configuration file not found"):
+        ExtractionConfig.from_yaml("missing.yml")
+
+
+def test_extraction_config_rejects_unknown_step_lookup():
+    with pytest.raises(ConfigurationError, match="Unknown extraction step"):
+        ExtractionConfig().for_step("guide")

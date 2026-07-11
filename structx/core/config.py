@@ -1,9 +1,18 @@
+"""Pydantic Settings configuration for model-backed extraction steps."""
+
+import json
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Type
 
-from omegaconf import OmegaConf
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    YamlConfigSettingsSource,
+)
 
+from structx.core.exceptions import ConfigurationError
 from structx.utils.types import DictStrAny
 
 
@@ -12,73 +21,86 @@ class StepConfig(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, extra="allow")
 
+    @model_validator(mode="before")
+    @classmethod
+    def decode_scalar_values(cls, value: Any) -> Any:
+        """Decode numeric and boolean values supplied by nested environment keys."""
+        if not isinstance(value, dict):
+            return value
+        decoded = {}
+        for key, item in value.items():
+            if isinstance(item, str):
+                try:
+                    item = json.loads(item)
+                except json.JSONDecodeError:
+                    pass
+            decoded[key] = item
+        return decoded
 
-class ExtractionConfig:
-    """Configuration management for structx using OmegaConf and Pydantic"""
+    def options(self) -> DictStrAny:
+        """Return explicitly configured provider parameters."""
+        return self.model_dump(exclude_none=True)
 
-    DEFAULT_CONFIG = {
-        "planning": {},
-        "extraction": {},
-    }
 
-    def __init__(
-        self,
-        config: Optional[Union[Dict[str, Any], str]] = None,
-        config_path: Optional[Union[str, Path]] = None,
-    ):
-        """
-        Initialize configuration
+class ExtractionConfig(BaseSettings):
+    """Settings loaded from arguments, environment, dotenv, YAML, or secrets.
 
-        Args:
-            config: Optional configuration dictionary or YAML string
-            config_path: Optional path to YAML configuration file
-        """
-        # Create base config from defaults
-        self.conf = OmegaConf.create(self.DEFAULT_CONFIG)
+    Source priority is constructor values, environment variables, ``.env``,
+    YAML, then file secrets. Environment and secret names use the ``STRUCTX_``
+    prefix.
+    """
 
-        # Load from file if provided
-        if config_path:
-            file_conf = OmegaConf.load(config_path)
-            self.conf = OmegaConf.merge(self.conf, file_conf)
+    planning: DictStrAny = Field(default_factory=dict)
+    extraction: DictStrAny = Field(default_factory=dict)
 
-        # Merge with provided config if any
-        if config:
-            if isinstance(config, str):
-                conf_to_merge = OmegaConf.create(config)
-            else:
-                conf_to_merge = OmegaConf.create(config)
-            self.conf = OmegaConf.merge(self.conf, conf_to_merge)
+    model_config = SettingsConfigDict(
+        extra="ignore",
+        env_prefix="STRUCTX_",
+        env_nested_delimiter="__",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        yaml_file=None,
+    )
 
-        # Validate using Pydantic models
-        self._validate_config()
+    @field_validator("planning", "extraction", mode="before")
+    @classmethod
+    def validate_step(cls, value: Any) -> DictStrAny:
+        return StepConfig(**(value or {})).options()
 
-    def _validate_config(self) -> None:
-        """Validate configuration using Pydantic models"""
-        for step in ["planning", "extraction"]:
-            step_config: DictStrAny = OmegaConf.to_container(self.conf.get(step, {}))  # type: ignore
-            # Validate using StepConfig model
-            StepConfig(**step_config)
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Use conventional precedence with YAML below dotenv values."""
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            YamlConfigSettingsSource(settings_cls),
+            file_secret_settings,
+        )
 
-    @property
-    def planning(self) -> DictStrAny:
-        """Get validated planning step configuration"""
-        config: DictStrAny = OmegaConf.to_container(self.conf.planning)  # type: ignore
-        return StepConfig(**config).model_dump(exclude_none=True)
+    @classmethod
+    def from_yaml(cls, path: str | Path, **overrides: Any) -> "ExtractionConfig":
+        """Load settings from a YAML file with optional highest-priority overrides."""
+        yaml_path = Path(path).expanduser()
+        if not yaml_path.is_file():
+            raise ConfigurationError(f"Configuration file not found: {yaml_path}")
 
-    @property
-    def extraction(self) -> DictStrAny:
-        """Get validated extraction step configuration"""
-        config: DictStrAny = OmegaConf.to_container(self.conf.extraction)  # type: ignore
-        return StepConfig(**config).model_dump(exclude_none=True)
+        class YamlExtractionConfig(cls):
+            model_config = SettingsConfigDict(
+                **{**cls.model_config, "yaml_file": yaml_path}
+            )
 
-    def save(self, path: str) -> None:
-        """Save configuration to YAML file"""
-        OmegaConf.save(self.conf, path)
+        return YamlExtractionConfig(**overrides)
 
-    def __str__(self) -> str:
-        """String representation of configuration"""
-        return OmegaConf.to_yaml(self.conf)
-
-    def __repr__(self) -> str:
-        """Representation of configuration"""
-        return self.__str__()
+    def for_step(self, step: str) -> DictStrAny:
+        """Return provider kwargs for ``planning`` or ``extraction``."""
+        if step not in {"planning", "extraction"}:
+            raise ConfigurationError(f"Unknown extraction step: {step}")
+        return StepConfig(**getattr(self, step)).options()
