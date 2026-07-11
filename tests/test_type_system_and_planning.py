@@ -1,14 +1,12 @@
 from typing import get_args, get_origin
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from structx.core.models import (
-    ExtractionGuide,
     ExtractionPlan,
     ExtractionRequest,
     ModelField,
-    QueryRefinement,
 )
 from structx.core.type_system import (
     TypeExpressionError,
@@ -17,7 +15,7 @@ from structx.core.type_system import (
 )
 from structx.extraction.generator import ModelGenerator
 from structx.extraction.processors.model_operations import ModelOperations
-from structx.utils.usage import ExtractionStep
+from structx.utils.usage import ExtractionStep, ExtractorUsage
 
 
 @pytest.mark.parametrize(
@@ -96,6 +94,7 @@ def test_generated_model_enforces_normalized_constraints():
             )
         ],
     )
+
     model = ModelGenerator.from_extraction_request(request)
 
     with pytest.raises(ValidationError):
@@ -209,10 +208,35 @@ class FakeLLMCore:
         return self.plan
 
 
+class ContactModel(BaseModel):
+    """A person to extract."""
+
+    name: str
+    email: str | None = None
+
+
+def test_custom_model_strategy_is_derived_without_an_llm_call():
+    class NoCallLLMCore:
+        def complete(self, **kwargs):
+            pytest.fail("custom model planning should not call the LLM")
+
+    instructions, target_columns = ModelOperations(
+        NoCallLLMCore()
+    ).generate_from_custom_model(
+        model=ContactModel,
+        query="extract the contact",
+        data_columns=["name", "profile_text", "unrelated"],
+    )
+
+    assert "extract the contact" in instructions
+    assert "ContactModel" in instructions
+    assert target_columns == ["name", "profile_text", "unrelated"]
+
+
 def test_extraction_plan_is_generated_in_one_llm_call():
     plan = ExtractionPlan(
-        refined_query=QueryRefinement(refined_query="Extract terms"),
-        guide=ExtractionGuide(target_columns=["invented_column"]),
+        instructions="Extract terms",
+        target_columns=["invented_column"],
         schema=ExtractionRequest(
             model_name="Terms",
             model_description="Agreement terms",
@@ -223,14 +247,44 @@ def test_extraction_plan_is_generated_in_one_llm_call():
     )
     llm_core = FakeLLMCore(plan)
     operations = ModelOperations(llm_core)
+    usage = ExtractorUsage()
 
     result = operations.generate_extraction_plan(
         query="Extract terms",
         sample_text="Payment is due monthly.",
         data_columns=["source", "pdf_path"],
+        usage=usage,
     )
 
     assert len(llm_core.requests) == 1
     assert llm_core.requests[0]["response_model"] is ExtractionPlan
     assert llm_core.requests[0]["step"] is ExtractionStep.SCHEMA_GENERATION
-    assert result.guide.target_columns == ["source", "pdf_path"]
+    assert llm_core.requests[0]["usage"] is usage
+    assert result.target_columns == ["source", "pdf_path"]
+
+
+def test_extraction_plan_attaches_pdf_when_text_sample_is_unavailable(
+    sample_pdf_path,
+):
+    plan = ExtractionPlan(
+        instructions="Extract terms",
+        target_columns=["source"],
+        schema=ExtractionRequest(
+            model_name="Terms",
+            model_description="Agreement terms",
+            fields=[ModelField(name="term", type="str", description="Term")],
+        ),
+    )
+    llm_core = FakeLLMCore(plan)
+
+    ModelOperations(llm_core).generate_extraction_plan(
+        query="Extract terms",
+        sample_text="",
+        data_columns=["source"],
+        usage=ExtractorUsage(),
+        pdf_path=str(sample_pdf_path),
+    )
+
+    content = llm_core.requests[0]["messages"][1]["content"]
+    assert isinstance(content, list)
+    assert content[1].source == sample_pdf_path

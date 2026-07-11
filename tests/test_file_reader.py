@@ -1,5 +1,6 @@
 import sys
 import types
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -42,9 +43,10 @@ def install_fake_document_modules(monkeypatch, text="sample text", html="<h1>Doc
             return FakeResult()
 
     class FakeHTML:
-        def __init__(self, *, string, base_url=None):
+        def __init__(self, *, string, base_url=None, url_fetcher=None):
             calls["html"] = string
             calls["base_url"] = base_url
+            calls["url_fetcher"] = url_fetcher
 
         def write_pdf(self, path):
             calls["pdf_path"] = path
@@ -62,6 +64,7 @@ def install_fake_document_modules(monkeypatch, text="sample text", html="<h1>Doc
     converter_module.ImageFormatOption = FakeFormatOption
     weasyprint_module = types.ModuleType("weasyprint")
     weasyprint_module.HTML = FakeHTML
+    weasyprint_module.default_url_fetcher = lambda url, *args, **kwargs: {"url": url}
 
     monkeypatch.setitem(sys.modules, "docling", docling_module)
     monkeypatch.setitem(sys.modules, "docling.datamodel", datamodel_module)
@@ -83,7 +86,8 @@ def test_read_structured_csv_uses_pandas_reader(tmp_path):
     csv_path = tmp_path / "incidents.csv"
     csv_path.write_text("id,message\n1,hello\n2,world\n", encoding="utf-8")
 
-    df = FileReader.read_file(csv_path)
+    prepared_input = FileReader.read_file(csv_path)
+    df = prepared_input.dataframe
 
     assert list(df.columns) == ["id", "message"]
     assert df["message"].tolist() == ["hello", "world"]
@@ -92,16 +96,17 @@ def test_read_structured_csv_uses_pandas_reader(tmp_path):
 def test_read_document_file_converts_to_multimodal_pdf(monkeypatch, sample_docx_path):
     calls = install_fake_document_modules(monkeypatch)
 
-    df = FileReader.read_file(sample_docx_path)
+    prepared_input = FileReader.read_file(sample_docx_path)
+    df = prepared_input.dataframe
 
     assert df.to_dict(orient="records")[0]["source"] == str(sample_docx_path)
-    assert df.to_dict(orient="records")[0]["multimodal"] is True
-    assert df.to_dict(orient="records")[0]["file_type"] == "pdf"
     assert calls["converted_path"] == str(sample_docx_path)
     assert calls["html"] == "<h1>Doc</h1>"
     assert calls["base_url"] == str(sample_docx_path.parent)
-    assert calls["pdf_path"] == df.loc[0, "pdf_path"]
-    assert df.attrs["content_sample"] == "sample text"
+    assert callable(calls["url_fetcher"])
+    assert Path(calls["pdf_path"]) == prepared_input.pdf_rows[0].pdf_path
+    assert prepared_input.planning_sample == "sample text"
+    assert prepared_input.owned_paths == [prepared_input.pdf_rows[0].pdf_path]
     format_options = calls["converter_kwargs"]["format_options"]
     assert format_options["image"].pipeline_options.do_ocr is False
     assert format_options["image"].pipeline_options.do_table_structure is False
@@ -127,12 +132,13 @@ def test_invalid_pdf_is_rejected(tmp_path):
 
 
 def test_read_sample_pdf_passes_existing_pdf_through(sample_pdf_path):
-    df = FileReader.read_file(sample_pdf_path)
+    prepared_input = FileReader.read_file(sample_pdf_path)
+    df = prepared_input.dataframe
 
     record = df.to_dict(orient="records")[0]
     assert record["source"] == str(sample_pdf_path)
-    assert record["pdf_path"] == str(sample_pdf_path)
-    assert record["file_type"] == "pdf"
+    assert prepared_input.pdf_rows[0].pdf_path == sample_pdf_path
+    assert prepared_input.owned_paths == []
 
 
 def test_extract_text_sample_uses_docling(monkeypatch, sample_docx_path):
@@ -160,6 +166,22 @@ def test_read_file_forwards_file_options_to_structured_reader(tmp_path):
     csv_path = tmp_path / "semi.csv"
     csv_path.write_text("id;message\n1;hello\n", encoding="utf-8")
 
-    df = FileReader.read_file(csv_path, file_options={"sep": ";"})
+    df = FileReader.read_file(csv_path, file_options={"sep": ";"}).dataframe
 
     assert df.to_dict(orient="records") == [{"id": 1, "message": "hello"}]
+
+
+def test_document_resource_fetcher_blocks_network_and_parent_paths(tmp_path):
+    fetcher = FileReader._local_url_fetcher(
+        lambda url, *args, **kwargs: url,
+        tmp_path,
+    )
+    local_asset = tmp_path / "image.png"
+    local_asset.touch()
+
+    assert fetcher(local_asset.as_uri()) == local_asset.as_uri()
+    assert fetcher("data:image/png;base64,AA==").startswith("data:")
+    with pytest.raises(FileError, match="Blocked external"):
+        fetcher("https://example.com/image.png")
+    with pytest.raises(FileError, match="Blocked external"):
+        fetcher((tmp_path.parent / "secret.png").as_uri())

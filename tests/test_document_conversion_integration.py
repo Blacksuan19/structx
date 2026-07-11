@@ -22,25 +22,21 @@ def assert_pdf_output(pdf_path: Path):
 
 @pytest.mark.integration
 def test_sample_docx_converts_to_real_pdf(sample_docx_path):
-    df = FileReader.read_file(sample_docx_path)
-    pdf_path = Path(df.loc[0, "pdf_path"])
+    prepared_input = FileReader.read_file(sample_docx_path)
+    pdf_path = prepared_input.pdf_rows[0].pdf_path
 
-    assert df.loc[0, "source"] == str(sample_docx_path)
-    assert bool(df.loc[0, "multimodal"]) is True
-    assert df.loc[0, "file_type"] == "pdf"
-    assert "consultancy agreement" in df.attrs["content_sample"].lower()
+    assert prepared_input.dataframe.loc[0, "source"] == str(sample_docx_path)
+    assert "consultancy agreement" in prepared_input.planning_sample.lower()
     assert_pdf_output(pdf_path)
 
 
 @pytest.mark.integration
 def test_sample_pdf_is_passed_through_for_multimodal_input(sample_pdf_path):
-    df = FileReader.read_file(sample_pdf_path)
-    pdf_path = Path(df.loc[0, "pdf_path"])
+    prepared_input = FileReader.read_file(sample_pdf_path)
+    pdf_path = prepared_input.pdf_rows[0].pdf_path
 
-    assert df.loc[0, "source"] == str(sample_pdf_path)
+    assert prepared_input.dataframe.loc[0, "source"] == str(sample_pdf_path)
     assert pdf_path == sample_pdf_path
-    assert bool(df.loc[0, "multimodal"]) is True
-    assert df.loc[0, "file_type"] == "pdf"
     assert_pdf_output(pdf_path)
 
 

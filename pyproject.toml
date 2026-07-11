@@ -112,6 +112,7 @@ include = ["structx*"]
 
 [tool.pytest.ini_options]
 filterwarnings = [
+    "ignore:There is no current event loop:DeprecationWarning:litellm\\._service_logger",
     "ignore:This field is deprecated.*:DeprecationWarning:docling\\.pipeline\\.standard_pdf_pipeline",
     "ignore:torch\\.ao\\.quantization is deprecated.*:DeprecationWarning:torch\\.ao\\.quantization\\.quantize",
     "ignore:torch\\.quantize_per_tensor.*:UserWarning:torch\\.ao\\.nn\\.quantized\\.dynamic\\.modules\\.rnn",
