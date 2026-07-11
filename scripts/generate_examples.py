@@ -8,7 +8,7 @@ from typing import Dict, List
 
 from structx import Extractor
 from structx.core.models import ExtractionResult
-from structx.utils.usage import UsageSummary
+from structx.utils.usage import ExtractorUsage
 
 
 def print_section_header(title: str, description: str = None):
@@ -33,14 +33,15 @@ def print_json(data: List[Dict]):
     print("```")
 
 
-def print_token_usage(usage: UsageSummary):
+def print_token_usage(usage: ExtractorUsage):
     """Print token usage information."""
     print("\n### Token Usage:")
     if usage:
         print(f"Total tokens used: {usage.total_tokens}\n")
         print("Tokens by step:\n")
-        for step in usage.steps:
-            print(f"- {step.name}: {step.tokens} tokens\n")
+        for step, calls in usage.steps.items():
+            tokens = sum(call.total_tokens for call in calls)
+            print(f"- {step.value}: {tokens} tokens\n")
 
 
 def print_extraction_results(results: ExtractionResult):
@@ -50,7 +51,7 @@ def print_extraction_results(results: ExtractionResult):
         f"\nExtracted {results.success_count} items with {results.success_rate:.1f}% success rate"
     )
 
-    print_token_usage(results.usage.get_usage_summary())
+    print_token_usage(results.usage)
 
     # Display results - either as markdown table or JSON
     if hasattr(results.data, "to_markdown"):
@@ -192,7 +193,7 @@ def main():
 
     print("\n### Token Usage for Schema Generation Process:")
 
-    usage: UsageSummary = DataModel.usage.get_usage_summary()
+    usage: ExtractorUsage = DataModel.usage
 
     print_token_usage(usage)
     print("\n<details>")

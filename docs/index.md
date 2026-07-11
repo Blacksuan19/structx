@@ -75,7 +75,7 @@ graph TB
     end
 
     subgraph "Processing Pipeline"
-        N[Query Refinement] --> O[Model Generation]
+        N[Schema and Guide Planning] --> O[Model Generation]
         O --> P[Data Extraction]
         P --> Q[Result Collection]
     end

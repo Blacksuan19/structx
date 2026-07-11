@@ -6,9 +6,8 @@ This guide covers the fundamentals of data extraction with `structx`.
 
 When you use `structx` to extract data, the following happens:
 
-1. **Query Refinement**: The query is expanded and refined for better extraction
-2. **Model Generation**: A Pydantic model is dynamically generated based on the
-   query
+1. **Planning**: The query, extraction guide, and schema are generated together
+2. **Model Generation**: A Pydantic model is created from the planned schema
 3. **Data Extraction**: The model is used to extract structured data from the
    text
 4. **Result Collection**: Results are collected and returned as an
@@ -21,23 +20,19 @@ When you use `structx` to extract data, the following happens:
 
 ```mermaid
 graph LR
-    A[Raw Query] --> B[Query Refinement]
-    B --> C[Schema Generation]
+    A[Raw Query] --> B[Schema and Guide Planning]
+    B --> C[Model Generation]
     C --> D[Model Creation]
     D --> E[Data Extraction]
     E --> F[Result Collection]
     F --> G[ExtractionResult]
 
     subgraph "LLM Operations"
-        B1[Analyze Query] --> B2[Generate Context]
-        B2 --> B3[Refine Query]
-
-        C1[Infer Schema] --> C2[Generate Fields]
-        C2 --> C3[Define Types]
+        B1[Analyze Query] --> B2[Infer Schema]
+        B2 --> B3[Generate Guide]
     end
 
     B --> B1
-    C --> C1
 ```
 
 </details>

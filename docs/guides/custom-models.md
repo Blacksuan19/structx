@@ -161,7 +161,8 @@ EnhancedContractModel = extractor.refine_data_model(
 # check token usage
 usage = EnhancedContractModel.usage
 print(f"Total tokens used: {usage.total_tokens}")
-print(f"By step: {[(s.name, s.tokens) for s in usage.steps]}")
+for step, calls in usage.steps.items():
+    print(step.value, [call.total_tokens for call in calls])
 ```
 
 ## Model Validation

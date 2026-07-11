@@ -143,12 +143,12 @@ monitor costs:
 
 ```python
 # Check token usage
-usage = result.get_token_usage()
+usage = result.usage
 print(f"Total tokens used: {usage.total_tokens}")
 
 # See usage breakdown by step
-for step in usage.steps:
-    print(f"{step.name}: {step.tokens} tokens")
+for step, calls in usage.steps.items():
+    print(step.value, [call.total_tokens for call in calls])
 ```
 
 ### Configure Extraction
@@ -156,25 +156,24 @@ for step in usage.steps:
 ```python
 # With a YAML file
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="gpt-5.5",
     api_key="your-api-key",
     config="config.yaml"
 )
 
 # With a dictionary
 config = {
-    "refinement": {
-        "temperature": 0.1,
-        "top_p": 0.05
+    "planning": {
+        "reasoning_effort": "low"
     },
     "extraction": {
-        "temperature": 0.0,
-        "top_p": 0.1
+        "reasoning_effort": "medium",
+        "max_completion_tokens": 16000
     }
 }
 
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="gpt-5.5",
     api_key="your-api-key",
     config=config
 )
@@ -188,6 +187,10 @@ extractor = Extractor.from_litellm(
     max_wait=30         # Maximum seconds between retries
 )
 ```
+
+Structx does not set sampling controls or token limits by default. Values under
+each step are passed to LiteLLM and the selected provider, so only configure
+parameters supported by your model.
 
 ## Next Steps
 

@@ -132,10 +132,11 @@ result = extractor.extract(
 
 ```python
 # Check token usage for cost monitoring
-usage = result.get_token_usage()
+usage = result.usage
 if usage:
     print(f"Total tokens: {usage.total_tokens}")
-    print(f"By step: {[(s.name, s.tokens) for s in usage.steps]}")
+    for step, calls in usage.steps.items():
+        print(step.value, [call.total_tokens for call in calls])
 ```
 
 ## 🚀 Why Multimodal PDF Processing?

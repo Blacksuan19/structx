@@ -56,11 +56,7 @@ Total tokens used: 18638
 
 Tokens by step:
 
-- refinement: 306 tokens
-
-- schema_generation: 1205 tokens
-
-- guide: 454 tokens
+- schema_generation: 1965 tokens
 
 - extraction: 16673 tokens
 
@@ -338,11 +334,7 @@ Total tokens used: 3323
 
 Tokens by step:
 
-- refinement: 376 tokens
-
-- schema_generation: 1005 tokens
-
-- guide: 519 tokens
+- schema_generation: 1900 tokens
 
 - extraction: 1423 tokens
 
@@ -477,11 +469,7 @@ Total tokens used: 3031
 
 Tokens by step:
 
-- refinement: 286 tokens
-
-- schema_generation: 2325 tokens
-
-- guide: 420 tokens
+- schema_generation: 3031 tokens
 
 - extraction: 0 tokens
 

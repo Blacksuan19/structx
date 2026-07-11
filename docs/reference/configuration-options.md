@@ -1,6 +1,8 @@
 # Configuration Options
 
-`structx` provides flexible configuration options for extraction.
+`structx` passes model configuration through without imposing generation
+defaults. When no configuration is supplied, the selected model and provider
+control sampling, reasoning, and output limits.
 
 ## Configuration Methods
 
@@ -10,21 +12,17 @@ You can configure `structx` in several ways:
 
 ```yaml
 # config.yaml
-refinement:
-  temperature: 0.1
-  top_p: 0.05
-  max_tokens: 2000
+planning:
+  reasoning_effort: low
 
 extraction:
-  temperature: 0.0
-  top_p: 0.1
-  max_tokens: 2000
-  frequency_penalty: 0.1
+  reasoning_effort: medium
+  max_completion_tokens: 16000
 ```
 
 ```python
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="gpt-5.5",
     api_key="your-api-key",
     config="config.yaml"
 )
@@ -34,21 +32,17 @@ extractor = Extractor.from_litellm(
 
 ```python
 config = {
-    "refinement": {
-        "temperature": 0.1,
-        "top_p": 0.05,
-        "max_tokens": 2000
+    "planning": {
+        "reasoning_effort": "low"
     },
     "extraction": {
-        "temperature": 0.0,
-        "top_p": 0.1,
-        "max_tokens": 2000,
-        "frequency_penalty": 0.1
+        "reasoning_effort": "medium",
+        "max_completion_tokens": 16000
     }
 }
 
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="gpt-5.5",
     api_key="your-api-key",
     config=config
 )
@@ -57,24 +51,20 @@ extractor = Extractor.from_litellm(
 ### ExtractionConfig Object
 
 ```python
-from structx import ExtractionConfig, StepConfig
+from structx import ExtractionConfig
 
 config = ExtractionConfig(
-    refinement=StepConfig(
-        temperature=0.1,
-        top_p=0.05,
-        max_tokens=2000
-    ),
-    extraction=StepConfig(
-        temperature=0.0,
-        top_p=0.1,
-        max_tokens=2000,
-        frequency_penalty=0.1
-    )
+    config={
+        "planning": {"reasoning_effort": "low"},
+        "extraction": {
+            "reasoning_effort": "medium",
+            "max_completion_tokens": 16000,
+        },
+    }
 )
 
 extractor = Extractor.from_litellm(
-    model="gpt-4o",
+    model="gpt-5.5",
     api_key="your-api-key",
     config=config
 )
@@ -86,23 +76,33 @@ extractor = Extractor.from_litellm(
 
 Each step in the extraction process can be configured separately:
 
-1. **Refinement**: Query refinement and model generation
+1. **Planning**: Query refinement, extraction guidance, and model generation
 2. **Extraction**: Actual data extraction
 
-### Common Parameters
+### Model Parameters
 
-| Parameter   | Type  | Default | Description                          |
-| ----------- | ----- | ------- | ------------------------------------ |
-| temperature | float | varies  | Sampling temperature (0.0-1.0)       |
-| top_p       | float | varies  | Nucleus sampling parameter (0.0-1.0) |
-| max_tokens  | int   | 2000    | Maximum tokens in completion         |
+Each step accepts arbitrary LiteLLM or provider completion parameters. Structx
+does not maintain its own parameter allowlist and does not provide defaults.
+For example, reasoning models may use `reasoning_effort` and
+`max_completion_tokens`, while other models may support `temperature`, `top_p`,
+or provider-specific options.
 
-### Default Values
+LiteLLM drops parameters it knows are unsupported for the selected model. Model
+metadata cannot describe every value restriction or custom OpenAI-compatible
+endpoint, so consult the provider's model documentation before setting a value.
 
-| Step       | Temperature | Top P | Max Tokens |
-| ---------- | ----------- | ----- | ---------- |
-| Refinement | 0.1         | 0.05  | 2000       |
-| Extraction | 0.0         | 0.1   | 2000       |
+For lower planning latency, use a smaller model for schema and guide generation
+while keeping the primary model for document extraction:
+
+```python
+extractor = Extractor.from_litellm(
+    model="openai/gpt-5.5",
+    planning_model="openai/gpt-4o",
+    config={
+        "extraction": {"reasoning_effort": "low"},
+    },
+)
+```
 
 ## Retry Configuration
 
@@ -148,21 +148,17 @@ extractor = Extractor.from_litellm(
 
 ## Best Practices
 
-1. **Temperature Settings**:
+1. **Model Settings**:
 
-   - Use lower temperatures (0.0-0.2) for consistent extraction
-   - Higher temperatures may introduce variability
+   - Start with no model parameters and use the provider defaults
+   - Add reasoning, sampling, or token controls only when supported and needed
+   - Set output limits high enough for large documents and data models
 
-2. **Token Limits**:
-
-   - Ensure `max_tokens` is sufficient for your extraction needs
-   - Complex extractions may require higher limits
-
-3. **Batch Size**:
+2. **Batch Size**:
 
    - Adjust based on your data size and memory constraints
    - Smaller batches use less memory but may be slower
 
-4. **Thread Count**:
+3. **Thread Count**:
    - Set based on your CPU capabilities
    - Too many threads can cause resource contention

@@ -10,16 +10,13 @@ extraction process, helping you monitor costs and optimize your queries.
 
 ```mermaid
 graph TD
-    A[Extraction Request] --> B[Query Refinement]
-    B --> C[Model Generation]
-    C --> D[Data Extraction]
+    A[Extraction Request] --> B[Schema and Guide Planning]
+    B --> D[Data Extraction]
     D --> E[Result Collection]
 
-    B --> F1[Track Refinement Tokens]
-    C --> F2[Track Generation Tokens]
+    B --> F2[Track Planning Tokens]
     D --> F3[Track Extraction Tokens]
 
-    F1 --> G[Usage Aggregation]
     F2 --> G
     F3 --> G
 
@@ -33,13 +30,11 @@ graph TD
     end
 
     subgraph "Tracking Steps"
-        M[Refinement Step]
-        N[Generation Step]
+        N[Schema Generation Step]
         O[Extraction Step]
         P[Individual Extraction Items]
     end
 
-    F1 --> M
     F2 --> N
     F3 --> O
     O --> P
@@ -65,45 +60,38 @@ result = extractor.extract(
 )
 
 # Access token usage information
-usage = result.get_token_usage()
+usage = result.usage
 if usage:
     print(f"Total tokens used: {usage.total_tokens}")
     print(f"Prompt tokens: {usage.prompt_tokens}")
     print(f"Completion tokens: {usage.completion_tokens}")
 
-    # Print usage by step
-    for step in usage.steps:
-        print(f"{step.name}: {step.tokens} tokens")
+    # Inspect the original provider usage objects by step
+    for step, calls in usage.steps.items():
+        print(step.value, [call.total_tokens for call in calls])
 ```
 
 ## Detailed Token Information
 
-For more detailed information about extraction steps, use the `detailed`
-parameter:
+Each step contains the original usage object returned by LiteLLM. Values are
+always lists because a step may make more than one model call:
 
 ```python
-# Get detailed token usage with extraction breakdowns
-detailed_usage = result.get_token_usage(detailed=True)
+from structx.utils.usage import ExtractionStep
 
-# Access extraction details
-extraction = next((s for s in detailed_usage.steps if s.name == "extraction"), None)
-if extraction and hasattr(extraction, "steps"):
-    print(f"Number of extraction steps: {len(extraction.steps)}")
-    for i, step in enumerate(extraction.steps):
-        print(f"  Extraction {i+1}: {step.tokens} tokens")
+extraction_calls = usage.get_step(ExtractionStep.EXTRACTION)
+for call_usage in extraction_calls:
+    print(call_usage.model_dump())
 ```
 
 ## Understanding the Steps
 
-Token usage is tracked across four main steps:
+The summary contains only model-backed steps that actually ran:
 
-1. **Refinement**: Refining and expanding the query for better extraction
-   (skipped if a model is provided)
-2. **Guide Generation**: Generating a guide for the extraction process
-3. **Schema Generation**: Generating the data model for extraction (skipped if a
-   model is provided)
-4. **Extraction**: Performing the actual data extraction (potentially multiple
-   calls)
+1. **Schema Generation**: Performs planning, including schema or extraction
+   guide generation depending on whether a custom model was supplied.
+2. **Extraction**: Performs the actual extraction, potentially across multiple
+   calls.
 
 ## Token Usage with Multiple Queries
 
@@ -115,7 +103,7 @@ queries = ["extract dates", "extract names", "extract organizations"]
 results = extractor.extract_queries(data="document.txt", queries=queries)
 
 for query, result in results.items():
-    usage = result.get_token_usage()
+    usage = result.usage
     if usage:
         print(f"Query: {query}")
         print(f"Total tokens: {usage.total_tokens}")
@@ -132,6 +120,22 @@ if usage.thinking_tokens:
 
 if usage.cached_tokens:
     print(f"Cached tokens: {usage.cached_tokens}")
+```
+
+These values remain `None` when the provider or OpenAI-compatible proxy does not
+include the corresponding token details in its response.
+
+Structx retains each provider usage object without translating it into a
+separate token schema. This includes metrics specific to LiteLLM or the
+underlying provider:
+
+```python
+from structx.utils.usage import ExtractionStep
+
+schema_calls = usage.get_step(ExtractionStep.SCHEMA_GENERATION)
+if schema_calls:
+    raw_usage = schema_calls[0]
+    print(raw_usage.completion_tokens_details.reasoning_tokens)
 ```
 
 ## Usage with Model Refinement
@@ -151,7 +155,7 @@ enhanced_user = extractor.refine_data_model(
 )
 
 # Access token usage information
-usage = enhanced_user.usage.get_usage_summary()
+usage = enhanced_user.usage
 print(f"Token usage for model refinement: {usage.total_tokens}")
 ```
 
