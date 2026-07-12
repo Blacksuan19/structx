@@ -31,10 +31,23 @@ For each synchronous method, there is an async counterpart:
 
 | Synchronous Method | Asynchronous Method     |
 | ------------------ | ----------------------- |
+| `prepare_input`    | `prepare_input_async`    |
 | `extract`          | `extract_async`         |
 | `extract_queries`  | `extract_queries_async` |
 | `get_schema`       | `get_schema_async`      |
 | `refine_data_model` | `refine_data_model_async` |
+
+Explicit preparation can be inspected and reused without repeating document
+conversion:
+
+```python
+async with extractor.prepare_input_async(data="agreement.docx") as prepared:
+    result = await extractor.extract_async(
+        data=prepared,
+        query="extract agreement terms",
+        model=AgreementTerms,
+    )
+```
 
 ## Parallel Processing
 

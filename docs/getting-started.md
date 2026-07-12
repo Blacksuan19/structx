@@ -85,6 +85,8 @@ result = extractor.extract("file.pdf", "extract information")  # This will fail
 
 This applies to all methods:
 
+- `prepare_input(*, data, ...)`
+- `prepare_input_async(*, data, ...)`
 - `extract(*, data, query, ...)`
 - `extract_async(*, data, query, ...)`
 - `extract_queries(*, data, queries, ...)`

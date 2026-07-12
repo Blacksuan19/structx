@@ -1,8 +1,8 @@
 # Input Contracts
 
-Most users should pass supported data directly to `Extractor`. The contracts on
-this page are useful for integrations that call the lower-level file and input
-processors.
+Most users should pass supported data directly to `Extractor`. Integrations can
+prepare input explicitly when they need to inspect normalized data or reuse one
+document conversion across schema and extraction operations.
 
 ## PreparedInput
 
@@ -23,20 +23,32 @@ processors.
 `FileReader.read_file()` returns a `PreparedInput`. Existing PDFs are borrowed
 and never deleted. Converted documents place generated PDFs in `owned_paths`.
 
-`Extractor` and the `InputProcessor.prepared()` context manager clean those
-paths automatically. A direct `FileReader` caller must perform cleanup:
+One-shot `Extractor` methods clean those paths automatically. The public
+preparation context managers keep prepared input open across schema and
+extraction methods, then guarantee cleanup when the context exits:
 
 ```python
-from structx.extraction.processors.input_processor import InputProcessor
-from structx.utils.file_reader import FileReader
+from structx import Extractor
 
-prepared = FileReader.read_file("agreement.docx")
-try:
+with extractor.prepare_input(data="agreement.docx") as prepared:
     print(prepared.dataframe)
     print(prepared.pdf_rows[0].pdf_path)
-finally:
-    InputProcessor.cleanup(prepared)
+    schema = extractor.get_schema(
+        data=prepared,
+        query="extract agreement terms",
+    )
+    result = extractor.extract(
+        data=prepared,
+        query="extract agreement terms",
+        model=schema,
+    )
 ```
+
+Use `async with extractor.prepare_input_async(...)` when preparation may perform
+blocking file parsing or document conversion. The prepared object can be
+inspected for metering or status updates before any model-backed operation.
+Lower-level callers can still use the idempotent `PreparedInput.close()` method
+directly when a context manager is not suitable.
 
 See [Supported Formats](../reference/supported-formats.md) for accepted public
 input types and document conversion behavior.
