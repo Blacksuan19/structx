@@ -3,7 +3,7 @@
 import asyncio
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterator, List, Union
+from typing import Any, AsyncGenerator, Dict, Generator, List, Union
 
 import pandas as pd
 
@@ -11,35 +11,44 @@ from structx.core.exceptions import FileError
 from structx.core.input import PreparedInput
 from structx.utils.file_reader import FileReader
 
-InputData = Union[str, Path, pd.DataFrame, List[Dict[str, str]]]
+InputData = Union[str, Path, pd.DataFrame, List[Dict[str, str]], PreparedInput]
 
 
 class InputProcessor:
     """Prepare supported inputs and own any temporary files they create."""
 
     @contextmanager
-    def prepared(self, data: InputData, **kwargs: Any) -> Iterator[PreparedInput]:
+    def prepared(
+        self, data: InputData, **kwargs: Any
+    ) -> Generator[PreparedInput, None, None]:
         """Yield normalized data and always release owned temporary files."""
+        owns_prepared_input = not isinstance(data, PreparedInput)
         prepared_input = self.prepare(data, **kwargs)
         try:
             yield prepared_input
         finally:
-            self.cleanup(prepared_input)
+            if owns_prepared_input:
+                self.cleanup(prepared_input)
 
     @asynccontextmanager
     async def prepared_async(
         self, data: InputData, **kwargs: Any
-    ) -> AsyncIterator[PreparedInput]:
+    ) -> AsyncGenerator[PreparedInput, None]:
         """Prepare blocking file inputs off-loop and own their lifetime."""
+        owns_prepared_input = not isinstance(data, PreparedInput)
         prepared_input = await asyncio.to_thread(self.prepare, data, **kwargs)
         try:
             yield prepared_input
         finally:
-            await asyncio.to_thread(self.cleanup, prepared_input)
+            if owns_prepared_input:
+                await asyncio.to_thread(self.cleanup, prepared_input)
 
     def prepare(self, data: InputData, **kwargs: Any) -> PreparedInput:
         """Normalize a supported input and retain its explicit resource metadata."""
-        if isinstance(data, pd.DataFrame):
+        if isinstance(data, PreparedInput):
+            data.ensure_open()
+            prepared_input = data
+        elif isinstance(data, pd.DataFrame):
             prepared_input = PreparedInput(dataframe=data)
         elif isinstance(data, list) and all(isinstance(item, dict) for item in data):
             prepared_input = PreparedInput(dataframe=pd.DataFrame(data))
@@ -102,6 +111,4 @@ class InputProcessor:
     @staticmethod
     def cleanup(prepared_input: PreparedInput) -> None:
         """Remove temporary artifacts owned by a prepared input."""
-        for path in prepared_input.owned_paths:
-            Path(path).unlink(missing_ok=True)
-        prepared_input.owned_paths.clear()
+        prepared_input.close()

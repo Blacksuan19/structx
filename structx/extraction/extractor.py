@@ -1,12 +1,12 @@
 """Public orchestration for structured extraction operations."""
 
 import asyncio
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Type, Union
 
-import pandas as pd
 from instructor import AsyncInstructor, Instructor
 from loguru import logger
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ from structx.extraction.core.llm_core import LLMCore
 from structx.extraction.engines.extraction_engine import ExtractionEngine
 from structx.extraction.processors.batch_processor import BatchProcessor
 from structx.extraction.processors.content_analyzer import ContentAnalyzer
-from structx.extraction.processors.input_processor import InputProcessor
+from structx.extraction.processors.input_processor import InputData, InputProcessor
 from structx.extraction.processors.model_operations import ModelOperations
 from structx.extraction.result_manager import ResultCollector
 from structx.utils.helpers import handle_errors
@@ -137,6 +137,24 @@ class Extractor:
         if len(set(validated)) != len(validated):
             raise ValueError("queries must not contain duplicates")
         return validated
+
+    @contextmanager
+    def prepare_input(
+        self, *, data: InputData, **kwargs: Any
+    ) -> Generator[PreparedInput, None, None]:
+        """Prepare input once and release owned resources after the context."""
+        with self.input_processor.prepared(data, **kwargs) as prepared_input:
+            yield prepared_input
+
+    @asynccontextmanager
+    async def prepare_input_async(
+        self, *, data: InputData, **kwargs: Any
+    ) -> AsyncGenerator[PreparedInput, None]:
+        """Prepare input off-loop and release resources after the async context."""
+        async with self.input_processor.prepared_async(
+            data, **kwargs
+        ) as prepared_input:
+            yield prepared_input
 
     def _build_strategy(
         self,
@@ -377,7 +395,7 @@ class Extractor:
     def extract(
         self,
         *,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        data: InputData,
         query: str,
         model: Optional[Type[BaseModel]] = None,
         return_df: bool = False,
@@ -407,7 +425,7 @@ class Extractor:
     async def extract_async(
         self,
         *,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        data: InputData,
         query: str,
         model: Optional[Type[BaseModel]] = None,
         return_df: bool = False,
@@ -443,7 +461,7 @@ class Extractor:
     def extract_queries(
         self,
         *,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        data: InputData,
         queries: List[str],
         return_df: bool = True,
         expand_nested: bool = False,
@@ -478,7 +496,7 @@ class Extractor:
     async def extract_queries_async(
         self,
         *,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        data: InputData,
         queries: List[str],
         return_df: bool = True,
         expand_nested: bool = False,
@@ -518,7 +536,7 @@ class Extractor:
     def get_schema(
         self,
         *,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        data: InputData,
         query: str,
         **kwargs: Any,
     ) -> Type[BaseModel]:
@@ -557,7 +575,7 @@ class Extractor:
     async def get_schema_async(
         self,
         *,
-        data: Union[str, Path, pd.DataFrame, List[Dict[str, str]]],
+        data: InputData,
         query: str,
         **kwargs: Any,
     ) -> Type[BaseModel]:

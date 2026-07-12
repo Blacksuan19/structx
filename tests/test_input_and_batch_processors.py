@@ -161,3 +161,28 @@ def test_cleanup_data_removes_all_owned_temporary_paths(tmp_path):
 
     assert all(not path.exists() for path in paths)
     assert prepared_input.owned_paths == []
+    assert prepared_input.closed
+
+
+def test_explicitly_prepared_input_is_reused_without_automatic_cleanup(tmp_path):
+    owned_path = tmp_path / "rendered.pdf"
+    owned_path.write_text("temporary", encoding="utf-8")
+    prepared_input = PreparedInput(
+        dataframe=pd.DataFrame({"source": ["document.docx"]}),
+        owned_paths=[owned_path],
+    )
+    processor = InputProcessor()
+
+    with processor.prepared(prepared_input) as reused:
+        assert reused is prepared_input
+
+    assert owned_path.exists()
+    assert not prepared_input.closed
+
+    prepared_input.close()
+    prepared_input.close()
+
+    assert not owned_path.exists()
+    assert prepared_input.closed
+    with pytest.raises(RuntimeError, match="closed"):
+        processor.prepare(prepared_input)

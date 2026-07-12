@@ -47,11 +47,32 @@ class PreparedInput:
     pdf_rows: Dict[int, PdfRow] = field(default_factory=dict)
     planning_sample: Optional[str] = None
     owned_paths: List[Path] = field(default_factory=list)
+    _closed: bool = field(default=False, init=False, repr=False)
+
+    @property
+    def closed(self) -> bool:
+        """Whether temporary resources owned by this input were released."""
+        return self._closed
+
+    def ensure_open(self) -> None:
+        """Reject reuse after explicit cleanup."""
+        if self._closed:
+            raise RuntimeError("Prepared input is closed")
+
+    def close(self) -> None:
+        """Release owned temporary resources. This operation is idempotent."""
+        if self._closed:
+            return
+        for path in self.owned_paths:
+            Path(path).unlink(missing_ok=True)
+        self.owned_paths.clear()
+        self._closed = True
 
     def row_payload(
         self, position: int, row: pd.Series, target_columns: List[str]
     ) -> RowPayload:
         """Build the text or PDF payload for one positional input row."""
+        self.ensure_open()
         pdf_row = self.pdf_rows.get(position)
         if pdf_row is not None:
             return pdf_row

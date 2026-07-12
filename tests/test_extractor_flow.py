@@ -1,8 +1,9 @@
-from types import SimpleNamespace
 from contextlib import contextmanager
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
+from pydantic import BaseModel
 
 from structx.core.exceptions import ConfigurationError, ExtractionError
 from structx.core.input import PreparedInput
@@ -85,3 +86,45 @@ def test_extract_queries_prepares_and_cleans_data_once(monkeypatch):
         "cleanup": 1,
         "process": ["payment", "termination"],
     }
+
+
+def test_get_schema_accepts_caller_owned_prepared_input(monkeypatch):
+    class GeneratedRecord(BaseModel):
+        value: str
+
+    extractor = Extractor(client=_unused_client(), model_name="provider/model")
+    monkeypatch.setattr(
+        extractor.model_operations,
+        "generate_extraction_plan",
+        lambda **kwargs: SimpleNamespace(extraction_schema=object()),
+    )
+    monkeypatch.setattr(
+        extractor.model_operations,
+        "create_model_from_schema",
+        lambda schema: GeneratedRecord,
+    )
+
+    with extractor.prepare_input(
+        data=pd.DataFrame({"text": ["agreement"]})
+    ) as prepared_input:
+        model = extractor.get_schema(
+            data=prepared_input,
+            query="extract value",
+        )
+
+        assert model is GeneratedRecord
+        assert not prepared_input.closed
+
+    assert prepared_input.closed
+
+
+def test_prepare_input_context_cleans_up_after_an_error():
+    extractor = Extractor(client=_unused_client(), model_name="provider/model")
+
+    with pytest.raises(RuntimeError, match="stop inspection"):
+        with extractor.prepare_input(
+            data=pd.DataFrame({"text": ["agreement"]})
+        ) as prepared_input:
+            raise RuntimeError("stop inspection")
+
+    assert prepared_input.closed

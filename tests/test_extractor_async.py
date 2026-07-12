@@ -85,3 +85,32 @@ def test_extract_async_requires_an_async_client_for_provider_calls():
                 model=AsyncRecord,
             )
         )
+
+
+def test_explicit_prepared_input_can_be_inspected_and_reused_async():
+    completions = TrackingAsyncCompletions()
+    extractor = Extractor(
+        client=SimpleNamespace(),
+        async_client=SimpleNamespace(chat=SimpleNamespace(completions=completions)),
+        model_name="provider/model",
+        max_threads=1,
+        max_retries=0,
+    )
+
+    async def prepare_and_extract():
+        async with extractor.prepare_input_async(
+            data=[{"text": "row-0"}]
+        ) as prepared_input:
+            assert prepared_input.dataframe.shape == (1, 1)
+            result = await extractor.extract_async(
+                data=prepared_input,
+                query="extract value",
+                model=AsyncRecord,
+            )
+            assert not prepared_input.closed
+            return result, prepared_input
+
+    result, prepared_input = asyncio.run(prepare_and_extract())
+
+    assert [item.value for item in result.data] == ["row-0"]
+    assert prepared_input.closed
