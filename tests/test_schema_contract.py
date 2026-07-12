@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from decimal import Decimal
 from typing import Optional
@@ -102,6 +103,17 @@ def test_manual_pydantic_model_round_trips_through_extraction_request():
     assert value.issued_on == date(2026, 7, 11)
     assert value.unique_codes == {1, 2}
     assert value.address.street == "Main Street"
+
+    dumped = value.model_dump(mode="json")
+    assert dumped["record_id"] == "64c26f2a-8fd0-4ef8-b1ec-7969ebbe91cb"
+    assert dumped["amount"] == "1.50"
+    assert dumped["issued_on"] == "2026-07-11"
+    assert sorted(dumped["unique_codes"]) == [1, 2]
+    json.dumps(dumped)
+
+    python_dump = value.model_dump()
+    assert python_dump["amount"] == Decimal("1.50")
+    assert python_dump["issued_on"] == date(2026, 7, 11)
 
 
 def test_extraction_request_methods_preserve_the_original_definition():

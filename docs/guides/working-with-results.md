@@ -25,6 +25,20 @@ for item in result.data:
     print(item.model_dump())
 ```
 
+Like any Pydantic model, `model_dump()` preserves native Python objects such as
+`Decimal`, UUID, date, and datetime values. Use JSON mode before passing a
+collection of results to Python's `json` module:
+
+```python
+import json
+
+payload = [item.model_dump(mode="json") for item in result.data]
+print(json.dumps(payload, indent=2))
+```
+
+For one item, `item.model_dump_json(indent=2)` serializes directly to a JSON
+string.
+
 A row may produce zero, one, or multiple model instances. Consequently,
 `len(result.data)` does not always equal the number of input rows.
 
