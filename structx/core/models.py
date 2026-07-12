@@ -35,6 +35,13 @@ class ModelField(BaseModel):
     nullable: bool = Field(
         default=True, description="Whether the generated field may be null"
     )
+    has_default: bool = Field(
+        default=False, description="Whether the generated field has an explicit default"
+    )
+    default: Any = Field(
+        default=None,
+        description="JSON-serializable default value when has_default is true",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -54,8 +61,12 @@ class ModelField(BaseModel):
 
     @model_validator(mode="after")
     def validate_presence_semantics(self) -> "ModelField":
-        if not self.required and not self.nullable:
-            raise ValueError("A non-required field must be nullable")
+        if self.required and self.has_default:
+            raise ValueError("A required field cannot also have a default")
+        if not self.required and not self.nullable and not self.has_default:
+            raise ValueError(
+                "A non-required field must be nullable unless it has an explicit default"
+            )
         return self
 
 

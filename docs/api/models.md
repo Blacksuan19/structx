@@ -53,6 +53,73 @@ invalid regular expressions are discarded before model creation.
       show_bases: false
       heading_level: 3
 
+`ExtractionRequest` is the portable representation of a StructX model. It can
+be serialized as JSON, stored outside the Python process, and converted back to
+a runtime Pydantic model:
+
+```python
+from structx import (
+    ExtractionRequest,
+    model_from_extraction_request,
+    model_to_extraction_request,
+)
+
+definition = model_to_extraction_request(Invoice)
+stored = definition.model_dump(mode="json")
+
+restored_definition = ExtractionRequest.model_validate(stored)
+RestoredInvoice = model_from_extraction_request(restored_definition)
+```
+
+StructX-generated and refined models retain their original definition, so
+`model_to_extraction_request()` returns that definition without reverse
+engineering it. Custom Pydantic models are converted from their declarative
+fields, nested models, supported constraints, required state, nullability, and
+serializable defaults.
+
+Custom validators, serializers, computed fields, recursive models, and default
+factories cannot be represented as portable data and are rejected rather than
+silently discarded.
+
+## Type Capabilities
+
+Use `get_type_capabilities()` to build schema editors without copying StructX's
+private aliases or type parser:
+
+```python
+from structx import get_type_capabilities
+
+capabilities = get_type_capabilities()
+payload = capabilities.model_dump(mode="json")
+```
+
+The catalog contains canonical scalar and container identifiers, user-facing
+labels, supported constraints, valid item kinds, and presence modifiers.
+Aliases such as `string`, `integer`, and `array` remain accepted as input but
+are never returned by the catalog or persisted by `ExtractionRequest`.
+
+::: structx.schema.TypeCapabilities
+    options:
+      show_bases: false
+      heading_level: 3
+
+## Schema Conversion Functions
+
+::: structx.schema.model_to_extraction_request
+    options:
+      show_bases: false
+      heading_level: 3
+
+::: structx.schema.model_from_extraction_request
+    options:
+      show_bases: false
+      heading_level: 3
+
+::: structx.schema.get_type_capabilities
+    options:
+      show_bases: false
+      heading_level: 3
+
 ## ExtractionPlan
 
 ::: structx.core.models.ExtractionPlan

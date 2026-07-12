@@ -6,7 +6,8 @@ Use only these field type forms: str, int, float, bool, date, datetime, time,
 Decimal, UUID, Any, List[T], Dict[str, T], Set[T], and Optional[T].
 Fields are optional and nullable by default. Set required=true for core values
 explicitly requested by the user. Set nullable=false only together with
-required=true when null is invalid.
+required=true or has_default=true when null is invalid. Use has_default and
+default only when the user explicitly requests a default value.
 Do not add Optional unless it clarifies intent.
 Represent nested objects with nested_fields and use List[Any] or Dict[str, Any]
 only when a more precise type cannot be determined."""

@@ -38,6 +38,14 @@ class ModelGenerator:
             return Optional[field_type]
         return field_type
 
+    @staticmethod
+    def _field_default(field: ModelField):
+        if field.required:
+            return ...
+        if field.has_default:
+            return field.default
+        return None
+
     @classmethod
     def _create_nested_model(
         cls,
@@ -72,7 +80,7 @@ class ModelGenerator:
             field_definitions[field.name] = (
                 cls._field_annotation(field, field_type),
                 Field(
-                    default=... if field.required else None,
+                    default=cls._field_default(field),
                     description=field.description,
                     **(field.validation or {}),
                 ),
@@ -81,11 +89,7 @@ class ModelGenerator:
         model_name = f"{parent_name}{field_name}" if parent_name else field_name
 
         # Create the model using Pydantic v2 style
-        model_options = (
-            {"__config__": ConfigDict(frozen=True)}
-            if frozen
-            else {"__base__": BaseModel}
-        )
+        model_options = {"__config__": ConfigDict(frozen=frozen, validate_default=True)}
         model = create_model(model_name, **model_options, **field_definitions)
 
         # Add description as model docstring
@@ -117,6 +121,7 @@ class ModelGenerator:
             field_description=request.model_description,
             nested_fields=request.fields,
         )
+        setattr(model, "__structx_definition__", request.model_copy(deep=True))
 
         logger.debug("Model generation completed")
 

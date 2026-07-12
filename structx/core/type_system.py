@@ -4,7 +4,18 @@ import ast
 import re
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Dict, FrozenSet, List, Mapping, Optional, Set, Tuple, Type
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    get_origin,
+)
 from uuid import UUID
 
 
@@ -49,7 +60,7 @@ _ALIASES = {
     "uuid": "UUID",
 }
 
-_PRIMITIVES = {
+CANONICAL_SCALAR_TYPES = (
     "Any",
     "bool",
     "date",
@@ -60,7 +71,33 @@ _PRIMITIVES = {
     "str",
     "time",
     "UUID",
-}
+)
+
+CANONICAL_CONTAINER_TYPES = ("List", "Set", "Dict", "FrozenSet", "Tuple")
+
+SUPPORTED_FIELD_CONSTRAINTS = frozenset(
+    {
+        "alias",
+        "deprecated",
+        "examples",
+        "exclude",
+        "frozen",
+        "ge",
+        "gt",
+        "json_schema_extra",
+        "le",
+        "lt",
+        "max_length",
+        "min_length",
+        "multiple_of",
+        "pattern",
+        "repr",
+        "strict",
+        "title",
+    }
+)
+
+_PRIMITIVES = set(CANONICAL_SCALAR_TYPES)
 
 _RUNTIME_TYPES: Dict[str, Type[Any]] = {
     "Any": Any,
@@ -75,24 +112,16 @@ _RUNTIME_TYPES: Dict[str, Type[Any]] = {
     "UUID": UUID,
 }
 
-_FIELD_CONSTRAINTS = {
-    "alias",
-    "deprecated",
-    "examples",
-    "exclude",
-    "frozen",
-    "ge",
-    "gt",
-    "json_schema_extra",
-    "le",
-    "lt",
-    "max_length",
-    "min_length",
-    "multiple_of",
-    "pattern",
-    "repr",
-    "strict",
-    "title",
+_RUNTIME_TYPE_NAMES = {
+    runtime_type: name for name, runtime_type in _RUNTIME_TYPES.items()
+}
+
+_CONTAINER_ORIGIN_NAMES = {
+    list: "List",
+    set: "Set",
+    dict: "Dict",
+    frozenset: "FrozenSet",
+    tuple: "Tuple",
 }
 
 _LEGACY_TYPES = {
@@ -218,7 +247,7 @@ def _normalize_validation(
     normalized: Dict[str, Any] = {}
 
     for key, value in raw_validation.items():
-        if key in _FIELD_CONSTRAINTS:
+        if key in SUPPORTED_FIELD_CONSTRAINTS:
             normalized[key] = value
 
     for source_key, target_key in _VALIDATION_ALIASES.items():
@@ -248,6 +277,16 @@ def normalize_field_definition(
         {**implied_constraints, **dict(validation or {})}
     )
     return normalize_type_expression(legacy_type), normalized_validation
+
+
+def canonical_scalar_name(annotation: Any) -> Optional[str]:
+    """Return the canonical name for a supported runtime scalar type."""
+    return _RUNTIME_TYPE_NAMES.get(annotation)
+
+
+def canonical_container_name(annotation: Any) -> Optional[str]:
+    """Return the canonical name for a supported container annotation."""
+    return _CONTAINER_ORIGIN_NAMES.get(get_origin(annotation) or annotation)
 
 
 def normalize_type_expression(value: str) -> str:

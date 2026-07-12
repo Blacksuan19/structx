@@ -110,6 +110,35 @@ result2 = extractor.extract(
 )
 ```
 
+## Persisting Model Definitions
+
+Use `ExtractionRequest` when a model must survive beyond the current Python
+process. The definition is JSON-safe and can reconstruct the runtime Pydantic
+model later:
+
+```python
+from structx import (
+    ExtractionRequest,
+    model_from_extraction_request,
+    model_to_extraction_request,
+)
+
+definition = model_to_extraction_request(ConsultancyAgreement)
+stored_definition = definition.model_dump(mode="json")
+
+# Load the dictionary from a database or file.
+loaded_definition = ExtractionRequest.model_validate(stored_definition)
+StoredAgreement = model_from_extraction_request(loaded_definition)
+```
+
+The portable contract covers StructX-supported field types, nested models,
+required and nullable state, field constraints, and serializable defaults. It
+does not execute or serialize custom Python validators, serializers, computed
+fields, recursive models, or default factories.
+
+Applications that provide visual schema builders can use
+`get_type_capabilities()` as their canonical, alias-free type catalog.
+
 ## Generating Models Without Extraction
 
 You can generate a model without performing extraction using `get_schema`:

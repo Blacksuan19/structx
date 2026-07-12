@@ -11,6 +11,15 @@ from structx.core.models import (
     RowResult,
 )
 from structx.extraction.extractor import Extractor
+from structx.schema import (
+    ContainerTypeCapability,
+    ScalarTypeCapability,
+    TypeCapabilities,
+    TypeModifierCapabilities,
+    get_type_capabilities,
+    model_from_extraction_request,
+    model_to_extraction_request,
+)
 
 __version__ = "0.6.0"
 __all__ = [
@@ -22,4 +31,11 @@ __all__ = [
     "ExtractionRequest",
     "ExtractionResult",
     "RowResult",
+    "ScalarTypeCapability",
+    "ContainerTypeCapability",
+    "TypeModifierCapabilities",
+    "TypeCapabilities",
+    "get_type_capabilities",
+    "model_to_extraction_request",
+    "model_from_extraction_request",
 ]
