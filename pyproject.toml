@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "structx"
-version = "0.6.0"
+version = "0.6.1"
 description = "Structured data extraction from text using LLMs and dynamic model generation"
 authors = [{ name = "blacksuan19", email = "py@aolabs.dev" }]
 license-files = ["LICENSE"]
@@ -92,7 +92,7 @@ torchvision = [
 ]
 
 [tool.bumpver]
-current_version = "0.6.0"
+current_version = "0.6.1"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
