@@ -7,6 +7,9 @@ support.
 [![PyPI](https://img.shields.io/badge/PyPi-0.6.0-blue?style=for-the-badge)](https://pypi.org/project/structx "Package")
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
+See the [project roadmap](docs/ROADMAP.md) for planned portable business rules
+and semantic validation work.
+
 `structx` is a powerful Python library for extracting structured data from text,
 tables, and documents using Large Language Models (LLMs). It passes existing
 PDFs directly to vision-capable models; the optional `docs` extra converts other

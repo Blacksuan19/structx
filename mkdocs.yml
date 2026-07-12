@@ -30,6 +30,7 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Examples: examples.md
+  - Roadmap: ROADMAP.md
   - Contributing: contributing.md
   - Changelog: changelog.md
   - User Guide:
