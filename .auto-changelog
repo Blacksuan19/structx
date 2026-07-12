@@ -5,7 +5,7 @@
     "commitLimit": 0,
     "sortCommits": "date-desc",
     "breakingPattern": "BREAKING CHANGE:",
-    "ignoreCommitPattern": "^chore\\(release\\)|^docs\\(changelog\\)|Bump version|^Merge|^Release|^Version|^v\\d+\\.\\d+\\.\\d+",
+    "ignoreCommitPattern": "^chore(?:\\(release\\))?: bump version|^Bump version|^docs\\(changelog\\)|^Merge|^Release|^Version|^v\\d+\\.\\d+\\.\\d+",
     "issuePattern": "#(\\d+)",
     "issueUrl": "https://github.com/blacksuan19/structx/issues/{id}"
 }
