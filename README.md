@@ -4,7 +4,7 @@ Advanced structured data extraction from any document using LLMs with multimodal
 support.
 
 [![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg?style=for-the-badge)](https://structx.aolabs.dev "Documentation")
-[![PyPI](https://img.shields.io/badge/PyPi-0.6.1-blue?style=for-the-badge)](https://pypi.org/project/structx "Package")
+[![PyPI](https://img.shields.io/badge/PyPi-0.6.2-blue?style=for-the-badge)](https://pypi.org/project/structx "Package")
 [![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)](# "Build with GitHub Actions")
 
 See the [project roadmap](docs/ROADMAP.md) for planned portable business rules
