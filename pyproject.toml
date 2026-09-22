@@ -68,6 +68,20 @@ docs = [
     "weasyprint>=69.0",
 ]
 
+# Optional standalone document measurement (structx.measurement). Independent
+# of extraction: it estimates page and text counts for callers that need a
+# size estimate before running an extraction.
+measurement = [
+    "pypdfium2>=5.12.1",
+]
+
+# Local OCR for measuring pages that have no embedded text layer.
+measurement-ocr = [
+    "pypdfium2>=5.12.1",
+    "rapidocr>=3.9.0",
+    "onnxruntime>=1.22.0",
+]
+
 # Documentation site tooling.
 mkdocs = [
     "mkdocs>=1.6.1",
