@@ -1,4 +1,5 @@
 import sys
+import threading
 import types
 from pathlib import Path
 
@@ -7,8 +8,10 @@ import pytest
 from structx.core.exceptions import ConfigurationError, FileError
 from structx.measurement import DocumentMeasurer, DocumentMeasurement
 from structx.utils.measurement_ocr import (
+    PARALLEL_ENGINE_PARAMS,
     OcrEngineUnavailableError,
     RapidOcrReader,
+    ThreadLocalRapidOcrReader,
     create_default_ocr_reader,
 )
 
@@ -266,6 +269,9 @@ def test_extraction_input_preparation_is_unaffected_by_measurement(native_pdf):
         lambda: DocumentMeasurer(ocr_mode="sometimes"),
         lambda: DocumentMeasurer(ocr_reader="not callable"),
         lambda: DocumentMeasurer(max_pages=0),
+        lambda: DocumentMeasurer(ocr_workers=0),
+        lambda: DocumentMeasurer(ocr_workers=True),
+        lambda: DocumentMeasurer(ocr_engine_params="params"),
         lambda: DocumentMeasurer(max_pages=True),
         lambda: DocumentMeasurer(max_input_bytes=-1),
         lambda: DocumentMeasurer(render_dpi=0),
@@ -425,6 +431,138 @@ def _import_failing_on(missing_name):
         return original_import(name, *args, **kwargs)
 
     return guarded_import
+
+
+def test_parallel_workers_recognize_pages_concurrently_and_in_order(tmp_path):
+    scanned = build_pdf(tmp_path / "scan.pdf", [None] * 4)
+    barrier = threading.Barrier(2, timeout=10)
+    worker_threads = set()
+
+    def reader(image):
+        worker_threads.add(threading.current_thread().name)
+        barrier.wait()
+        return "page text"
+
+    measurer = DocumentMeasurer(ocr_mode="auto", ocr_reader=reader, ocr_workers=2)
+    try:
+        measurement = measurer.measure(scanned)
+    finally:
+        measurer.close()
+
+    assert [page.page_number for page in measurement.pages] == [1, 2, 3, 4]
+    assert all(page.method == "ocr" for page in measurement.pages)
+    assert measurement.character_count == 4 * len("page text")
+    assert len(worker_threads) >= 2
+
+
+def test_only_one_batch_of_pages_is_rendered_at_a_time(tmp_path):
+    scanned = build_pdf(tmp_path / "scan.pdf", [None] * 6)
+    in_flight = 0
+    peak = 0
+    guard = threading.Lock()
+    ready = threading.Barrier(2, timeout=10)
+
+    def reader(image):
+        nonlocal in_flight, peak
+        with guard:
+            in_flight += 1
+            peak = max(peak, in_flight)
+        ready.wait()
+        with guard:
+            in_flight -= 1
+        return "text"
+
+    measurer = DocumentMeasurer(ocr_mode="auto", ocr_reader=reader, ocr_workers=2)
+    try:
+        measurement = measurer.measure(scanned)
+    finally:
+        measurer.close()
+
+    assert measurement.page_count == 6
+    assert peak <= 2
+
+
+def test_ocr_does_not_hold_the_pdf_lock(tmp_path, native_pdf):
+    scanned = build_pdf(tmp_path / "scan.pdf", [None])
+    recognizing = threading.Event()
+    release = threading.Event()
+
+    def blocking_reader(image):
+        recognizing.set()
+        assert release.wait(10)
+        return "slow page"
+
+    slow = DocumentMeasurer(ocr_mode="auto", ocr_reader=blocking_reader)
+    worker = threading.Thread(target=slow.measure, args=(scanned,))
+    worker.start()
+    try:
+        assert recognizing.wait(10)
+        # Another document must still be measurable while OCR is running.
+        quick = DocumentMeasurer().measure(native_pdf)
+        assert quick.status == "complete"
+    finally:
+        release.set()
+        worker.join(10)
+    assert not worker.is_alive()
+
+
+def test_serial_measurement_does_not_create_worker_threads(blank_pdf):
+    measurer = DocumentMeasurer(ocr_mode="auto", ocr_reader=RecordingReader())
+    measurer.measure(blank_pdf)
+
+    assert measurer._ocr_pool is None
+
+
+def test_measuring_again_after_close_still_works(tmp_path):
+    scanned = build_pdf(tmp_path / "scan.pdf", [None, None])
+    measurer = DocumentMeasurer(
+        ocr_mode="auto", ocr_reader=RecordingReader(), ocr_workers=2
+    )
+    try:
+        first = measurer.measure(scanned)
+        measurer.close()
+        second = measurer.measure(scanned)
+    finally:
+        measurer.close()
+
+    assert first == second
+    assert first.status == "complete"
+
+
+def test_parallel_default_reader_uses_one_engine_per_thread(monkeypatch):
+    calls = install_fake_rapidocr(monkeypatch)
+    reader = create_default_ocr_reader(workers=2)
+    assert isinstance(reader, ThreadLocalRapidOcrReader)
+    assert reader.engine_params == PARALLEL_ENGINE_PARAMS
+
+    results = []
+    threads = [
+        threading.Thread(target=lambda: results.append(reader("image")))
+        for _ in range(2)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(10)
+
+    assert results == ["first line\nsecond line"] * 2
+    assert calls["init"] == 2
+    assert calls["kwargs"] == PARALLEL_ENGINE_PARAMS
+
+
+def test_serial_default_reader_keeps_engine_defaults(monkeypatch):
+    install_fake_rapidocr(monkeypatch)
+    reader = create_default_ocr_reader(workers=1)
+
+    assert isinstance(reader, RapidOcrReader)
+    assert reader.engine_params == {}
+
+
+def test_explicit_engine_parameters_survive_parallel_readers(monkeypatch):
+    calls = install_fake_rapidocr(monkeypatch)
+    create_default_ocr_reader(workers=4, params={"Rec.model_type": "tiny"})("image")
+
+    assert calls["kwargs"] == {"params": {"Rec.model_type": "tiny"}}
 
 
 @pytest.mark.integration
