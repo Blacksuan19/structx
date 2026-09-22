@@ -17,6 +17,18 @@ class OcrEngineUnavailableError(StructXError):
     pass
 
 
+PARALLEL_ENGINE_PARAMS: Dict[str, Any] = {
+    "params": {"EngineConfig.onnxruntime.intra_op_num_threads": 1}
+}
+"""Engine parameters used when several reader threads run at once.
+
+ONNX Runtime already spreads a single recognition call across CPU cores, so
+parallel workers only help when each engine is limited to one inference thread.
+This applies to the built-in onnxruntime engine; pass explicit engine parameters
+for other backends.
+"""
+
+
 def _joined_text(result: Any) -> str:
     """Join recognized text lines from a RapidOCR result."""
     lines = getattr(result, "txts", None)
@@ -80,13 +92,47 @@ class RapidOcrReader:
             return _joined_text(engine(image))
 
 
-def create_default_ocr_reader(**engine_params: Any) -> Callable[[Any], str]:
+class ThreadLocalRapidOcrReader:
+    """Reader that gives every worker thread its own OCR engine.
+
+    ``RapidOCR`` updates instance state on each call, so one engine cannot be
+    shared across threads. This reader creates an engine per thread instead,
+    which is what makes page-level parallel OCR safe.
+
+    Attributes:
+        engine_params: Parameters forwarded to ``RapidOCR`` on creation.
+    """
+
+    def __init__(self, **engine_params: Any) -> None:
+        self.engine_params: Dict[str, Any] = dict(engine_params)
+        self._local = threading.local()
+
+    def __call__(self, image: Any) -> str:
+        """Recognize text using this thread's engine, creating it on demand."""
+        reader = getattr(self._local, "reader", None)
+        if reader is None:
+            reader = RapidOcrReader(**self.engine_params)
+            self._local.reader = reader
+        return reader(image)
+
+
+def create_default_ocr_reader(
+    *, workers: int = 1, **engine_params: Any
+) -> Callable[[Any], str]:
     """Create the built-in RapidOCR reader without initializing the engine.
 
     Args:
+        workers: Number of threads that may call the reader at once. Values
+            above one create one engine per thread and, unless the caller
+            overrides engine parameters, limit each engine to a single
+            inference thread so workers do not oversubscribe the CPU.
         **engine_params: Optional parameters forwarded to ``RapidOCR``.
 
     Returns:
         A callable that accepts rendered page pixels and returns text.
     """
-    return RapidOcrReader(**engine_params)
+    if workers <= 1:
+        return RapidOcrReader(**engine_params)
+    if not engine_params:
+        engine_params = dict(PARALLEL_ENGINE_PARAMS)
+    return ThreadLocalRapidOcrReader(**engine_params)

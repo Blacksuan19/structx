@@ -21,6 +21,7 @@ Example:
 """
 
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from math import ceil, sqrt
 from pathlib import Path
@@ -118,6 +119,17 @@ class DocumentMeasurement:
         return tuple(codes)
 
 
+@dataclass
+class _PagePlan:
+    """Work-in-progress state for one page, used between rendering and OCR."""
+
+    page_number: int
+    native_text: str = ""
+    native_failed: bool = False
+    image: Any = None
+    measurement: Optional[PageMeasurement] = None
+
+
 def _positive_int(value: Any, name: str) -> int:
     """Validate a positive integer setting."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
@@ -167,6 +179,11 @@ class DocumentMeasurer:
         render_dpi: Resolution used when rendering a page for OCR.
         max_render_pixels: Upper bound on rendered pixels per page. Larger
             pages are rendered at a reduced scale rather than skipped.
+        ocr_workers: Pages recognized at once. The default of 1 keeps OCR
+            serial. Higher values give each worker thread its own engine and
+            bound how many page images are held in memory at once.
+        ocr_engine_params: Parameters for the built-in OCR engine. Ignored when
+            ``ocr_reader`` is supplied.
     """
 
     def __init__(
@@ -174,6 +191,8 @@ class DocumentMeasurer:
         *,
         ocr_mode: str = "never",
         ocr_reader: Optional[Callable[[Any], str]] = None,
+        ocr_workers: int = 1,
+        ocr_engine_params: Optional[dict] = None,
         max_pages: int = MEASUREMENT_PAGE_LIMIT,
         max_input_bytes: int = MEASUREMENT_BYTES_LIMIT,
         render_dpi: float = MEASUREMENT_RENDER_DPI,
@@ -183,16 +202,26 @@ class DocumentMeasurer:
             raise ConfigurationError(f"ocr_mode must be one of {', '.join(OCR_MODES)}")
         if ocr_reader is not None and not callable(ocr_reader):
             raise ConfigurationError("ocr_reader must be callable")
+        if ocr_engine_params is not None and not isinstance(ocr_engine_params, dict):
+            raise ConfigurationError("ocr_engine_params must be a dict")
 
         self.ocr_mode = ocr_mode
+        self.ocr_workers = _positive_int(ocr_workers, "ocr_workers")
+        self.ocr_engine_params = dict(ocr_engine_params or {})
         self.max_pages = _positive_int(max_pages, "max_pages")
         self.max_input_bytes = _positive_int(max_input_bytes, "max_input_bytes")
         self.render_dpi = _positive_real(render_dpi, "render_dpi")
         self.max_render_pixels = _positive_int(max_render_pixels, "max_render_pixels")
         self._ocr_reader = ocr_reader
+        self._ocr_pool: Optional[ThreadPoolExecutor] = None
+        self._reader_lock = threading.Lock()
 
     def measure(self, file_path: Union[str, Path]) -> DocumentMeasurement:
         """Measure one PDF document.
+
+        PDF reading and rendering are serialized because the PDF backend is not
+        thread-safe. OCR runs outside that lock, so a slow scanned document does
+        not block other documents measured at the same time.
 
         Args:
             file_path: Path to an existing PDF file.
@@ -207,8 +236,7 @@ class DocumentMeasurer:
         """
         path = self._validated_path(file_path)
         pdfium = _import_pdfium()
-        with _PDFIUM_LOCK:
-            pages = self._measure_pages(pdfium, path)
+        pages = self._measure_pages(pdfium, path)
         return DocumentMeasurement(
             pages=tuple(pages),
             ocr_mode=self.ocr_mode,
@@ -243,108 +271,178 @@ class DocumentMeasurer:
         return path
 
     def _measure_pages(self, pdfium: Any, path: Path) -> list:
-        """Open the document once and measure every page in order."""
-        try:
-            document = pdfium.PdfDocument(path)
-        except Exception as error:
-            raise FileError(f"Could not open PDF for measurement: {path}") from error
-
-        try:
-            if _is_encrypted(pdfium, document):
-                raise FileError(f"Encrypted PDFs cannot be measured: {path}")
-
-            page_count = len(document)
-            if page_count < 1:
-                raise FileError(f"The PDF contains no pages: {path}")
-            if page_count > self.max_pages:
+        """Measure every page in order, in batches bounded by the worker count."""
+        with _PDFIUM_LOCK:
+            try:
+                document = pdfium.PdfDocument(path)
+            except Exception as error:
                 raise FileError(
-                    f"PDF exceeds the {self.max_pages} page measurement limit: {path}"
-                )
-            return [self._measure_page(document, index) for index in range(page_count)]
-        finally:
-            document.close()
+                    f"Could not open PDF for measurement: {path}"
+                ) from error
+            try:
+                if _is_encrypted(pdfium, document):
+                    raise FileError(f"Encrypted PDFs cannot be measured: {path}")
+                page_count = len(document)
+                if page_count < 1:
+                    raise FileError(f"The PDF contains no pages: {path}")
+                if page_count > self.max_pages:
+                    raise FileError(
+                        f"PDF exceeds the {self.max_pages} page measurement "
+                        f"limit: {path}"
+                    )
+            except FileError:
+                document.close()
+                raise
 
-    def _measure_page(self, document: Any, index: int) -> PageMeasurement:
-        """Measure one page without letting a page failure end the document."""
+        measurements: list = []
+        try:
+            # Only the pages of one batch are rendered at a time, so a long
+            # document does not hold every page image in memory at once.
+            for start in range(0, page_count, self.ocr_workers):
+                end = min(start + self.ocr_workers, page_count)
+                with _PDFIUM_LOCK:
+                    plans = [self._prepare_page(document, i) for i in range(start, end)]
+                measurements.extend(self._recognize_batch(plans))
+        finally:
+            with _PDFIUM_LOCK:
+                document.close()
+        return measurements
+
+    def _prepare_page(self, document: Any, index: int) -> _PagePlan:
+        """Read a page's text layer and render it only when OCR is needed.
+
+        This runs under the PDF lock. Recognition itself happens afterwards.
+        """
         page_number = index + 1
         try:
             page = document[index]
         except Exception:
-            return PageMeasurement(
-                page_number, 0, "none", "partial", "page_load_failed"
+            return _PagePlan(
+                page_number,
+                measurement=PageMeasurement(
+                    page_number, 0, "none", "partial", "page_load_failed"
+                ),
             )
 
         try:
             native_text, native_failed = _native_text(page)
+            plan = _PagePlan(
+                page_number, native_text=native_text, native_failed=native_failed
+            )
 
-            if self.ocr_mode == "always":
-                return self._ocr_page(page, page_number, native_text, native_failed)
-
-            if native_failed:
-                if self.ocr_mode == "auto":
-                    return self._ocr_page(page, page_number, "", True)
-                return PageMeasurement(
-                    page_number, 0, "none", "partial", "native_text_failed"
-                )
-
-            if native_text.strip():
-                return PageMeasurement(
+            if self.ocr_mode == "never":
+                plan.measurement = self._without_ocr(plan)
+                return plan
+            if self.ocr_mode == "auto" and not native_failed and native_text.strip():
+                plan.measurement = PageMeasurement(
                     page_number, len(native_text), "native", "complete"
                 )
+                return plan
+            if self.ocr_mode == "auto" and native_failed:
+                # A failed text layer says nothing about the page, so the
+                # native text is not reused as a fallback count.
+                plan.native_text = ""
 
-            if self.ocr_mode == "auto":
-                return self._ocr_page(page, page_number, "", False)
-
-            # Without OCR, an empty text layer cannot be distinguished from a
-            # scanned page, so the page is reported as incomplete.
-            return PageMeasurement(page_number, 0, "none", "partial", "ocr_skipped")
+            try:
+                plan.image = self._rendered_image(page)
+            except Exception:
+                plan.measurement = self._ocr_unavailable(plan, "page_render_failed")
+            return plan
         finally:
             page.close()
 
-    def _ocr_page(
-        self,
-        page: Any,
-        page_number: int,
-        native_text: str,
-        native_failed: bool,
-    ) -> PageMeasurement:
-        """Measure a page with OCR, falling back to any usable native count."""
-        text, error_code = self._recognized_text(page)
-        if error_code is None:
-            return PageMeasurement(page_number, len(text), "ocr", "complete")
-        if not native_failed and native_text.strip():
+    def _without_ocr(self, plan: _PagePlan) -> PageMeasurement:
+        """Resolve a page that will not be sent to OCR."""
+        if plan.native_failed:
             return PageMeasurement(
-                page_number, len(native_text), "native", "partial", error_code
+                plan.page_number, 0, "none", "partial", "native_text_failed"
             )
-        return PageMeasurement(page_number, 0, "none", "partial", error_code)
+        if plan.native_text.strip():
+            return PageMeasurement(
+                plan.page_number, len(plan.native_text), "native", "complete"
+            )
+        # Without OCR, an empty text layer cannot be distinguished from a
+        # scanned page, so the page is reported as incomplete.
+        return PageMeasurement(plan.page_number, 0, "none", "partial", "ocr_skipped")
 
-    def _recognized_text(self, page: Any) -> Tuple[str, Optional[str]]:
-        """Render one page and recognize its text, reporting bounded failures."""
+    def _recognize_batch(self, plans: list) -> list:
+        """Recognize the rendered pages of one batch, in page order."""
+        pending = [plan for plan in plans if plan.measurement is None]
+        if pending:
+            if len(pending) > 1 and self.ocr_workers > 1:
+                # Created before fan-out so workers share one reader object.
+                self._resolve_reader()
+                results = list(self._pool().map(self._recognized_text, pending))
+            else:
+                results = [self._recognized_text(plan) for plan in pending]
+            for plan, (text, error_code) in zip(pending, results):
+                plan.measurement = self._from_recognition(plan, text, error_code)
+        return [plan.measurement for plan in plans]
+
+    def _recognized_text(self, plan: _PagePlan) -> Tuple[str, Optional[str]]:
+        """Recognize one rendered page, reporting bounded failures."""
         reader = self._resolve_reader()
-        if reader is None:
-            return "", "ocr_unavailable"
-
         try:
-            image = self._rendered_image(page)
-        except Exception:
-            return "", "page_render_failed"
-
-        try:
-            text = reader(image)
+            text = reader(plan.image)
         except OcrEngineUnavailableError:
             return "", "ocr_unavailable"
         except Exception:
             return "", "ocr_failed"
+        finally:
+            plan.image = None
 
         if not isinstance(text, str):
             return "", "ocr_failed"
         return _normalized(text), None
 
-    def _resolve_reader(self) -> Optional[Callable[[Any], str]]:
+    def _from_recognition(
+        self, plan: _PagePlan, text: str, error_code: Optional[str]
+    ) -> PageMeasurement:
+        """Build a page result, falling back to any usable native count."""
+        if error_code is None:
+            return PageMeasurement(plan.page_number, len(text), "ocr", "complete")
+        return self._ocr_unavailable(plan, error_code)
+
+    def _ocr_unavailable(self, plan: _PagePlan, error_code: str) -> PageMeasurement:
+        """Report a page OCR could not measure, keeping a usable native count."""
+        if not plan.native_failed and plan.native_text.strip():
+            return PageMeasurement(
+                plan.page_number,
+                len(plan.native_text),
+                "native",
+                "partial",
+                error_code,
+            )
+        return PageMeasurement(plan.page_number, 0, "none", "partial", error_code)
+
+    def _resolve_reader(self) -> Callable[[Any], str]:
         """Return the configured reader, creating the built-in one on demand."""
-        if self._ocr_reader is None:
-            self._ocr_reader = create_default_ocr_reader()
-        return self._ocr_reader
+        with self._reader_lock:
+            if self._ocr_reader is None:
+                self._ocr_reader = create_default_ocr_reader(
+                    workers=self.ocr_workers, **self.ocr_engine_params
+                )
+            return self._ocr_reader
+
+    def _pool(self) -> ThreadPoolExecutor:
+        """Return this measurer's OCR worker pool, creating it on demand."""
+        with self._reader_lock:
+            if self._ocr_pool is None:
+                self._ocr_pool = ThreadPoolExecutor(
+                    max_workers=self.ocr_workers,
+                    thread_name_prefix="structx-measure-ocr",
+                )
+            return self._ocr_pool
+
+    def close(self) -> None:
+        """Release worker threads held for parallel OCR.
+
+        Measuring again after closing recreates them.
+        """
+        with self._reader_lock:
+            pool, self._ocr_pool = self._ocr_pool, None
+        if pool is not None:
+            pool.shutdown(wait=True)
 
     def _rendered_image(self, page: Any) -> Any:
         """Render a page to pixels within the configured pixel budget."""
