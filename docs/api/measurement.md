@@ -33,10 +33,42 @@ for page in measurement.pages:
     print(page.page_number, page.method, page.character_count, page.status)
 ```
 
-One measurer can measure many documents and reuses a single OCR engine across
-them. Measurement is synchronous, and PDF work is serialized internally because
-the PDF backend is not thread-safe. Run heavy OCR workloads in separate
-processes rather than threads.
+One measurer can measure many documents and reuses its OCR engines across them,
+so create it once and keep it. Measurement is synchronous. Reading and rendering
+PDF pages is serialized internally because the PDF backend is not thread-safe,
+but OCR runs outside that lock, so a slow scanned document does not block other
+documents measured at the same time.
+
+## Parallel OCR
+
+OCR costs seconds per page, so a multi-page scan is slow when measured one page
+at a time. `ocr_workers` recognizes several pages at once:
+
+```python
+measurer = DocumentMeasurer(ocr_mode="auto", ocr_workers=4)
+try:
+    measurement = measurer.measure("scanned.pdf")
+finally:
+    measurer.close()  # release worker threads; measuring again recreates them
+```
+
+Pages are still reported in source order, and only one batch of pages is
+rendered at a time, so a long document does not hold every page image in memory.
+
+The default is `1`. Raise it deliberately:
+
+- Each worker gets its own OCR engine, because a single `RapidOCR` instance
+  updates its own state per call and cannot be shared across threads.
+- ONNX Runtime already spreads one recognition call across CPU cores, so extra
+  workers only help when each engine is limited to one inference thread. The
+  built-in reader applies that automatically for `ocr_workers > 1`; pass
+  `ocr_engine_params` to override it.
+- More workers is not better. On a 12-core machine measuring 8 scanned pages,
+  1 worker took 20.8s, 4 workers took 14.2s, and 6 workers took 16.6s.
+- Each engine loads its own models, so memory grows with worker count.
+
+A custom `ocr_reader` is never fanned out with per-thread engines; if you supply
+one and raise `ocr_workers`, it must be safe to call from several threads.
 
 ## OCR Modes
 
@@ -54,6 +86,9 @@ first use.
 ```python
 measurer = DocumentMeasurer(ocr_mode="always", ocr_reader=my_reader)
 ```
+
+Render resolution is not a useful cost lever: the OCR engine resizes pages
+internally, so 72 DPI and 150 DPI cost about the same per page.
 
 ## Completeness
 
