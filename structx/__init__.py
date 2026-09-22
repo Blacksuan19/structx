@@ -22,7 +22,7 @@ from structx.schema import (
     model_to_extraction_request,
 )
 
-__version__ = "0.6.3"
+__version__ = "0.6.4"
 __all__ = [
     "Extractor",
     "ExtractionConfig",
