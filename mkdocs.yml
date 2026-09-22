@@ -47,6 +47,7 @@ nav:
   - API Reference:
       - Extractor: api/extractor.md
       - Input Contracts: api/inputs.md
+      - Document Measurement: api/measurement.md
       - Models: api/models.md
       - Configuration: api/configuration.md
       - Token Tracking: api/token-tracking.md

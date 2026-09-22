@@ -80,12 +80,21 @@ non-PDF document formats:
 pip install "structx[docs]"
 ```
 
+For estimating PDF page and text counts before extraction, without running an
+extraction:
+
+```bash
+pip install "structx[measurement]"        # embedded text only
+pip install "structx[measurement-ocr]"    # adds local OCR for scanned pages
+```
+
 ### 🔧 What The Package Provides
 
 - Structured readers for CSV, Excel, JSON, Parquet, and Feather
 - Instructor multimodal vision support
 - Optional Docling document parsing with CPU-only PyTorch resolution for uv on Linux
 - Optional WeasyPrint PDF rendering for non-PDF document formats
+- Optional standalone document measurement, separate from the extraction path
 
 ## Quick Start
 
@@ -131,6 +140,22 @@ result = extractor.extract(
     data="scripts/example_input/free-consultancy-agreement.docx",
     query="extract parties, effective date, and payment terms"
 )
+```
+
+### 📏 Document Measurement Before Extraction
+
+Install `structx[measurement]` to size a PDF without extracting it. This path is
+independent of extraction: it never converts or replaces the input file.
+
+```python
+from structx.measurement import DocumentMeasurer
+
+measurement = DocumentMeasurer(ocr_mode="auto").measure(
+    "scripts/example_input/S0305SampleInvoice.pdf"
+)
+
+# Estimates, plus whether every page could actually be measured
+print(measurement.page_count, measurement.character_count, measurement.status)
 ```
 
 ### 📊 Token Usage Monitoring
